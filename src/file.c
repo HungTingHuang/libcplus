@@ -135,11 +135,7 @@ cplus_file cplus_file_new(
     char * file
     , CPLUS_FILE_ACCESS access)
 {
-    if (!is_exist(file))
-    {
-        return NULL;
-    }
-    return file_initialize_object(file, access, CPLUS_FILE_FALG_NONE, CPLUS_FILE_MODE_ALL);
+    return file_initialize_object(file, access, CPLUS_FILE_FLAG_CREATE, CPLUS_FILE_MODE_ALL);
 }
 
 int32_t cplus_file_open(cplus_file obj)
@@ -154,7 +150,7 @@ int32_t cplus_file_open(cplus_file obj)
     {
         if (!is_exist(f->file_path))
         {
-            flag |= CPLUS_FILE_FALG_CREATE;
+            flag |= CPLUS_FILE_FLAG_CREATE;
         }
 
         f->fd = open((const char *)(f->file_path), (f->access | flag), f->mode);
@@ -378,7 +374,7 @@ CPLUS_UNIT_TEST(cplus_file_new, functionity)
     cplus_file file;
 
     UNITTEST_EXPECT_EQ(true, (NULL != (file = cplus_file_new_ex(
-        TEST_FILE, CPLUS_FILE_ACCESS_RDWR, CPLUS_FILE_FALG_CREATE, CPLUS_FILE_MODE_ALL))));
+        TEST_FILE, CPLUS_FILE_ACCESS_RDWR, CPLUS_FILE_FLAG_CREATE, CPLUS_FILE_MODE_ALL))));
     UNITTEST_EXPECT_EQ(true, (true == cplus_file_check(file)));
     UNITTEST_EXPECT_EQ(true, (true == cplus_file_is_exist(TEST_FILE)));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_file_delete(file));
@@ -392,7 +388,7 @@ CPLUS_UNIT_TEST(cplus_file_write, functionity)
     cplus_file file;
 
     UNITTEST_EXPECT_EQ(true, (NULL != (file = cplus_file_new_ex(
-        TEST_FILE, CPLUS_FILE_ACCESS_WRONLY, CPLUS_FILE_FALG_CREATE, CPLUS_FILE_MODE_ALL))));
+        TEST_FILE, CPLUS_FILE_ACCESS_WRONLY, CPLUS_FILE_FLAG_CREATE, CPLUS_FILE_MODE_ALL))));
     UNITTEST_EXPECT_EQ(true, (true == cplus_file_is_exist(TEST_FILE)));
     UNITTEST_EXPECT_EQ(strlen(TEST_STR), cplus_file_write(file, strlen(TEST_STR), TEST_STR));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_file_delete(file));
@@ -405,7 +401,7 @@ CPLUS_UNIT_TEST(cplus_file_read, functionity)
     char rr[32] = {0};
 
     UNITTEST_EXPECT_EQ(true, (NULL != (file = cplus_file_new_ex(
-        TEST_FILE, CPLUS_FILE_ACCESS_RDONLY, CPLUS_FILE_FALG_CREATE, CPLUS_FILE_MODE_ALL))));
+        TEST_FILE, CPLUS_FILE_ACCESS_RDONLY, CPLUS_FILE_FLAG_CREATE, CPLUS_FILE_MODE_ALL))));
     UNITTEST_EXPECT_EQ(true, (true == cplus_file_is_exist(TEST_FILE)));
     UNITTEST_EXPECT_EQ(strlen(TEST_STR), cplus_file_read(file, sizeof(rr), rr));
     UNITTEST_EXPECT_EQ(true, (0 == strcmp(TEST_STR, rr)));
@@ -420,7 +416,7 @@ CPLUS_UNIT_TEST(cplus_file_get_data_size, functionity)
     cplus_file file;
 
     UNITTEST_EXPECT_EQ(true, (NULL != (file = cplus_file_new_ex(
-        TEST_FILE, CPLUS_FILE_ACCESS_WRONLY, CPLUS_FILE_FALG_CREATE, CPLUS_FILE_MODE_ALL))));
+        TEST_FILE, CPLUS_FILE_ACCESS_WRONLY, CPLUS_FILE_FLAG_CREATE, CPLUS_FILE_MODE_ALL))));
     UNITTEST_EXPECT_EQ(true, (true == cplus_file_is_exist(TEST_FILE)));
     UNITTEST_EXPECT_EQ(strlen(TEST_STR), cplus_file_write(file, strlen(TEST_STR), TEST_STR));
     UNITTEST_EXPECT_EQ(strlen(TEST_STR), cplus_file_get_data_size(file));
@@ -437,7 +433,7 @@ CPLUS_UNIT_TEST(cplus_file_get_data, functionity)
     char rr[32] = {0};
 
     UNITTEST_EXPECT_EQ(true, (NULL != (file = cplus_file_new_ex(
-        TEST_FILE, CPLUS_FILE_ACCESS_RDWR, CPLUS_FILE_FALG_CREATE, CPLUS_FILE_MODE_ALL))));
+        TEST_FILE, CPLUS_FILE_ACCESS_RDWR, CPLUS_FILE_FLAG_CREATE, CPLUS_FILE_MODE_ALL))));
     UNITTEST_EXPECT_EQ(true, (true == cplus_file_is_exist(TEST_FILE)));
     UNITTEST_EXPECT_EQ(strlen(TEST_STR), cplus_file_write(file, strlen(TEST_STR), TEST_STR));
     UNITTEST_EXPECT_EQ(true, (NULL != (bufs = cplus_file_get_data(file))));

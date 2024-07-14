@@ -30,6 +30,7 @@
 #include "cplus_socket.h"
 #include "cplus_ipc_server.h"
 #include "cplus_file.h"
+#include "cplus_event_server.h"
 
 #ifdef __cplusplus
 extern "C" {

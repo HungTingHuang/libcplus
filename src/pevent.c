@@ -199,7 +199,6 @@ bool cplus_pevent_get_status(cplus_pevent obj)
 int32_t cplus_pevent_delete(cplus_pevent obj)
 {
     struct pevent * evt = (struct pevent *)obj;
-
     CHECK_OBJECT_TYPE(obj);
 
     if (evt->shared_mem)
@@ -215,7 +214,6 @@ int32_t cplus_pevent_delete(cplus_pevent obj)
                 pthread_cond_destroy(evt->ptr_cond);
             }
         }
-
         cplus_sharedmem_delete(evt->shared_mem);
     }
     else
@@ -374,9 +372,8 @@ static void * pevent_initialize_object(
         {
             cplus_pevent_set(evt);
         }
-
-        return evt;
     }
+    return evt;
 exit:
     cplus_pevent_delete(evt);
     return NULL;

@@ -33,5 +33,7 @@ typedef void* cplus_syslog;
 typedef void* cplus_task;
 typedef void* cplus_taskpool;
 typedef void* cplus_file;
+typedef void* cplus_event_server;
+typedef void* cplus_event_client;
 
 #endif //__CPLUS_TYPEDEF__

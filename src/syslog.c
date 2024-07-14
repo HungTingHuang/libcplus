@@ -297,8 +297,8 @@ static void * syslog_initialize_object(const char * custom_program_name)
                 cplus_task_wait_start(slog->message_logger_wroker, CPLUS_INFINITE_TIMEOUT);
             }
         }
-        return slog;
     }
+    return slog;
 exit:
     cplus_syslog_delete(slog);
     return NULL;

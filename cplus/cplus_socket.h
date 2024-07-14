@@ -92,6 +92,9 @@ int32_t cplus_socket_send(cplus_socket obj, void * data_bufs, int32_t data_len);
 
 int32_t cplus_socket_setopt_reuse_addr(cplus_socket obj, bool enable_reuse_addr);
 
+int32_t cplus_socket_recv_fd(cplus_socket obj, int32_t * recvfd, uint32_t timeout);
+int32_t cplus_socket_send_fd(cplus_socket obj, int32_t sendfd, const char * addr, int32_t port);
+
 #ifdef __cplusplus
 }
 #endif

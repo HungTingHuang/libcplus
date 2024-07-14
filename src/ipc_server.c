@@ -1100,8 +1100,8 @@ static void * ipc_server_new(
     , uint32_t max_connection
     , CPLUS_IPC_CB_FUNCS cb_funcs)
 {
-    IPC_SERVER ipc_serv = (IPC_SERVER)cplus_malloc(sizeof(IPC_SERVER_T));
-    if (ipc_serv)
+    IPC_SERVER ipc_serv = NULL;
+    if ((ipc_serv = (IPC_SERVER)cplus_malloc(sizeof(IPC_SERVER_T))))
     {
         CPLUS_INITIALIZE_STRUCT_POINTER(ipc_serv);
 
@@ -1176,9 +1176,8 @@ static void * ipc_server_new(
 
         cplus_task_start(ipc_serv->accept_task, 500);
         cplus_task_wait_start(ipc_serv->accept_task, CPLUS_INFINITE_TIMEOUT);
-
-        return ipc_serv;
     }
+    return ipc_serv;
 exit:
     ipc_server_delete(ipc_serv);
     return NULL;
@@ -1190,8 +1189,7 @@ static void * ipc_client_new(
 {
     IPC_CLIENT ipc_clt = NULL;
 
-    ipc_clt = (IPC_CLIENT)cplus_malloc(sizeof(IPC_CLIENT_T));
-    if (ipc_clt)
+    if ((ipc_clt = (IPC_CLIENT)cplus_malloc(sizeof(IPC_CLIENT_T))))
     {
         CPLUS_INITIALIZE_STRUCT_POINTER(ipc_clt);
 
@@ -1250,9 +1248,8 @@ static void * ipc_client_new(
                 }
             }
         }
-
-        return ipc_clt;
     }
+    return ipc_clt;
 error:
     ipc_client_delete(ipc_clt);
     return NULL;

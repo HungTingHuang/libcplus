@@ -214,7 +214,6 @@ int32_t cplus_task_stop(cplus_task obj, uint32_t timeout)
         }
 #else
         res = cplus_pevent_wait(task->evt_finish, tout);
-
         if (CPLUS_FAIL == res)
         {
             pthread_cancel(task->thread);
@@ -225,7 +224,6 @@ int32_t cplus_task_stop(cplus_task obj, uint32_t timeout)
             pthread_join(task->thread, NULL);
         }
 #endif // SUPPORT_NON_PORTABLE
-
         cplus_task_delete(task);
         return res;
     }
@@ -379,9 +377,8 @@ static void * task_initialize_object(CPLUS_TASK_CONFIG config)
         {
             pthread_detach(task->thread);
         }
-
-        return task;
     }
+    return task;
 exit:
     cplus_task_delete(task);
     return NULL;

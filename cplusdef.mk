@@ -22,6 +22,7 @@ SOURCES 		+= data
 SOURCES 		+= socket
 SOURCES 		+= ipc_server
 SOURCES 		+= file
+SOURCES 		+= event_server
 SOURCES 		+= cplus
 
 SRC_DIR 		?= $(BUILD_DIR)/src

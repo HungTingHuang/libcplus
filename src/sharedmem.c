@@ -361,6 +361,8 @@ bool cplus_sharedmem_check(cplus_object obj)
 }
 
 #ifdef __CPLUS_UNITTEST__
+#include "cplus_systime.h"
+
 static char TEST_SHMEM_NAME[] = "test";
 
 struct test_area

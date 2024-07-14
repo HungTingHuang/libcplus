@@ -194,9 +194,8 @@ static void * mutex_initialize_object(const char * name, enum INIT_MODE mode)
                 mtx->mutex = &(shared_mutex->mutex);
             }
         }
-
-        return mtx;
     }
+    return mtx;
 exit:
     cplus_mutex_delete(mtx);
     return NULL;

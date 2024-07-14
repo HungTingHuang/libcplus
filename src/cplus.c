@@ -74,6 +74,14 @@ int32_t cplus_object_delete(cplus_object object)
     {
         return cplus_file_delete(object);
     }
+    else if (cplus_event_server_check(object))
+    {
+        return cplus_event_server_delete(object);
+    }
+    else if (cplus_event_client_check(object))
+    {
+        return cplus_event_client_delete(object);
+    }
     return CPLUS_FAIL;
 }
 

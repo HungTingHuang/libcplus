@@ -133,8 +133,8 @@ static void * data_initialize_object(
                 goto exit;
             }
         }
-        return dt;
     }
+    return dt;
 exit:
     cplus_data_delete(dt);
     return NULL;

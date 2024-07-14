@@ -158,6 +158,11 @@ extern void unittest_sys(void);
 extern void unittest_socket(void);
 extern void unittest_ipc_server(void);
 extern void unittest_file(void);
+extern void unittest_event_server(void);
+
+extern void unittest_socket_server(void);
+extern void unittest_socket_client(void);
+
 
 int32_t main(void)
 {
@@ -181,6 +186,15 @@ int32_t main(void)
     unittest_socket();
     unittest_ipc_server();
     unittest_file();
+    unittest_event_server();
+
+#if 0
+    #if 0
+    unittest_socket_server();
+    #else
+    unittest_socket_client();
+    #endif
+#endif
 
     unittest_run();
     return 0;

@@ -239,9 +239,8 @@ static void * taskpool_initialize_object(
 
             cplus_llist_push_front(tp->worker_list, worker);
         }
-
-        return tp;
     }
+    return tp;
 exit:
     cplus_taskpool_delete(tp);
     return NULL;
