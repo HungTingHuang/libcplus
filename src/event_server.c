@@ -177,6 +177,7 @@ static void accept_proc(void * param1, void * param2)
     EVENT_SERVER server = (EVENT_SERVER)(param1);
     cplus_socket sock = NULL;
     uint8_t recv_bufs[32] = {0};
+    UNUSED_PARAM(param2);
 
     if ((sock = cplus_socket_accept(server->skt_server, TIMEOUT_FOR_ACCEPT_TASK)))
     {

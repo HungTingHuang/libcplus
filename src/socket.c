@@ -796,7 +796,7 @@ int32_t cplus_socket_send_fd(cplus_socket obj
     msg.msg_iov = iov;
     msg.msg_iovlen = 1;
 
-    return (msg.msg_iovlen == socket_sendmsg(skt, &msg))? CPLUS_SUCCESS: CPLUS_FAIL;
+    return ((int32_t)(msg.msg_iovlen) == socket_sendmsg(skt, &msg))? CPLUS_SUCCESS: CPLUS_FAIL;
 }
 
 #if 0 /* have not completed yat */
@@ -807,7 +807,7 @@ int32_t cplus_socket_recv_fd(
     , int32_t from_addr_size
     , uint32_t timeout)
 #else
-    int32_t cplus_socket_recv_fd(
+int32_t cplus_socket_recv_fd(
     cplus_socket obj
     , int32_t * recvfd
     , uint32_t timeout)
@@ -873,7 +873,7 @@ int32_t cplus_socket_recv_fd(
 
         if (recvfd) { (* recvfd) = sock_fd; }
 
-        res = (res ==  msg.msg_iovlen)? CPLUS_SUCCESS: CPLUS_FAIL;
+        res = (res == (int32_t)(msg.msg_iovlen))? CPLUS_SUCCESS: CPLUS_FAIL;
     }
     return res;
 }
