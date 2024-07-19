@@ -192,9 +192,10 @@ static void accept_proc(void * param1, void * param2)
         {
             if (0 == strcmp((char *)(recv_bufs), CHECK_RECV_FD))
             {
-                cplus_socket_delete(sock);
+                ;
             }
         }
+        cplus_socket_delete(sock);
     }
     return;
 }
