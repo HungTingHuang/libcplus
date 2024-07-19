@@ -29,7 +29,7 @@ LIBS					+= -Wl,-rpath=/lib
 LIBS 					+= -pthread
 LIBS 					+= -lrt
 
-.PHONY: lib test build_library install_library build_unittest clean
+.PHONY: lib test build_library install_library build_unittest build_unittest_one clean
 
 all:
 
@@ -37,15 +37,22 @@ lib: build_library install_library clean
 
 test: build_library install_library build_unittest clean
 
-build_library: $(LIB_OBJS)
-	$(CC) ${CFLAGS} -shared -Wl,-soname,$(LIBRARY_NAME).so -o $(LIBRARY_NAME).so.$(LIB_VER) $(LIB_OBJS) ${LIBS}
+test_pack: build_unittest_pack clean
+
 $(LIB_OBJS): $(SRC_DIR)/%.o: $(SRC_DIR)/%.c
 	$(CC) ${CFLAGS} -fPIC -c $< -o $@ ${LIBS}
 
-build_unittest: $(UNITTEST_SRC).o
-	$(CC) ${CFLAGS} -o $(UNITTEST_NAME) $(UNITTEST_SRC).o ${LIBS} -lcplus
 $(UNITTEST_SRC).o:
 	$(CC) ${CFLAGS} -c $(SRC_DIR)/$(UNITTEST_SRC).c
+
+build_library: $(LIB_OBJS)
+	$(CC) ${CFLAGS} -shared -Wl,-soname,$(LIBRARY_NAME).so -o $(LIBRARY_NAME).so.$(LIB_VER) $(LIB_OBJS) ${LIBS}
+
+build_unittest: $(UNITTEST_SRC).o
+	$(CC) ${CFLAGS} -o $(UNITTEST_NAME) $(UNITTEST_SRC).o ${LIBS} -lcplus
+
+build_unittest_pack: $(LIB_OBJS) $(UNITTEST_SRC).o
+	$(CC) ${CFLAGS} -o $(UNITTEST_NAME)_one $(LIB_OBJS) $(UNITTEST_SRC).o ${LIBS}
 
 install_library:
 	@sudo install -m 777 -d $(INSTALL_HDR_DIR)/cplus

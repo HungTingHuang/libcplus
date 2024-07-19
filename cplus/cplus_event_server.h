@@ -2,9 +2,9 @@
 #define __CPLUS_EVENT_SERVER_H__
 #include "cplus_typedef.h"
 
-typedef int32_t (* CPLUS_EVENT_SERVER_CB_ON_ERROR)(int32_t fd, int32_t error_no);
-typedef int32_t (* CPLUS_EVENT_SERVER_CB_ON_TIMEOUT)(int32_t fd);
-typedef int32_t (* CPLUS_EVENT_SERVER_CB_ON_READ)(int32_t fd, int32_t value);
+typedef int32_t (* CPLUS_EVENT_SERVER_CB_ON_ERROR)(int32_t fd, int32_t error_no, void * cb_param);
+typedef int32_t (* CPLUS_EVENT_SERVER_CB_ON_TIMEOUT)(int32_t fd, void * cb_param);
+typedef int32_t (* CPLUS_EVENT_SERVER_CB_ON_READ)(int32_t fd, int32_t value, void * cb_param);
 
 typedef struct cplus_event_server_cb_funcs
 {
@@ -27,6 +27,7 @@ typedef struct cplus_event_server_config
     uint32_t init_val;
     CPLUS_EVENT_SERVER_FLAG flag;
     bool start;
+    void * cb_param;
 } *CPLUS_EVENT_SERVER_CONFIG, CPLUS_EVENT_SERVER_CONFIG_T;
 
 cplus_event_server cplus_event_server_new(

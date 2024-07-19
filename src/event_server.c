@@ -38,6 +38,7 @@ typedef struct event_server
     int32_t flag;
     bool start;
     cplus_task poll_proc;
+    void * cb_param;
     CPLUS_EVENT_SERVER_CB_ON_ERROR on_error;
     CPLUS_EVENT_SERVER_CB_ON_TIMEOUT on_timeout;
     CPLUS_EVENT_SERVER_CB_ON_READ on_read;
@@ -131,7 +132,7 @@ static void event_poll_proc(void * param1, void * param2)
         {
             if (server->on_error)
             {
-                server->on_error(pollfds[0].fd, errno);
+                server->on_error(pollfds[0].fd, errno, server->cb_param);
             }
         }
         break;
@@ -139,7 +140,7 @@ static void event_poll_proc(void * param1, void * param2)
         {
             if (server->on_timeout)
             {
-                server->on_timeout(pollfds[0].fd);
+                server->on_timeout(pollfds[0].fd, server->cb_param);
             }
         }
         break;
@@ -149,7 +150,7 @@ static void event_poll_proc(void * param1, void * param2)
             {
                 if (sizeof(uint64_t) == read(pollfds[0].fd, &read_value, sizeof(uint64_t)))
                 {
-                    server->on_read(pollfds[0].fd, read_value);
+                    server->on_read(pollfds[0].fd, read_value, server->cb_param);
                 }
             }
             if (pollfds[0].revents & POLLPRI)
@@ -213,6 +214,7 @@ static void * event_server_initialize_object(
         server->init_val = config->init_val;
         server->flag = config->flag;
         server->start = !!(config->start);
+        server->cb_param = config->cb_param;
         if (cb_funcs)
         {
             if (cb_funcs->on_error)
@@ -295,6 +297,7 @@ cplus_event_server cplus_event_server_new(
     config.init_val = init_val;
     config.flag = flag;
     config.start = false;
+    config.cb_param = NULL;
 
     return event_server_initialize_object(&config, cb_funcs);
 }
@@ -428,11 +431,19 @@ bool cplus_event_client_check(cplus_object obj)
 #define WRITTEN_COUNT 5
 #define RUN_COUNT 10
 
-int32_t verification_count = 0;
+int32_t verification_count = 0, callback_param = 0;
 
-int32_t on_read(int32_t fd, int32_t value)
+int32_t on_read(int32_t fd, int32_t value, void * cb_param)
 {
     verification_count += 5;
+    return 0;
+}
+
+int32_t on_read_ex(int32_t fd, int32_t value, void * cb_param)
+{
+    int32_t * param = (int32_t *)(cb_param);
+    verification_count += 5;
+    (* param ) += 5;
     return 0;
 }
 
@@ -472,8 +483,9 @@ CPLUS_UNIT_TEST(cplus_event_server_new, CPLUS_SOCKET_TYPE_STREAM_LOCAL)
     config.enable_ipc = true;
     config.init_val = 0;
     config.flag = CPLUS_EVENT_SERVER_FLAG_NONBLOCK;
+    config.cb_param = &callback_param;
 
-    on_funcs.on_read = on_read;
+    on_funcs.on_read = on_read_ex;
 
     UNITTEST_EXPECT_EQ(true, (NULL != (server = cplus_event_server_new_config(
         &config
@@ -488,6 +500,7 @@ CPLUS_UNIT_TEST(cplus_event_server_new, CPLUS_SOCKET_TYPE_STREAM_LOCAL)
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_event_client_delete(client));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_event_server_delete(server));
     UNITTEST_EXPECT_EQ(true, ((RUN_COUNT * WRITTEN_COUNT) == verification_count));
+    UNITTEST_EXPECT_EQ(true, ((RUN_COUNT * WRITTEN_COUNT) == callback_param));
     UNITTEST_EXPECT_EQ(0, cplus_mgr_report());
 }
 
@@ -496,5 +509,4 @@ void unittest_event_server(void)
     UNITTEST_ADD_TESTCASE(cplus_event_server_new, functionity);
     UNITTEST_ADD_TESTCASE(cplus_event_server_new, CPLUS_SOCKET_TYPE_STREAM_LOCAL);
 }
-
 #endif
