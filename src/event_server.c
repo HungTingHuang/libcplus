@@ -20,7 +20,7 @@
 #define DEFAULT_POLL_EVENT_TIMEOUT 500U
 #define DEFAULT_EVENT_SERVER_NAME "fd_pass"
 #define DEFAULT_LISTEN_COUNT 10
-#define TIMEOUT_FOR_STOP_ACCEPT_TASK 5000U
+#define TIMEOUT_FOR_STOP_ACCEPT_TASK 500U
 #define DURATION_FOR_ACCEPT_TASK 100U
 #define TIMEOUT_FOR_ACCEPT_TASK 500U
 #define TIMEOUT_FOR_RECV_PASS_FD_ACK 5000U
@@ -38,6 +38,9 @@ typedef struct event_server
     int32_t flag;
     bool start;
     cplus_task poll_proc;
+    CPLUS_EVENT_SERVER_CB_ON_ERROR on_error;
+    CPLUS_EVENT_SERVER_CB_ON_TIMEOUT on_timeout;
+    CPLUS_EVENT_SERVER_CB_ON_READ on_read;
 } * EVENT_SERVER, EVENT_SERVER_T;
 
 typedef struct event_client
@@ -115,39 +118,38 @@ int32_t cplus_event_client_delete(cplus_event_client obj)
 static void event_poll_proc(void * param1, void * param2)
 {
     EVENT_SERVER server = (EVENT_SERVER)(param1);
-    CPLUS_EVENT_SERVER_CB_FUNCS cb_funcs = (CPLUS_EVENT_SERVER_CB_FUNCS)(param2);
     struct pollfd pollfds[1] = {0};
     uint64_t read_value = 0;
+    UNUSED_PARAM(param2);
 
     pollfds[0].fd = server->efd;
     pollfds[0].events = POLLIN | POLLPRI | POLLERR | POLLHUP | POLLNVAL;
     pollfds[0].revents = 0;
-
     switch(poll(pollfds, 1, CPLUS_INFINITE_TIMEOUT))
     {
     case -1: /* error */
         {
-            if (cb_funcs->on_error)
+            if (server->on_error)
             {
-                cb_funcs->on_error(pollfds[0].fd, errno);
+                server->on_error(pollfds[0].fd, errno);
             }
         }
         break;
     case 0: /* tiemout */
         {
-            if (cb_funcs->on_timeout)
+            if (server->on_timeout)
             {
-                cb_funcs->on_timeout(pollfds[0].fd);
+                server->on_timeout(pollfds[0].fd);
             }
         }
         break;
     default:
         {
-            if ((pollfds[0].revents & POLLIN) && cb_funcs->on_read)
+            if ((pollfds[0].revents & POLLIN) && server->on_read)
             {
                 if (sizeof(uint64_t) == read(pollfds[0].fd, &read_value, sizeof(uint64_t)))
                 {
-                    cb_funcs->on_read(pollfds[0].fd, read_value);
+                    server->on_read(pollfds[0].fd, read_value);
                 }
             }
             if (pollfds[0].revents & POLLPRI)
@@ -211,6 +213,21 @@ static void * event_server_initialize_object(
         server->init_val = config->init_val;
         server->flag = config->flag;
         server->start = !!(config->start);
+        if (cb_funcs)
+        {
+            if (cb_funcs->on_error)
+            {
+                server->on_error = cb_funcs->on_error;
+            }
+            if (cb_funcs->on_timeout)
+            {
+                server->on_timeout = cb_funcs->on_timeout;
+            }
+            if (cb_funcs->on_read)
+            {
+                server->on_read = cb_funcs->on_read;
+            }
+        }
         server->efd = eventfd(server->init_val, convert_efd_flag(server->flag));
         if (-1 == server->efd)
         {
