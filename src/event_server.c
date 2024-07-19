@@ -121,6 +121,7 @@ static void event_poll_proc(void * param1, void * param2)
     EVENT_SERVER server = (EVENT_SERVER)(param1);
     struct pollfd pollfds[1] = {0};
     uint64_t read_value = 0;
+    int32_t value = 0;
     UNUSED_PARAM(param2);
 
     pollfds[0].fd = server->efd;
@@ -150,7 +151,9 @@ static void event_poll_proc(void * param1, void * param2)
             {
                 if (sizeof(uint64_t) == read(pollfds[0].fd, &read_value, sizeof(uint64_t)))
                 {
-                    server->on_read(pollfds[0].fd, read_value, server->cb_param);
+                    value = (int32_t)(read_value);
+                    server->on_read(pollfds[0].fd, value, server->cb_param);
+                    value = 0;
                 }
             }
             if (pollfds[0].revents & POLLPRI)
