@@ -14,14 +14,14 @@
 #define OBJ_TYPE_SERVER (OBJ_NONE + SYS + 9)
 #define OBJ_TYPE_CLIENT (OBJ_NONE + SYS + 10)
 
-#define DURATION_FOR_POLL_PROC 10U
+#define DURATION_FOR_POLL_PROC 100U
 #define TIMEOUT_FOR_STOP_EVENT_POLL 500U
 #define DEFAULT_POLL_EVENT_COUNT 10
 #define DEFAULT_POLL_EVENT_TIMEOUT 500U
 #define DEFAULT_EVENT_SERVER_NAME "fd_pass"
 #define DEFAULT_LISTEN_COUNT 10
 #define TIMEOUT_FOR_STOP_ACCEPT_TASK 5000U
-#define DURATION_FOR_ACCEPT_TASK 10U
+#define DURATION_FOR_ACCEPT_TASK 100U
 #define TIMEOUT_FOR_ACCEPT_TASK 500U
 #define TIMEOUT_FOR_RECV_PASS_FD_ACK 5000U
 #define CHECK_RECV_FD "RECV_FD"
@@ -123,7 +123,7 @@ static void event_poll_proc(void * param1, void * param2)
     pollfds[0].events = POLLIN | POLLPRI | POLLERR | POLLHUP | POLLNVAL;
     pollfds[0].revents = 0;
 
-    switch(poll(pollfds, 1, DEFAULT_POLL_EVENT_TIMEOUT))
+    switch(poll(pollfds, 1, CPLUS_INFINITE_TIMEOUT))
     {
     case -1: /* error */
         {
@@ -143,7 +143,7 @@ static void event_poll_proc(void * param1, void * param2)
         break;
     default:
         {
-            if (pollfds[0].revents & POLLIN && cb_funcs->on_read)
+            if ((pollfds[0].revents & POLLIN) && cb_funcs->on_read)
             {
                 if (sizeof(uint64_t) == read(pollfds[0].fd, &read_value, sizeof(uint64_t)))
                 {
@@ -179,7 +179,7 @@ static void accept_proc(void * param1, void * param2)
     uint8_t recv_bufs[32] = {0};
     UNUSED_PARAM(param2);
 
-    if ((sock = cplus_socket_accept(server->skt_server, TIMEOUT_FOR_ACCEPT_TASK)))
+    if ((sock = cplus_socket_accept(server->skt_server, CPLUS_INFINITE_TIMEOUT)))
     {
         cplus_socket_send_fd(sock, server->efd, NULL, 0);
         if (strlen(CHECK_RECV_FD) == cplus_socket_recv(sock
