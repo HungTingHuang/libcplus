@@ -22,5 +22,4 @@ int32_t cplus_crit_sect_exit(cplus_mutex obj);
 #ifdef __cplusplus
 }
 #endif
-
 #endif // __CPLUS_MUTEX_H__

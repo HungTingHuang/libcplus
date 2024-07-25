@@ -105,7 +105,7 @@ static void * file_initialize_object(
         f->flag = flag;
         f->mode = mode;
         f->fd = open(file, (f->access | f->flag), f->mode);
-        if (-1 == f->fd)
+        if (INVALID_FD == f->fd)
         {
             goto exit;
         }
@@ -146,7 +146,7 @@ int32_t cplus_file_open(cplus_file obj)
     CHECK_OBJECT_TYPE(obj);
 
     flag = f->flag;
-    if (-1 == f->fd)
+    if (INVALID_FD == f->fd)
     {
         if (!is_exist(f->file_path))
         {
@@ -154,7 +154,7 @@ int32_t cplus_file_open(cplus_file obj)
         }
 
         f->fd = open((const char *)(f->file_path), (f->access | flag), f->mode);
-        if (-1 == f->fd)
+        if (INVALID_FD == f->fd)
         {
             goto exit;
         }
@@ -172,7 +172,7 @@ int32_t cplus_file_close(cplus_file obj)
 
     if (0 == (res = close(f->fd)))
     {
-        f->fd = -1;
+        f->fd = INVALID_FD;
     }
     return res;
 }
@@ -374,12 +374,12 @@ CPLUS_UNIT_TEST(cplus_file_new, functionity)
     cplus_file file;
 
     UNITTEST_EXPECT_EQ(true, (NULL != (file = cplus_file_new_ex(
-        TEST_FILE, CPLUS_FILE_ACCESS_RDWR, CPLUS_FILE_FLAG_CREATE, CPLUS_FILE_MODE_ALL))));
+        (char *)(TEST_FILE), CPLUS_FILE_ACCESS_RDWR, CPLUS_FILE_FLAG_CREATE, CPLUS_FILE_MODE_ALL))));
     UNITTEST_EXPECT_EQ(true, (true == cplus_file_check(file)));
-    UNITTEST_EXPECT_EQ(true, (true == cplus_file_is_exist(TEST_FILE)));
+    UNITTEST_EXPECT_EQ(true, (true == cplus_file_is_exist((char *)(TEST_FILE))));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_file_delete(file));
-    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_file_remove(TEST_FILE));
-    UNITTEST_EXPECT_EQ(true, (false == cplus_file_is_exist(TEST_FILE)));
+    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_file_remove((char *)(TEST_FILE)));
+    UNITTEST_EXPECT_EQ(true, (false == cplus_file_is_exist((char *)(TEST_FILE))));
     UNITTEST_EXPECT_EQ(0, cplus_mgr_report());
 }
 
@@ -388,9 +388,9 @@ CPLUS_UNIT_TEST(cplus_file_write, functionity)
     cplus_file file;
 
     UNITTEST_EXPECT_EQ(true, (NULL != (file = cplus_file_new_ex(
-        TEST_FILE, CPLUS_FILE_ACCESS_WRONLY, CPLUS_FILE_FLAG_CREATE, CPLUS_FILE_MODE_ALL))));
-    UNITTEST_EXPECT_EQ(true, (true == cplus_file_is_exist(TEST_FILE)));
-    UNITTEST_EXPECT_EQ(strlen(TEST_STR), cplus_file_write(file, strlen(TEST_STR), TEST_STR));
+        (char *)(TEST_FILE), CPLUS_FILE_ACCESS_WRONLY, CPLUS_FILE_FLAG_CREATE, CPLUS_FILE_MODE_ALL))));
+    UNITTEST_EXPECT_EQ(true, (true == cplus_file_is_exist((char *)(TEST_FILE))));
+    UNITTEST_EXPECT_EQ(strlen(TEST_STR), cplus_file_write(file, strlen(TEST_STR), (void *)(TEST_STR)));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_file_delete(file));
     UNITTEST_EXPECT_EQ(0, cplus_mgr_report());
 }
@@ -401,13 +401,13 @@ CPLUS_UNIT_TEST(cplus_file_read, functionity)
     char rr[32] = {0};
 
     UNITTEST_EXPECT_EQ(true, (NULL != (file = cplus_file_new_ex(
-        TEST_FILE, CPLUS_FILE_ACCESS_RDONLY, CPLUS_FILE_FLAG_CREATE, CPLUS_FILE_MODE_ALL))));
-    UNITTEST_EXPECT_EQ(true, (true == cplus_file_is_exist(TEST_FILE)));
+        (char *)(TEST_FILE), CPLUS_FILE_ACCESS_RDONLY, CPLUS_FILE_FLAG_CREATE, CPLUS_FILE_MODE_ALL))));
+    UNITTEST_EXPECT_EQ(true, (true == cplus_file_is_exist((char *)(TEST_FILE))));
     UNITTEST_EXPECT_EQ(strlen(TEST_STR), cplus_file_read(file, sizeof(rr), rr));
     UNITTEST_EXPECT_EQ(true, (0 == strcmp(TEST_STR, rr)));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_file_delete(file));
-    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_file_remove(TEST_FILE));
-    UNITTEST_EXPECT_EQ(true, (false == cplus_file_is_exist(TEST_FILE)));
+    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_file_remove((char *)(TEST_FILE)));
+    UNITTEST_EXPECT_EQ(true, (false == cplus_file_is_exist((char *)(TEST_FILE))));
     UNITTEST_EXPECT_EQ(0, cplus_mgr_report());
 }
 
@@ -416,13 +416,13 @@ CPLUS_UNIT_TEST(cplus_file_get_data_size, functionity)
     cplus_file file;
 
     UNITTEST_EXPECT_EQ(true, (NULL != (file = cplus_file_new_ex(
-        TEST_FILE, CPLUS_FILE_ACCESS_WRONLY, CPLUS_FILE_FLAG_CREATE, CPLUS_FILE_MODE_ALL))));
-    UNITTEST_EXPECT_EQ(true, (true == cplus_file_is_exist(TEST_FILE)));
-    UNITTEST_EXPECT_EQ(strlen(TEST_STR), cplus_file_write(file, strlen(TEST_STR), TEST_STR));
+        (char *)(TEST_FILE), CPLUS_FILE_ACCESS_WRONLY, CPLUS_FILE_FLAG_CREATE, CPLUS_FILE_MODE_ALL))));
+    UNITTEST_EXPECT_EQ(true, (true == cplus_file_is_exist((char *)(TEST_FILE))));
+    UNITTEST_EXPECT_EQ(strlen(TEST_STR), cplus_file_write(file, strlen(TEST_STR), (void *)(TEST_STR)));
     UNITTEST_EXPECT_EQ(strlen(TEST_STR), cplus_file_get_data_size(file));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_file_delete(file));
-    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_file_remove(TEST_FILE));
-    UNITTEST_EXPECT_EQ(true, (false == cplus_file_is_exist(TEST_FILE)));
+    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_file_remove((char *)(TEST_FILE)));
+    UNITTEST_EXPECT_EQ(true, (false == cplus_file_is_exist((char *)(TEST_FILE))));
     UNITTEST_EXPECT_EQ(0, cplus_mgr_report());
 }
 
@@ -433,17 +433,17 @@ CPLUS_UNIT_TEST(cplus_file_get_data, functionity)
     char rr[32] = {0};
 
     UNITTEST_EXPECT_EQ(true, (NULL != (file = cplus_file_new_ex(
-        TEST_FILE, CPLUS_FILE_ACCESS_RDWR, CPLUS_FILE_FLAG_CREATE, CPLUS_FILE_MODE_ALL))));
-    UNITTEST_EXPECT_EQ(true, (true == cplus_file_is_exist(TEST_FILE)));
-    UNITTEST_EXPECT_EQ(strlen(TEST_STR), cplus_file_write(file, strlen(TEST_STR), TEST_STR));
+        (char *)(TEST_FILE), CPLUS_FILE_ACCESS_RDWR, CPLUS_FILE_FLAG_CREATE, CPLUS_FILE_MODE_ALL))));
+    UNITTEST_EXPECT_EQ(true, (true == cplus_file_is_exist((char *)(TEST_FILE))));
+    UNITTEST_EXPECT_EQ(strlen(TEST_STR), cplus_file_write(file, strlen(TEST_STR), (void *)(TEST_STR)));
     UNITTEST_EXPECT_EQ(true, (NULL != (bufs = cplus_file_get_data(file))));
     UNITTEST_EXPECT_EQ(true, (0 == memcmp(bufs, TEST_STR, cplus_file_get_data_size(file))));
     UNITTEST_EXPECT_EQ(0, cplus_file_reset_pos(file));
     UNITTEST_EXPECT_EQ(strlen(TEST_STR), cplus_file_read(file, sizeof(rr), rr));
     UNITTEST_EXPECT_EQ(true, (0 == strcmp(TEST_STR, rr)));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_file_delete(file));
-    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_file_remove(TEST_FILE));
-    UNITTEST_EXPECT_EQ(true, (false == cplus_file_is_exist(TEST_FILE)));
+    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_file_remove((char *)(TEST_FILE)));
+    UNITTEST_EXPECT_EQ(true, (false == cplus_file_is_exist((char *)(TEST_FILE))));
     UNITTEST_EXPECT_EQ(0, cplus_mgr_report());
 }
 

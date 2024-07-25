@@ -44,15 +44,13 @@ static void * socket_initialize_object(
     , int32_t ip_protocol)
 {
     struct socket * skt = NULL;
+    int32_t domain_in = 0, style_in = 0, ip_protocol_in = 0;
 
     if ((skt = (struct socket *)cplus_malloc(sizeof(struct socket))))
     {
-        int32_t domain_in = 0, style_in = 0, ip_protocol_in = 0;
-
         CPLUS_INITIALIZE_STRUCT_POINTER(skt);
-
         skt->type = OBJ_TYPE;
-        skt->socket = CPLUS_INVALID_SOCKET;
+        skt->socket = INVALID_SOCKET;
         skt->domain = domain;
         skt->style = style;
         skt->ip_protocol = ip_protocol;
@@ -64,16 +62,24 @@ static void * socket_initialize_object(
             errno = EINVAL;
             goto exit;
         case CPLUS_SOCKET_DOMAIN_IPV4:
-            domain_in = AF_INET;
+            {
+                domain_in = AF_INET;
+            }
             break;
         case CPLUS_SOCKET_DOMAIN_IPV6:
-            domain_in = AF_INET6;
+            {
+                domain_in = AF_INET6;
+            }
             break;
         case CPLUS_SOCKET_DOMAIN_LOCAL:
-            domain_in = AF_UNIX;
+            {
+                domain_in = AF_UNIX;
+            }
             break;
         case CPLUS_SOCKET_DOMAIN_UNSPEC:
-            domain_in = PF_UNSPEC;
+            {
+                domain_in = PF_UNSPEC;
+            }
             break;
         }
 
@@ -83,10 +89,14 @@ static void * socket_initialize_object(
             errno = EINVAL;
             goto exit;
         case CPLUS_SOCKET_STYLE_STREAM:
-            style_in = SOCK_STREAM;
+            {
+                style_in = SOCK_STREAM;
+            }
             break;
         case CPLUS_SOCKET_STYLE_DGRAM:
-            style_in = SOCK_DGRAM;
+            {
+                style_in = SOCK_DGRAM;
+            }
             break;
         }
 
@@ -96,20 +106,27 @@ static void * socket_initialize_object(
             errno = EINVAL;
             goto exit;
         case CPLUS_SOCKET_IP_PROTOCOL_NONE:
-            ip_protocol_in = IPPROTO_IP;
+            {
+                ip_protocol_in = IPPROTO_IP;
+            }
             break;
         case CPLUS_SOCKET_IP_PROTOCOL_TCP:
-            ip_protocol_in = IPPROTO_TCP;
+            {
+                ip_protocol_in = IPPROTO_TCP;
+            }
             break;
         case CPLUS_SOCKET_IP_PROTOCOL_UDP:
-            ip_protocol_in = IPPROTO_UDP;
+            {
+                ip_protocol_in = IPPROTO_UDP;
+            }
             break;
         }
 
         if (true == create_socket)
         {
-            if (CPLUS_INVALID_SOCKET == (skt->socket = socket(
-                domain_in, style_in, ip_protocol_in)))
+            if (INVALID_SOCKET == (skt->socket = socket(domain_in
+                , style_in
+                , ip_protocol_in)))
             {
                 goto exit;
             }
@@ -123,14 +140,14 @@ exit:
 
 int32_t cplus_socket_delete(cplus_socket obj)
 {
-    struct socket * skt = (struct socket *)obj;
+    struct socket * skt = (struct socket *)(obj);
     CHECK_OBJECT_TYPE(obj);
 
-    if (CPLUS_INVALID_SOCKET != skt->socket)
+    if (INVALID_SOCKET != skt->socket)
     {
         shutdown(skt->socket, SHUT_RDWR);
         close(skt->socket);
-        skt->socket = CPLUS_INVALID_SOCKET;
+        skt->socket = INVALID_SOCKET;
     }
 
     if (CPLUS_SOCKET_DOMAIN_LOCAL == skt->domain)
@@ -180,47 +197,53 @@ cplus_socket cplus_socket_new(CPLUS_SOCKET_TYPE type)
         return NULL;
 
     case CPLUS_SOCKET_TYPE_TCP_IPV4:
-        skt = cplus_socket_new_ex(
-            CPLUS_SOCKET_DOMAIN_IPV4
-            , CPLUS_SOCKET_STYLE_STREAM
-            , CPLUS_SOCKET_IP_PROTOCOL_TCP);
+        {
+            skt = cplus_socket_new_ex(
+                CPLUS_SOCKET_DOMAIN_IPV4
+                , CPLUS_SOCKET_STYLE_STREAM
+                , CPLUS_SOCKET_IP_PROTOCOL_TCP);
+        }
         break;
-
     case CPLUS_SOCKET_TYPE_TCP_IPV6:
-        skt = cplus_socket_new_ex(
-            CPLUS_SOCKET_DOMAIN_IPV6
-            , CPLUS_SOCKET_STYLE_STREAM
-            , CPLUS_SOCKET_IP_PROTOCOL_TCP);
+        {
+            skt = cplus_socket_new_ex(
+                CPLUS_SOCKET_DOMAIN_IPV6
+                , CPLUS_SOCKET_STYLE_STREAM
+                , CPLUS_SOCKET_IP_PROTOCOL_TCP);
+        }
         break;
-
     case CPLUS_SOCKET_TYPE_UDP_IPV4:
-        skt = cplus_socket_new_ex(
-            CPLUS_SOCKET_DOMAIN_IPV4
-            , CPLUS_SOCKET_STYLE_DGRAM
-            , CPLUS_SOCKET_IP_PROTOCOL_UDP);
+        {
+            skt = cplus_socket_new_ex(
+                CPLUS_SOCKET_DOMAIN_IPV4
+                , CPLUS_SOCKET_STYLE_DGRAM
+                , CPLUS_SOCKET_IP_PROTOCOL_UDP);
+        }
         break;
-
     case CPLUS_SOCKET_TYPE_UDP_IPV6:
-        skt = cplus_socket_new_ex(
-            CPLUS_SOCKET_DOMAIN_IPV6
-            , CPLUS_SOCKET_STYLE_DGRAM
-            , CPLUS_SOCKET_IP_PROTOCOL_UDP);
+        {
+            skt = cplus_socket_new_ex(
+                CPLUS_SOCKET_DOMAIN_IPV6
+                , CPLUS_SOCKET_STYLE_DGRAM
+                , CPLUS_SOCKET_IP_PROTOCOL_UDP);
+        }
         break;
-
     case CPLUS_SOCKET_TYPE_STREAM_LOCAL:
-        skt = cplus_socket_new_ex(
-            CPLUS_SOCKET_DOMAIN_LOCAL
-            , CPLUS_SOCKET_STYLE_STREAM
-            , CPLUS_SOCKET_IP_PROTOCOL_NONE);
+        {
+            skt = cplus_socket_new_ex(
+                CPLUS_SOCKET_DOMAIN_LOCAL
+                , CPLUS_SOCKET_STYLE_STREAM
+                , CPLUS_SOCKET_IP_PROTOCOL_NONE);
+        }
         break;
-
     case CPLUS_SOCKET_TYPE_DGRAM_LOCAL:
-        skt = cplus_socket_new_ex(
-            CPLUS_SOCKET_DOMAIN_LOCAL
-            , CPLUS_SOCKET_STYLE_DGRAM
-            , CPLUS_SOCKET_IP_PROTOCOL_NONE);
+        {
+            skt = cplus_socket_new_ex(
+                CPLUS_SOCKET_DOMAIN_LOCAL
+                , CPLUS_SOCKET_STYLE_DGRAM
+                , CPLUS_SOCKET_IP_PROTOCOL_NONE);
+        }
         break;
-
     case CPLUS_SOCKET_TYPE_DUEL_STACK:
         errno = ENOTSUP;
         break;
@@ -231,9 +254,9 @@ cplus_socket cplus_socket_new(CPLUS_SOCKET_TYPE type)
 
 int32_t cplus_socket_shutdown(cplus_socket obj)
 {
-    struct socket * skt = (struct socket *)obj;
+    struct socket * skt = (struct socket *)(obj);
     CHECK_OBJECT_TYPE(obj);
-    CHECK_IF(CPLUS_INVALID_SOCKET == skt->socket, CPLUS_FAIL);
+    CHECK_IF(INVALID_SOCKET == skt->socket, CPLUS_FAIL);
     CHECK_IF(false == skt->is_connected, CPLUS_SUCCESS);
     CHECK_IF(CPLUS_SOCKET_STYLE_STREAM != skt->style, CPLUS_SUCCESS);
 
@@ -244,26 +267,34 @@ int32_t cplus_socket_shutdown_ex(
     cplus_socket obj
     , CPLUS_SOCKET_SHUTDOWN_MODE mode)
 {
-    struct socket * skt = (struct socket *)obj;
+    struct socket * skt = (struct socket *)(obj);
     int mode_t = 0;
     CHECK_OBJECT_TYPE(obj);
-    CHECK_IF(CPLUS_INVALID_SOCKET == skt->socket, CPLUS_FAIL);
+    CHECK_IF(INVALID_SOCKET == skt->socket, CPLUS_FAIL);
     CHECK_IF(false == skt->is_connected, CPLUS_SUCCESS);
     CHECK_IF(CPLUS_SOCKET_STYLE_STREAM != skt->style, CPLUS_SUCCESS);
 
     switch (mode)
     {
     default:
-        errno = EINVAL;
+        {
+            errno = EINVAL;
+        }
         return CPLUS_FAIL;
     case CPLUS_SOCKET_SHUTDOWN_MODE_READ:
-        mode_t = SHUT_RD;
+        {
+            mode_t = SHUT_RD;
+        }
         break;
     case CPLUS_SOCKET_SHUTDOWN_MODE_WRITE:
-        mode_t = SHUT_WR;
+        {
+            mode_t = SHUT_WR;
+        }
         break;
     case CPLUS_SOCKET_SHUTDOWN_MODE_BOTH:
-        mode_t = SHUT_RDWR;
+        {
+            mode_t = SHUT_RDWR;
+        }
         break;
     }
 
@@ -272,13 +303,13 @@ int32_t cplus_socket_shutdown_ex(
 
 int32_t cplus_socket_close(cplus_socket obj)
 {
-    struct socket * skt = (struct socket *)obj;
+    struct socket * skt = (struct socket *)(obj);
     CHECK_OBJECT_TYPE(obj);
-    CHECK_IF(CPLUS_INVALID_SOCKET == skt->socket, CPLUS_FAIL);
+    CHECK_IF(INVALID_SOCKET == skt->socket, CPLUS_FAIL);
 
     if (0 == close(skt->socket))
     {
-        skt->socket = CPLUS_INVALID_SOCKET;
+        skt->socket = INVALID_SOCKET;
         return CPLUS_SUCCESS;
     }
     return CPLUS_FAIL;
@@ -291,7 +322,7 @@ static int32_t to_socket_addr(
     , void * to_addr
     , socklen_t * to_addr_size)
 {
-    union socketaddr * addr_t = (union socketaddr *)to_addr;
+    union socketaddr * addr_t = (union socketaddr *)(to_addr);
     CHECK_NOT_NULL(to_addr, CPLUS_FAIL);
 
     if (NULL == from_addr)
@@ -417,9 +448,9 @@ int32_t cplus_socket_bind(
     , int32_t port)
 {
     int32_t res = CPLUS_FAIL;
-    struct socket * skt = (struct socket *)obj;
+    struct socket * skt = (struct socket *)(obj);
     CHECK_OBJECT_TYPE(obj);
-    CHECK_IF(CPLUS_INVALID_SOCKET == skt->socket, CPLUS_FAIL);
+    CHECK_IF(INVALID_SOCKET == skt->socket, CPLUS_FAIL);
 
     socklen_t addr_size = 0;
     union socketaddr addr_t = {0};
@@ -456,9 +487,9 @@ int32_t cplus_socket_connect(
     , int32_t port)
 {
     int32_t res = CPLUS_FAIL;
-    struct socket * skt = (struct socket *)obj;
+    struct socket * skt = (struct socket *)(obj);
     CHECK_OBJECT_TYPE(obj);
-    CHECK_IF(CPLUS_INVALID_SOCKET == skt->socket, CPLUS_FAIL);
+    CHECK_IF(INVALID_SOCKET == skt->socket, CPLUS_FAIL);
 
     socklen_t addr_size = 0;
     union socketaddr addr_t = {0};
@@ -478,22 +509,22 @@ int32_t cplus_socket_connect(
 
 int32_t cplus_socket_listen(cplus_socket obj, int32_t max_conn)
 {
-    struct socket * skt = (struct socket *)obj;
+    struct socket * skt = (struct socket *)(obj);
     CHECK_OBJECT_TYPE(obj);
-    CHECK_IF(CPLUS_INVALID_SOCKET == skt->socket, CPLUS_FAIL);
+    CHECK_IF(INVALID_SOCKET == skt->socket, CPLUS_FAIL);
 
     return listen(skt->socket, CPLUS_MIN(max_conn, SOMAXCONN));
 }
 
 cplus_socket cplus_socket_accept(cplus_socket obj, uint32_t timeout)
 {
-    struct socket * skt = (struct socket *)obj;
+    struct socket * skt = (struct socket *)(obj);
     struct socket * new_skt = NULL;
     struct sockaddr connected_addr = {0};
     socklen_t connected_addr_len = sizeof(struct sockaddr);
 
     CHECK_OBJECT_TYPE(obj);
-    CHECK_IF(CPLUS_INVALID_SOCKET == skt->socket, NULL);
+    CHECK_IF(INVALID_SOCKET == skt->socket, NULL);
 
     if (CPLUS_SUCCESS != ready_to_recv(skt->socket, timeout))
     {
@@ -504,14 +535,14 @@ cplus_socket cplus_socket_accept(cplus_socket obj, uint32_t timeout)
         , &connected_addr
         , &connected_addr_len);
 
-    if (CPLUS_INVALID_SOCKET == client_socket)
+    if (INVALID_SOCKET == client_socket)
     {
         return NULL;
     }
 
     skt->is_connected = true;
 
-    new_skt = socket_initialize_object(
+    new_skt = (struct socket *)socket_initialize_object(
         false, skt->domain, skt->style, skt->ip_protocol);
 
     new_skt->socket = client_socket;
@@ -529,9 +560,12 @@ int32_t cplus_socket_recvfrom(
     , uint32_t timeout)
 {
     int32_t res = 0;
-    struct socket * skt = (struct socket *)obj;
+    struct socket * skt = (struct socket *)(obj);
+    char local_name[128] = {0};
+    union socketaddr addr = {0};
+    socklen_t addr_size = 0;
     CHECK_OBJECT_TYPE(obj);
-    CHECK_IF(CPLUS_INVALID_SOCKET == skt->socket, CPLUS_FAIL);
+    CHECK_IF(INVALID_SOCKET == skt->socket, CPLUS_FAIL);
     CHECK_NOT_NULL(data_bufs, CPLUS_FAIL);
     CHECK_GT_ZERO(data_len, CPLUS_FAIL);
 
@@ -540,28 +574,30 @@ int32_t cplus_socket_recvfrom(
         return CPLUS_FAIL;
     }
 
-    if (!(NULL != from_addr and 0 < from_addr_size and NULL != from_port))
+    if (!(NULL != from_addr AND 0 < from_addr_size AND NULL != from_port))
     {
         res = recv(skt->socket, data_bufs, data_len, 0);
     }
     else
     {
-        char local_name[128] = {0};
-        union socketaddr addr = {0};
-        socklen_t addr_size = 0;
-
         switch (skt->domain)
         {
         default:
             break;
         case CPLUS_SOCKET_DOMAIN_IPV4:
-            addr_size = sizeof(struct sockaddr_in);
+            {
+                addr_size = sizeof(struct sockaddr_in);
+            }
             break;
         case CPLUS_SOCKET_DOMAIN_IPV6:
-            addr_size = sizeof(struct sockaddr_in6);
+            {
+                addr_size = sizeof(struct sockaddr_in6);
+            }
             break;
         case CPLUS_SOCKET_DOMAIN_LOCAL:
-            addr_size = sizeof(struct sockaddr_un);
+            {
+                addr_size = sizeof(struct sockaddr_un);
+            }
             break;
         }
 
@@ -569,7 +605,7 @@ int32_t cplus_socket_recvfrom(
             , data_bufs
             , data_len
             , 0
-            , (struct sockaddr *)&addr
+            , (struct sockaddr *)(&(addr))
             , &addr_size)))
         {
             switch (skt->domain)
@@ -619,9 +655,9 @@ int32_t cplus_socket_sendto(
     , const char * addr
     , int32_t port)
 {
-    struct socket * skt = (struct socket *)obj;
+    struct socket * skt = (struct socket *)(obj);
     CHECK_OBJECT_TYPE(obj);
-    CHECK_IF(CPLUS_INVALID_SOCKET == skt->socket, CPLUS_FAIL);
+    CHECK_IF(INVALID_SOCKET == skt->socket, CPLUS_FAIL);
     CHECK_NOT_NULL(data_bufs, CPLUS_FAIL);
     CHECK_GT_ZERO(data_len, CPLUS_FAIL);
 
@@ -642,7 +678,7 @@ int32_t cplus_socket_sendto(
         , data_bufs
         , data_len
         , MSG_NOSIGNAL
-        , (struct sockaddr *)(&addr_t)
+        , (struct sockaddr *)(&(addr_t))
         , addr_size);
 }
 
@@ -651,9 +687,9 @@ int32_t cplus_socket_send(
     , void * data_bufs
     , int32_t data_len)
 {
-    struct socket * skt = (struct socket *)obj;
+    struct socket * skt = (struct socket *)(obj);
     CHECK_OBJECT_TYPE(obj);
-    CHECK_IF(CPLUS_INVALID_SOCKET == skt->socket, CPLUS_FAIL);
+    CHECK_IF(INVALID_SOCKET == skt->socket, CPLUS_FAIL);
     CHECK_NOT_NULL(data_bufs, CPLUS_FAIL);
     CHECK_GT_ZERO(data_len, CPLUS_FAIL);
 
@@ -667,9 +703,9 @@ int32_t cplus_socket_send(
 
 static int32_t socket_sendmsg(cplus_socket obj, struct msghdr * msg)
 {
-    struct socket * skt = (struct socket *)obj;
+    struct socket * skt = (struct socket *)(obj);
     CHECK_OBJECT_TYPE(obj);
-    CHECK_IF(CPLUS_INVALID_SOCKET == skt->socket, CPLUS_FAIL);
+    CHECK_IF(INVALID_SOCKET == skt->socket, CPLUS_FAIL);
 
     if (CPLUS_SUCCESS != ready_to_send(skt->socket, CPLUS_INFINITE_TIMEOUT))
     {
@@ -686,11 +722,11 @@ static int32_t socket_recvmsg(cplus_socket obj
     , uint32_t timeout)
 {
     int32_t res = CPLUS_SUCCESS;
-    struct socket * skt = (struct socket *)obj;
+    struct socket * skt = (struct socket *)(obj);
     union socketaddr * addr = NULL;
     char local_name[128] = {0};
     CHECK_OBJECT_TYPE(obj);
-    CHECK_IF(CPLUS_INVALID_SOCKET == skt->socket, CPLUS_FAIL);
+    CHECK_IF(INVALID_SOCKET == skt->socket, CPLUS_FAIL);
 
     if (CPLUS_SUCCESS != ready_to_recv(skt->socket, timeout))
     {
@@ -699,7 +735,7 @@ static int32_t socket_recvmsg(cplus_socket obj
 
     if (0 < (res = recvmsg(skt->socket, msg, 0)))
     {
-        if ((addr = msg->msg_name))
+        if ((addr = (union socketaddr *)(msg->msg_name)))
         {
             switch (skt->domain)
             {
@@ -731,9 +767,9 @@ static int32_t socket_recvmsg(cplus_socket obj
 
 int32_t cplus_socket_setopt_reuse_addr(cplus_socket obj, bool enable_reuse_addr)
 {
-	struct socket * skt = (struct socket *)obj;
+	struct socket * skt = (struct socket *)(obj);
     CHECK_OBJECT_TYPE(obj);
-    CHECK_IF(CPLUS_INVALID_SOCKET == skt->socket, CPLUS_FAIL);
+    CHECK_IF(INVALID_SOCKET == skt->socket, CPLUS_FAIL);
 
     int value = enable_reuse_addr;
 
@@ -750,7 +786,7 @@ int32_t cplus_socket_send_fd(cplus_socket obj
     , const char * addr
     , int32_t port)
 {
-    struct socket * skt = (struct socket *)obj;
+    struct socket * skt = (struct socket *)(obj);
     uint8_t data = 0;
     struct msghdr msg = {0};
     struct iovec iov[1] = {0};
@@ -813,8 +849,8 @@ int32_t cplus_socket_recv_fd(
     , uint32_t timeout)
 #endif
 {
-    int32_t res = CPLUS_FAIL, sock_fd = CPLUS_INVALID_SOCKET;
-    struct socket * skt = (struct socket *)obj;
+    int32_t res = CPLUS_FAIL, sock_fd = INVALID_SOCKET;
+    struct socket * skt = (struct socket *)(obj);
     uint8_t data = 0;
     struct msghdr msg = {0};
     struct iovec iov[1] = {0};
@@ -901,12 +937,12 @@ CPLUS_UNIT_TEST(CPLUS_SOCKET_TYPE_DGRAM_LOCAL, functionity)
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_socket_bind(skt_server, SERVER_NAME, SERVER_PORT));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_socket_bind(skt_client, CLIENT_NAME, CLIENT_PORT));
     UNITTEST_EXPECT_EQ(strlen("AaBbCcDd") + 1, cplus_socket_sendto(skt_client
-        , "AaBbCcDd", strlen("AaBbCcDd") + 1, SERVER_NAME, SERVER_PORT));
+        , (void *)("AaBbCcDd"), strlen("AaBbCcDd") + 1, SERVER_NAME, SERVER_PORT));
     UNITTEST_EXPECT_EQ(strlen("AaBbCcDd") + 1, cplus_socket_recvfrom(skt_server
         , data_bufs, sizeof(data_bufs), from_addr, sizeof(from_addr), &from_port, CPLUS_INFINITE_TIMEOUT));
     UNITTEST_EXPECT_EQ(0, strcmp(CLIENT_NAME, from_addr));
     UNITTEST_EXPECT_EQ(0, strcmp(data_bufs, "AaBbCcDd"));
-    UNITTEST_EXPECT_EQ(strlen("Hello World") + 1, cplus_socket_sendto(skt_client, "Hello World", strlen("Hello World") + 1, SERVER_NAME, SERVER_PORT));
+    UNITTEST_EXPECT_EQ(strlen("Hello World") + 1, cplus_socket_sendto(skt_client, (void *)("Hello World"), strlen("Hello World") + 1, SERVER_NAME, SERVER_PORT));
     UNITTEST_EXPECT_EQ(strlen("Hello World") + 1, cplus_socket_recvfrom(skt_server, data_bufs, sizeof(data_bufs), from_addr, sizeof(from_addr), &from_port, CPLUS_INFINITE_TIMEOUT));
     UNITTEST_EXPECT_EQ(0, strcmp(CLIENT_NAME, from_addr));
     UNITTEST_EXPECT_EQ(0, strcmp(data_bufs, "Hello World"));
@@ -926,10 +962,10 @@ CPLUS_UNIT_TEST(CPLUS_SOCKET_TYPE_STREAM_LOCAL, functionity)
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_socket_listen(skt_server, 10));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_socket_connect(skt_remote, SERVER_NAME, 0));
     UNITTEST_EXPECT_EQ(true, NULL != (skt_client = cplus_socket_accept(skt_server, CPLUS_INFINITE_TIMEOUT)));
-    UNITTEST_EXPECT_EQ(strlen("Hello World") + 1, cplus_socket_send(skt_remote, "Hello World", strlen("Hello World") + 1));
+    UNITTEST_EXPECT_EQ(strlen("Hello World") + 1, cplus_socket_send(skt_remote, (void *)("Hello World"), strlen("Hello World") + 1));
     UNITTEST_EXPECT_EQ(strlen("Hello World") + 1, cplus_socket_recv(skt_client, data_bufs, sizeof(data_bufs), CPLUS_INFINITE_TIMEOUT));
     UNITTEST_EXPECT_EQ(0, strcmp(data_bufs, "Hello World"));
-    UNITTEST_EXPECT_EQ(strlen("0123456789") + 1, cplus_socket_send(skt_client, "0123456789", strlen("0123456789") + 1));
+    UNITTEST_EXPECT_EQ(strlen("0123456789") + 1, cplus_socket_send(skt_client, (void *)("0123456789"), strlen("0123456789") + 1));
     UNITTEST_EXPECT_EQ(strlen("0123456789") + 1, cplus_socket_recv(skt_remote, data_bufs, sizeof(data_bufs), CPLUS_INFINITE_TIMEOUT));
     UNITTEST_EXPECT_EQ(0, strcmp(data_bufs, "0123456789"));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_socket_delete(skt_client));
@@ -949,13 +985,13 @@ CPLUS_UNIT_TEST(CPLUS_SOCKET_TYPE_UDP_IPV4, functionity)
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_socket_bind(skt_server, "127.0.0.1", SERVER_PORT));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_socket_bind(skt_client, "127.0.0.1", CLIENT_PORT));
     UNITTEST_EXPECT_EQ(strlen("Hello World") + 1, cplus_socket_sendto(skt_client
-        , "Hello World", strlen("Hello World") + 1, "127.0.0.1", SERVER_PORT));
+        , (void *)("Hello World"), strlen("Hello World") + 1, "127.0.0.1", SERVER_PORT));
     UNITTEST_EXPECT_EQ(strlen("Hello World") + 1, cplus_socket_recvfrom(skt_server
         , data_bufs, sizeof(data_bufs), from_addr, sizeof(from_addr), &from_port, CPLUS_INFINITE_TIMEOUT));
     UNITTEST_EXPECT_EQ(0, strcmp(data_bufs, "Hello World"));
     UNITTEST_EXPECT_EQ(0, strcmp(from_addr, "127.0.0.1"));
     UNITTEST_EXPECT_EQ(true, (from_port == CLIENT_PORT));
-    UNITTEST_EXPECT_EQ(strlen("AaBbCcDd") + 1, cplus_socket_sendto(skt_server, "AaBbCcDd", strlen("AaBbCcDd") + 1, "127.0.0.1", CLIENT_PORT));
+    UNITTEST_EXPECT_EQ(strlen("AaBbCcDd") + 1, cplus_socket_sendto(skt_server, (void *)("AaBbCcDd"), strlen("AaBbCcDd") + 1, "127.0.0.1", CLIENT_PORT));
     UNITTEST_EXPECT_EQ(strlen("AaBbCcDd") + 1, cplus_socket_recvfrom(skt_client, data_bufs, sizeof(data_bufs), from_addr, sizeof(from_addr), &from_port, CPLUS_INFINITE_TIMEOUT));
     UNITTEST_EXPECT_EQ(0, strcmp(data_bufs, "AaBbCcDd"));
     UNITTEST_EXPECT_EQ(0, strcmp(from_addr, "127.0.0.1"));
@@ -978,10 +1014,10 @@ CPLUS_UNIT_TEST(CPLUS_SOCKET_TYPE_TCP_IPV4, functionity)
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_socket_listen(skt_server, 10));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_socket_connect(skt_remote, "127.0.0.1", SERVER_PORT));
     UNITTEST_EXPECT_EQ(true, NULL != (skt_client = cplus_socket_accept(skt_server, CPLUS_INFINITE_TIMEOUT)));
-    UNITTEST_EXPECT_EQ(strlen("Hello World") + 1, cplus_socket_send(skt_remote, "Hello World", strlen("Hello World") + 1));
+    UNITTEST_EXPECT_EQ(strlen("Hello World") + 1, cplus_socket_send(skt_remote, (void *)("Hello World"), strlen("Hello World") + 1));
     UNITTEST_EXPECT_EQ(strlen("Hello World") + 1, cplus_socket_recv(skt_client, data_bufs, sizeof(data_bufs), CPLUS_INFINITE_TIMEOUT));
     UNITTEST_EXPECT_EQ(0, strcmp(data_bufs, "Hello World"));
-    UNITTEST_EXPECT_EQ(strlen("0123456789") + 1, cplus_socket_send(skt_client, "0123456789", strlen("0123456789") + 1));
+    UNITTEST_EXPECT_EQ(strlen("0123456789") + 1, cplus_socket_send(skt_client, (void *)("0123456789"), strlen("0123456789") + 1));
     UNITTEST_EXPECT_EQ(strlen("0123456789") + 1, cplus_socket_recv(skt_remote, data_bufs, sizeof(data_bufs), CPLUS_INFINITE_TIMEOUT));
     UNITTEST_EXPECT_EQ(0, strcmp(data_bufs, "0123456789"));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_socket_delete(skt_client));
@@ -994,13 +1030,13 @@ CPLUS_UNIT_TEST(cplus_socket_send_fd, CPLUS_SOCKET_TYPE_STREAM_LOCAL)
 {
     cplus_socket skt_server = NULL, skt_client = NULL, skt_remote = NULL;
     cplus_file test_file = NULL;
-    int32_t recv_fd = -1, send_fd = -1;
+    int32_t recv_fd = INVALID_FD, send_fd = INVALID_FD;
     char rr[32] = {0};
 
-    UNITTEST_EXPECT_EQ(true, (NULL != (test_file = cplus_file_new(TEST_FILE, CPLUS_FILE_ACCESS_RDWR))));
-    UNITTEST_EXPECT_EQ(strlen(TEST_STR), cplus_file_write(test_file, strlen(TEST_STR), TEST_STR));
+    UNITTEST_EXPECT_EQ(true, (NULL != (test_file = cplus_file_new((char *)(TEST_FILE), CPLUS_FILE_ACCESS_RDWR))));
+    UNITTEST_EXPECT_EQ(strlen(TEST_STR), cplus_file_write(test_file, strlen(TEST_STR), (void *)(TEST_STR)));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_file_reset_pos(test_file));
-    UNITTEST_EXPECT_EQ(true, (-1 != (send_fd = cplus_file_get_fd(test_file))));
+    UNITTEST_EXPECT_EQ(true, (INVALID_FD != (send_fd = cplus_file_get_fd(test_file))));
     UNITTEST_EXPECT_EQ(true, NULL != (skt_server = cplus_socket_new(CPLUS_SOCKET_TYPE_STREAM_LOCAL)));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_socket_bind(skt_server, SERVER_NAME, 0));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_socket_listen(skt_server, 10));
@@ -1012,7 +1048,7 @@ CPLUS_UNIT_TEST(cplus_socket_send_fd, CPLUS_SOCKET_TYPE_STREAM_LOCAL)
     UNITTEST_EXPECT_EQ(strlen(TEST_STR), read(recv_fd, rr, sizeof(rr)));
     UNITTEST_EXPECT_EQ(true, (0 == strcmp(TEST_STR, rr)));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_file_delete(test_file));
-    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_file_remove(TEST_FILE));
+    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_file_remove((char *)(TEST_FILE)));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_socket_delete(skt_client));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_socket_delete(skt_remote));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_socket_delete(skt_server));
@@ -1023,12 +1059,12 @@ CPLUS_UNIT_TEST(cplus_socket_send_fd, SERVER)
 {
     cplus_socket skt_server = NULL, skt_remote = NULL;
     cplus_file test_file = NULL;
-    int32_t send_fd = -1;
+    int32_t send_fd = INVALID_FD;
 
-    UNITTEST_EXPECT_EQ(true, (NULL != (test_file = cplus_file_new(TEST_FILE, CPLUS_FILE_ACCESS_RDWR))));
-    UNITTEST_EXPECT_EQ(strlen(TEST_STR), cplus_file_write(test_file, strlen(TEST_STR), TEST_STR));
+    UNITTEST_EXPECT_EQ(true, (NULL != (test_file = cplus_file_new((char *)(TEST_FILE), CPLUS_FILE_ACCESS_RDWR))));
+    UNITTEST_EXPECT_EQ(strlen(TEST_STR), cplus_file_write(test_file, strlen(TEST_STR), (void *)(TEST_STR)));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_file_reset_pos(test_file));
-    UNITTEST_EXPECT_EQ(true, (-1 != (send_fd = cplus_file_get_fd(test_file))));
+    UNITTEST_EXPECT_EQ(true, (INVALID_FD != (send_fd = cplus_file_get_fd(test_file))));
     UNITTEST_EXPECT_EQ(true, NULL != (skt_server = cplus_socket_new(CPLUS_SOCKET_TYPE_STREAM_LOCAL)));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_socket_bind(skt_server, SERVER_NAME, 0));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_socket_listen(skt_server, 10));
@@ -1043,7 +1079,7 @@ CPLUS_UNIT_TEST(cplus_socket_send_fd, SERVER)
 CPLUS_UNIT_TEST(cplus_socket_recv_fd, CLIENT)
 {
     cplus_socket skt_client = NULL;
-    int32_t recv_fd = -1;
+    int32_t recv_fd = INVALID_FD;
     char rr[32] = {0};
 
     UNITTEST_EXPECT_EQ(true, NULL != (skt_client = cplus_socket_new(CPLUS_SOCKET_TYPE_STREAM_LOCAL)));
@@ -1052,7 +1088,7 @@ CPLUS_UNIT_TEST(cplus_socket_recv_fd, CLIENT)
     UNITTEST_EXPECT_EQ(strlen(TEST_STR), read(recv_fd, rr, sizeof(rr)));
     UNITTEST_EXPECT_EQ(true, (0 == strcmp(TEST_STR, rr)));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_socket_delete(skt_client));
-    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_file_remove(TEST_FILE));
+    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_file_remove((char *)(TEST_FILE)));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_mgr_report());
 }
 
@@ -1061,12 +1097,12 @@ CPLUS_UNIT_TEST(cplus_socket_send_fd, CPLUS_SOCKET_TYPE_DGRAM_LOCAL)
     cplus_socket skt_server = NULL, skt_client = NULL;
     cplus_file test_file = NULL;
     char rr[32] = {0};
-    int32_t recv_fd = -1, send_fd = -1;
+    int32_t recv_fd = INVALID_FD, send_fd = INVALID_FD;
 
-    UNITTEST_EXPECT_EQ(true, (NULL != (test_file = cplus_file_new(TEST_FILE, CPLUS_FILE_ACCESS_RDWR))));
-    UNITTEST_EXPECT_EQ(strlen(TEST_STR), cplus_file_write(test_file, strlen(TEST_STR), TEST_STR));
+    UNITTEST_EXPECT_EQ(true, (NULL != (test_file = cplus_file_new((char *)(TEST_FILE), CPLUS_FILE_ACCESS_RDWR))));
+    UNITTEST_EXPECT_EQ(strlen(TEST_STR), cplus_file_write(test_file, strlen(TEST_STR), (void *)(TEST_STR)));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_file_reset_pos(test_file));
-    UNITTEST_EXPECT_EQ(true, (-1 != (send_fd = cplus_file_get_fd(test_file))));
+    UNITTEST_EXPECT_EQ(true, (INVALID_FD != (send_fd = cplus_file_get_fd(test_file))));
     UNITTEST_EXPECT_EQ(true, NULL != (skt_server = cplus_socket_new(CPLUS_SOCKET_TYPE_DGRAM_LOCAL)));
     UNITTEST_EXPECT_EQ(true, NULL != (skt_client = cplus_socket_new(CPLUS_SOCKET_TYPE_DGRAM_LOCAL)));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_socket_bind(skt_server, SERVER_NAME, SERVER_PORT));
@@ -1076,7 +1112,7 @@ CPLUS_UNIT_TEST(cplus_socket_send_fd, CPLUS_SOCKET_TYPE_DGRAM_LOCAL)
     UNITTEST_EXPECT_EQ(strlen(TEST_STR), read(recv_fd, rr, sizeof(rr)));
     UNITTEST_EXPECT_EQ(true, (0 == strcmp(TEST_STR, rr)));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_file_delete(test_file));
-    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_file_remove(TEST_FILE));
+    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_file_remove((char *)(TEST_FILE)));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_socket_delete(skt_server));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_socket_delete(skt_client));
     UNITTEST_EXPECT_EQ(0, cplus_mgr_report());
@@ -1091,7 +1127,6 @@ void unittest_socket(void)
     UNITTEST_ADD_TESTCASE(CPLUS_SOCKET_TYPE_TCP_IPV4, functionity);
     UNITTEST_ADD_TESTCASE(cplus_socket_send_fd, CPLUS_SOCKET_TYPE_STREAM_LOCAL);
     UNITTEST_ADD_TESTCASE(cplus_socket_send_fd, CPLUS_SOCKET_TYPE_DGRAM_LOCAL);
-
 }
 
 void unittest_socket_server(void)

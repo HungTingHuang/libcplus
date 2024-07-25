@@ -2,8 +2,6 @@
 #define __CPLUS_SOCKET_H__
 #include "cplus_typedef.h"
 
-#define CPLUS_INVALID_SOCKET -1
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -98,5 +96,4 @@ int32_t cplus_socket_send_fd(cplus_socket obj, int32_t sendfd, const char * addr
 #ifdef __cplusplus
 }
 #endif
-
 #endif //__CPLUS_SOCKET_H__

@@ -162,7 +162,7 @@ void cplus_systime_sleep_msec(uint32_t msec)
 				break;
 			}
 
-			if (-1 == res and EINTR == errno)
+			if (-1 == res AND EINTR == errno)
 			{
 				cplus_mem_cpy(&req, &rem, sizeof(req));
 			}

@@ -31,37 +31,37 @@ bool cplus_sharedmem_is_owner(cplus_sharedmem obj)
 {
     CHECK_OBJECT_TYPE(obj);
 
-    return (((struct shared_mem *)obj)->is_owner
-        and getpid() == ((struct shared_mem *)obj)->owner_id);
+    return (((struct shared_mem *)(obj))->is_owner
+        AND getpid() == ((struct shared_mem *)(obj))->owner_id);
 }
 
 int32_t cplus_sharedmem_get_size(cplus_sharedmem obj)
 {
     CHECK_OBJECT_TYPE(obj);
 
-    return ((struct shared_mem *)obj)->size;
+    return ((struct shared_mem *)(obj))->size;
 }
 
 char * cplus_sharedmem_get_name(cplus_sharedmem obj)
 {
     CHECK_OBJECT_TYPE(obj);
 
-    return &(((struct shared_mem *)obj)->name[strlen(SHAREDMEM_NAMED_PATTERN) - 2]);
+    return &(((struct shared_mem *)(obj))->name[strlen(SHAREDMEM_NAMED_PATTERN) - 2]);
 }
 
 void * cplus_sharedmem_alloc(cplus_sharedmem obj)
 {
     CHECK_OBJECT_TYPE(obj);
 
-    return ((struct shared_mem *)obj)->addr;
+    return ((struct shared_mem *)(obj))->addr;
 }
 
 int32_t cplus_sharedmem_delete(cplus_sharedmem obj)
 {
-    struct shared_mem * shmem = (struct shared_mem *)obj;
+    struct shared_mem * shmem = (struct shared_mem *)(obj);
 
     CHECK_OBJECT_TYPE(obj);
-    shmem = (struct shared_mem *)obj;
+    shmem = (struct shared_mem *)(obj);
 
     if (MAP_FAILED != shmem->addr)
     {
@@ -69,13 +69,13 @@ int32_t cplus_sharedmem_delete(cplus_sharedmem obj)
         shmem->addr = MAP_FAILED;
     }
 
-    if (-1 != shmem->fd)
+    if (INVALID_FD != shmem->fd)
     {
         close(shmem->fd);
-        shmem->fd = -1;
+        shmem->fd = INVALID_FD;
     }
 
-    if (true == shmem->is_owner and getpid() == shmem->owner_id)
+    if (true == shmem->is_owner AND getpid() == shmem->owner_id)
     {
         shm_unlink(shmem->name);
     }
@@ -88,13 +88,11 @@ static void * sharedmem_create(const char * name, uint32_t size)
 {
     struct shared_mem * shmem = NULL;
 
-    shmem = (struct shared_mem *)cplus_malloc(sizeof(struct shared_mem));
-    if (shmem)
+    if ((shmem = (struct shared_mem *)cplus_malloc(sizeof(struct shared_mem))))
     {
         CPLUS_INITIALIZE_STRUCT_POINTER(shmem);
-
         shmem->type = OBJ_TYPE;
-        shmem->fd = -1;
+        shmem->fd = INVALID_FD;
         shmem->addr = MAP_FAILED;
         shmem->size = size;
         shmem->is_owner = false;
@@ -113,7 +111,7 @@ static void * sharedmem_create(const char * name, uint32_t size)
             shmem->name
             , O_CREAT | O_EXCL | O_RDWR
             , DEFFILEMODE);
-        if (-1 == shmem->fd)
+        if (INVALID_FD == shmem->fd)
         {
             goto exit;
         }
@@ -142,7 +140,7 @@ static void * sharedmem_create(const char * name, uint32_t size)
             goto exit;
         }
 
-        if (-1 != shmem->fd)
+        if (INVALID_FD != shmem->fd)
         {
             close(shmem->fd);
         }
@@ -163,13 +161,11 @@ static void * sharedmem_open(const char * name)
     struct stat sm_stat;
     struct shared_mem * shmem = NULL;
 
-    shmem = (struct shared_mem *)cplus_malloc(sizeof(struct shared_mem));
-    if (shmem)
+    if ((shmem = (struct shared_mem *)cplus_malloc(sizeof(struct shared_mem))))
     {
         CPLUS_INITIALIZE_STRUCT_POINTER(shmem);
-
         shmem->type = OBJ_TYPE;
-        shmem->fd = -1;
+        shmem->fd = INVALID_FD;
         shmem->addr = MAP_FAILED;
         shmem->size = 0;
         shmem->is_owner = false;
@@ -185,7 +181,7 @@ static void * sharedmem_open(const char * name)
         }
 
         shmem->fd = shm_open(shmem->name, O_RDWR, DEFFILEMODE);
-        if (-1 == shmem->fd)
+        if (INVALID_FD == shmem->fd)
         {
             goto exit;
         }
@@ -211,7 +207,7 @@ static void * sharedmem_open(const char * name)
             goto exit;
         }
 
-        if (-1 != shmem->fd)
+        if (INVALID_FD != shmem->fd)
         {
             close(shmem->fd);
         }
@@ -232,13 +228,11 @@ static void * sharedmem_new(const char * name, uint32_t size)
     struct stat sm_stat;
     struct shared_mem * shmem = NULL;
 
-    shmem = (struct shared_mem *)cplus_malloc(sizeof(struct shared_mem));
-    if (shmem)
+    if ((shmem = (struct shared_mem *)cplus_malloc(sizeof(struct shared_mem))))
     {
         CPLUS_INITIALIZE_STRUCT_POINTER(shmem);
-
         shmem->type = OBJ_TYPE;
-        shmem->fd = -1;
+        shmem->fd = INVALID_FD;
         shmem->addr = MAP_FAILED;
         shmem->size = size;
         shmem->is_owner = false;
@@ -254,7 +248,7 @@ static void * sharedmem_new(const char * name, uint32_t size)
         }
 
         shmem->fd = shm_open(shmem->name, O_RDWR, DEFFILEMODE);
-        if (-1 != shmem->fd)
+        if (INVALID_FD != shmem->fd)
         {
             shmem->is_owner = false;
             if (-1 == fstat(shmem->fd, &sm_stat))
@@ -271,7 +265,7 @@ static void * sharedmem_new(const char * name, uint32_t size)
                     shmem->name
                     , O_CREAT | O_EXCL | O_RDWR
                     , DEFFILEMODE);
-                if (-1 == shmem->fd)
+                if (INVALID_FD == shmem->fd)
                 {
                     goto exit;
                 }
@@ -306,7 +300,7 @@ static void * sharedmem_new(const char * name, uint32_t size)
             goto exit;
         }
 
-        if (-1 != shmem->fd)
+        if (INVALID_FD != shmem->fd)
         {
             close(shmem->fd);
         }
@@ -325,22 +319,16 @@ exit:
 cplus_sharedmem cplus_sharedmem_create(const char * name, uint32_t size)
 {
     CHECK_NOT_NULL(name, NULL);
-    CHECK_IF(
-        SHAREDMEM_NAME_MAX_SIZE < (strlen(name) + SHAREDMEM_NAMED_PATTERN_SIZE)
+    CHECK_IF(SHAREDMEM_NAME_MAX_SIZE < (strlen(name) + SHAREDMEM_NAMED_PATTERN_SIZE)
         , NULL);
-    CHECK_IN_INTERVAL(
-        size
-        , 1
-        , SHAREDMEM_MAX_SIZE
-        , NULL);
+    CHECK_IN_INTERVAL(size, 1, SHAREDMEM_MAX_SIZE, NULL);
     return sharedmem_create(name, size);
 }
 
 cplus_sharedmem cplus_sharedmem_open(const char * name)
 {
     CHECK_NOT_NULL(name, NULL);
-    CHECK_IF(
-        SHAREDMEM_NAME_MAX_SIZE < (strlen(name) + SHAREDMEM_NAMED_PATTERN_SIZE)
+    CHECK_IF(SHAREDMEM_NAME_MAX_SIZE < (strlen(name) + SHAREDMEM_NAMED_PATTERN_SIZE)
         , NULL);
     return sharedmem_open(name);
 }
@@ -348,8 +336,7 @@ cplus_sharedmem cplus_sharedmem_open(const char * name)
 cplus_sharedmem cplus_sharedmem_new(const char * name, uint32_t size)
 {
     CHECK_NOT_NULL(name, NULL);
-    CHECK_IF(
-        SHAREDMEM_NAME_MAX_SIZE < (strlen(name) + SHAREDMEM_NAMED_PATTERN_SIZE)
+    CHECK_IF(SHAREDMEM_NAME_MAX_SIZE < (strlen(name) + SHAREDMEM_NAMED_PATTERN_SIZE)
         , NULL);
     CHECK_IN_INTERVAL(size, 1, SHAREDMEM_MAX_SIZE, NULL);
     return sharedmem_new(name, size);

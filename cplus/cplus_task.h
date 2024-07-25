@@ -62,5 +62,4 @@ uint32_t cplus_task_get_loop_last_timestamp(void);
 #ifdef __cplusplus
 }
 #endif
-
 #endif //__CPLUS_TASK_H__

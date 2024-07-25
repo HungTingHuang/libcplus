@@ -43,5 +43,4 @@ CPLUS_DEBUG_LEVEL cplus_syslog_get_logger_level(cplus_syslog obj);
 #ifdef __cplusplus
 }
 #endif
-
 #endif // __CPLUS_SYSLOG_H__

@@ -35,7 +35,7 @@ typedef struct event_server
     cplus_socket skt_server;
     cplus_task accept_proc;
     uint32_t init_val;
-    int32_t flag;
+    enum cplus_event_server_flag flag;
     bool start;
     cplus_task poll_proc;
     void * cb_param;
@@ -75,7 +75,7 @@ static int32_t convert_efd_flag(CPLUS_EVENT_SERVER_FLAG flag)
 
 int32_t cplus_event_server_delete(cplus_event_server obj)
 {
-    EVENT_SERVER server = (EVENT_SERVER)(obj);
+    struct event_server * server = (struct event_server *)(obj);
     CHECK_OBJECT_TYPE_EX(obj, OBJ_TYPE_SERVER);
 
     if (server->accept_proc)
@@ -93,7 +93,7 @@ int32_t cplus_event_server_delete(cplus_event_server obj)
         cplus_task_stop(server->poll_proc, TIMEOUT_FOR_STOP_EVENT_POLL);
     }
 
-    if (-1 != server->efd)
+    if (INVALID_FD != server->efd)
     {
         close(server->efd);
     }
@@ -104,7 +104,7 @@ int32_t cplus_event_server_delete(cplus_event_server obj)
 
 int32_t cplus_event_client_delete(cplus_event_client obj)
 {
-    EVENT_CLIENT client = (EVENT_CLIENT)(obj);
+    struct event_client * client = (struct event_client *)(obj);
     CHECK_OBJECT_TYPE_EX(obj, OBJ_TYPE_CLIENT);
 
     if (client->skt_client)
@@ -118,7 +118,7 @@ int32_t cplus_event_client_delete(cplus_event_client obj)
 
 static void event_poll_proc(void * param1, void * param2)
 {
-    EVENT_SERVER server = (EVENT_SERVER)(param1);
+    struct event_server * server = (struct event_server *)(param1);
     struct pollfd pollfds[1] = {0};
     uint64_t read_value = 0;
     int32_t value = 0;
@@ -180,7 +180,7 @@ static void event_poll_proc(void * param1, void * param2)
 
 static void accept_proc(void * param1, void * param2)
 {
-    EVENT_SERVER server = (EVENT_SERVER)(param1);
+    struct event_server * server = (struct event_server *)(param1);
     cplus_socket sock = NULL;
     uint8_t recv_bufs[32] = {0};
     UNUSED_PARAM(param2);
@@ -204,11 +204,11 @@ static void accept_proc(void * param1, void * param2)
 }
 
 static void * event_server_initialize_object(
-    CPLUS_EVENT_SERVER_CONFIG config
+    struct cplus_event_server_config * config
     , CPLUS_EVENT_SERVER_CB_FUNCS cb_funcs)
 {
-    EVENT_SERVER server = NULL;
-    if ((server = (EVENT_SERVER)cplus_malloc(sizeof(EVENT_SERVER_T))))
+    struct event_server * server = NULL;
+    if ((server = (struct event_server *)cplus_malloc(sizeof(struct event_server))))
     {
         CPLUS_INITIALIZE_STRUCT_POINTER(server);
         server->type = OBJ_TYPE_SERVER;
@@ -235,7 +235,7 @@ static void * event_server_initialize_object(
             }
         }
         server->efd = eventfd(server->init_val, convert_efd_flag(server->flag));
-        if (-1 == server->efd)
+        if (INVALID_FD == server->efd)
         {
             goto error;
         }
@@ -297,7 +297,7 @@ cplus_event_server cplus_event_server_new(
     , CPLUS_EVENT_SERVER_FLAG flag
     , CPLUS_EVENT_SERVER_CB_FUNCS cb_funcs)
 {
-    CPLUS_EVENT_SERVER_CONFIG_T config = {0};
+    struct cplus_event_server_config config = {0};
     config.init_val = init_val;
     config.flag = flag;
     config.start = false;
@@ -315,16 +315,16 @@ cplus_event_server cplus_event_server_new_config(
 
 cplus_event_client cplus_event_client_attach(cplus_event_server obj)
 {
-    EVENT_CLIENT client = NULL;
-    EVENT_SERVER server = (EVENT_SERVER)(obj);
+    struct event_client * client = NULL;
+    struct event_server * server = (struct event_server *)(obj);
     CHECK_OBJECT_TYPE_EX(obj, OBJ_TYPE_SERVER);
 
-    if ((client = (EVENT_CLIENT)cplus_malloc(sizeof(EVENT_CLIENT_T))))
+    if ((client = (struct event_client *)cplus_malloc(sizeof(struct event_client))))
     {
         CPLUS_INITIALIZE_STRUCT_POINTER(client);
         client->type = OBJ_TYPE_CLIENT;
         client->server_efd = server->efd;
-        if (-1 == client->server_efd)
+        if (INVALID_FD == client->server_efd)
         {
             goto error;
         }
@@ -338,13 +338,13 @@ error:
 
 cplus_event_client cplus_event_client_connect(void)
 {
-    EVENT_CLIENT client = NULL;
-    int32_t recv_fd = -1;
-    if ((client = (EVENT_CLIENT)cplus_malloc(sizeof(EVENT_CLIENT_T))))
+    struct event_client * client = NULL;
+    int32_t recv_fd = INVALID_FD;
+    if ((client = (struct event_client *)cplus_malloc(sizeof(struct event_client))))
     {
         CPLUS_INITIALIZE_STRUCT_POINTER(client);
         client->type = OBJ_TYPE_CLIENT;
-        client->server_efd = -1;
+        client->server_efd = INVALID_FD;
         client->skt_client = cplus_socket_new(CPLUS_SOCKET_TYPE_STREAM_LOCAL);
         if (NULL == client->skt_client)
         {
@@ -358,12 +358,12 @@ cplus_event_client cplus_event_client_connect(void)
         {
             goto error;
         }
-        if (strlen(CHECK_RECV_FD) != cplus_socket_send(client->skt_client, CHECK_RECV_FD, strlen(CHECK_RECV_FD)))
+        if (strlen(CHECK_RECV_FD) != cplus_socket_send(client->skt_client, (void *)(CHECK_RECV_FD), strlen(CHECK_RECV_FD)))
         {
             goto error;
         }
         client->server_efd = recv_fd;
-        if (-1 == client->server_efd)
+        if (INVALID_FD == client->server_efd)
         {
             goto error;
         }
@@ -380,7 +380,7 @@ error:
 
 int32_t cplus_event_server_start(cplus_event_server obj)
 {
-    EVENT_SERVER server = (EVENT_SERVER)(obj);
+    struct event_server * server = (struct event_server *)(obj);
     CHECK_OBJECT_TYPE_EX(obj, OBJ_TYPE_SERVER);
     if (!(server->start))
     {
@@ -400,17 +400,17 @@ int32_t cplus_event_server_start(cplus_event_server obj)
 
 int32_t cplus_event_server_get_efd(cplus_event_server obj)
 {
-    EVENT_SERVER server = (EVENT_SERVER)(obj);
+    struct event_server * server = (struct event_server *)(obj);
     CHECK_OBJECT_TYPE_EX(obj, OBJ_TYPE_SERVER);
     return server->efd;
 }
 
 int32_t cplus_event_client_add_count(cplus_event_client obj, uint64_t count)
 {
-    EVENT_CLIENT client = (EVENT_CLIENT)(obj);
+    struct event_client * client = (struct event_client *)(obj);
     CHECK_OBJECT_TYPE_EX(obj, OBJ_TYPE_CLIENT);
 
-    if (-1 == client->server_efd)
+    if (INVALID_FD == client->server_efd)
     {
         return CPLUS_FAIL;
     }
@@ -480,7 +480,7 @@ CPLUS_UNIT_TEST(cplus_event_server_new, CPLUS_SOCKET_TYPE_STREAM_LOCAL)
 {
     cplus_event_server server = NULL;
     cplus_event_client client = NULL;
-    CPLUS_EVENT_SERVER_CONFIG_T config = {0};
+    struct cplus_event_server_config config = {0};
     CPLUS_EVENT_SERVER_CB_FUNCS_T on_funcs = {0};
     verification_count = 0;
 

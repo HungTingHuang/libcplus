@@ -13,8 +13,17 @@
 
 #define OBJ_TYPE (OBJ_NONE + DS + 0)
 
-#define DATA_SPIN_LOCK() SPIN_LOCK(&(dt->spin))
-#define DATA_SPIN_UNLOCK() SPIN_UNLOCK(&(dt->spin))
+static uint8_t spin_up = 1;
+static uint8_t spin_down = 0;
+
+#define DATA_SPIN_LOCK() \
+    do { while ((spin_up == cplus_atomic_read(&(dt->spinlock))) \
+        || !cplus_atomic_compare_exchange(&(dt->spinlock), \
+                &(spin_down), &(spin_up))) { } \
+    } while (0)
+
+#define DATA_SPIN_UNLOCK() \
+    do { cplus_atomic_write(&(dt->spinlock), spin_down); } while(0)
 
 #define GET_VALUE_FROM_DATA_BUFS(VALUE, DATA_BUFS) \
     cplus_mem_cpy(VALUE, &(DATA_BUFS), sizeof(DATA_BUFS))
@@ -25,7 +34,7 @@
     DATA_SPIN_UNLOCK(); } while (0)
 
 #define GET_VALUE_FROM_DATA_BUFS_S(VALUE, DATA_BUFS) \
-    cplus_atomic_write((typeof(DATA_BUFS) *)VALUE, DATA_BUFS)
+    cplus_atomic_write((typeof(DATA_BUFS) *)(VALUE), DATA_BUFS)
 
 #define SET_VALUE_TO_DATA_BUFS(VALUE, DATA_BUFS) \
     cplus_mem_cpy(&DATA_BUFS, VALUE, sizeof(DATA_BUFS))
@@ -36,19 +45,19 @@
     DATA_SPIN_UNLOCK(); } while (0)
 
 #define SET_POINTER_VALUE_TO_DATA_BUFS_S(VALUE, DATA_BUFS) \
-    cplus_atomic_write(&DATA_BUFS, *((typeof(DATA_BUFS) *)VALUE))
+    cplus_atomic_write(&DATA_BUFS, *((typeof(DATA_BUFS) *)(VALUE)))
 
 #define SET_VALUE_TO_DATA_BUFS_S(VALUE, DATA_BUFS) \
-    cplus_atomic_write(&DATA_BUFS, ((typeof(DATA_BUFS))VALUE));
+    cplus_atomic_write(&DATA_BUFS, ((typeof(DATA_BUFS))(VALUE)));
 
 #define SET_VALUE_TO_POINTER_DATA_BUFS_S(VALUE, DATA_BUFS) \
-    cplus_atomic_write(&DATA_BUFS, ((void *)((intptr_t)VALUE)));
+    cplus_atomic_write(&DATA_BUFS, ((void *)((intptr_t)(VALUE))));
 
 #define READ_DATA_BUFS_S(DATA_BUFS) \
-    cplus_atomic_read((typeof(DATA_BUFS) *)(&DATA_BUFS))
+    cplus_atomic_read((typeof(DATA_BUFS) *)(&(DATA_BUFS)))
 
 #define COMPARE_DATA_BUFS_S(COMPARATOR, DATA_BUFS) \
-    cplus_atomic_or((&DATA_BUFS), (typeof(DATA_BUFS))(COMPARATOR))
+    cplus_atomic_or((&(DATA_BUFS)), (typeof(DATA_BUFS))(COMPARATOR))
 
 struct data
 {
@@ -58,7 +67,7 @@ struct data
     uint32_t action_mode;
     uint32_t key_len;
     char * key;
-    uint8_t spin;
+    uint8_t spinlock;
     uint32_t str_code;
     uint32_t bufs_size;
     CPLUS_DATA_VALUE value;
@@ -94,7 +103,7 @@ int32_t cplus_data_delete(cplus_data obj)
     return CPLUS_SUCCESS;
 }
 
-static char * cplus_type_string[] = {
+static const char * cplus_type_string[] = {
     "NULL", "BOOL", "INT8", "INT16", "INT32", "INT64", "UINT8", "UINT16", "UINT32", "UINT64"
     , "FLOAT", "DOUBLE", "POINTER", "STRING", "BYTE_ARRAY", "UNKNOWN" };
 
@@ -111,21 +120,21 @@ static void * data_initialize_object(
     {
         CPLUS_INITIALIZE_STRUCT_POINTER(dt);
         dt->type = OBJ_TYPE;
-        dt->data_type = (enum cplus_data_type)type;
+        dt->data_type = (enum cplus_data_type)(type);
         dt->is_valid = false;
         dt->key_len = 0;
         dt->key = NULL;
-        dt->spin = SPINDOWN;
+        dt->spinlock = 0;
         dt->str_code = 0;
         dt->bufs_size = 0;
-        if (NULL != value1)
+        if (value1)
         {
             if (CPLUS_SUCCESS != cplus_data_set_value(dt, value1, value2))
             {
                 goto exit;
             }
         }
-        if (NULL != key && 0 < key_len)
+        if (key && 0 < key_len)
         {
             if (CPLUS_SUCCESS != cplus_data_set_key(
                 dt, key_len, key))
@@ -147,72 +156,72 @@ cplus_data cplus_data_new(CPLUS_DATA_TYPE type, void * value1, void * value2)
 
 cplus_data cplus_data_new_bool(bool value)
 {
-    return data_initialize_object(CPLUS_DATA_TYPE_BOOL, &value, NULL, 0, NULL);
+    return data_initialize_object(CPLUS_DATA_TYPE_BOOL, &(value), NULL, 0, NULL);
 }
 
 cplus_data cplus_data_new_int8(int8_t value)
 {
-    return data_initialize_object(CPLUS_DATA_TYPE_INT8, &value, NULL, 0, NULL);
+    return data_initialize_object(CPLUS_DATA_TYPE_INT8, &(value), NULL, 0, NULL);
 }
 
 cplus_data cplus_data_new_int16(int16_t value)
 {
-    return data_initialize_object(CPLUS_DATA_TYPE_INT16, &value, NULL, 0, NULL);
+    return data_initialize_object(CPLUS_DATA_TYPE_INT16, &(value), NULL, 0, NULL);
 }
 
 cplus_data cplus_data_new_int32(int32_t value)
 {
-    return data_initialize_object(CPLUS_DATA_TYPE_INT32, &value, NULL, 0, NULL);
+    return data_initialize_object(CPLUS_DATA_TYPE_INT32, &(value), NULL, 0, NULL);
 }
 
 cplus_data cplus_data_new_int64(int64_t value)
 {
-    return data_initialize_object(CPLUS_DATA_TYPE_INT64, &value, NULL, 0, NULL);
+    return data_initialize_object(CPLUS_DATA_TYPE_INT64, &(value), NULL, 0, NULL);
 }
 
 cplus_data cplus_data_new_uint8(uint8_t value)
 {
-    return data_initialize_object(CPLUS_DATA_TYPE_UINT8, &value, NULL, 0, NULL);
+    return data_initialize_object(CPLUS_DATA_TYPE_UINT8, &(value), NULL, 0, NULL);
 }
 
 cplus_data cplus_data_new_uint16(uint16_t value)
 {
-    return data_initialize_object(CPLUS_DATA_TYPE_UINT16, &value, NULL, 0, NULL);
+    return data_initialize_object(CPLUS_DATA_TYPE_UINT16, &(value), NULL, 0, NULL);
 }
 
 cplus_data cplus_data_new_uint32(uint32_t value)
 {
-    return data_initialize_object(CPLUS_DATA_TYPE_UINT32, &value, NULL, 0, NULL);
+    return data_initialize_object(CPLUS_DATA_TYPE_UINT32, &(value), NULL, 0, NULL);
 }
 
 cplus_data cplus_data_new_uint64(uint64_t value)
 {
-    return data_initialize_object(CPLUS_DATA_TYPE_UINT64, &value, NULL, 0, NULL);
+    return data_initialize_object(CPLUS_DATA_TYPE_UINT64, &(value), NULL, 0, NULL);
 }
 
 cplus_data cplus_data_new_float(float value)
 {
-    return data_initialize_object(CPLUS_DATA_TYPE_FLOAT, &value, NULL, 0, NULL);
+    return data_initialize_object(CPLUS_DATA_TYPE_FLOAT, &(value), NULL, 0, NULL);
 }
 
 cplus_data cplus_data_new_double(double value)
 {
-    return data_initialize_object(CPLUS_DATA_TYPE_DOUBLE, &value, NULL, 0, NULL);
+    return data_initialize_object(CPLUS_DATA_TYPE_DOUBLE, &(value), NULL, 0, NULL);
 }
 
 cplus_data cplus_data_new_pointer(void * value)
 {
-    return data_initialize_object(CPLUS_DATA_TYPE_POINTER, &value, NULL, 0, NULL);
+    return data_initialize_object(CPLUS_DATA_TYPE_POINTER, &(value), NULL, 0, NULL);
 }
 
 cplus_data cplus_data_new_string(uint32_t str_len, char * string)
 {
-    return data_initialize_object(CPLUS_DATA_TYPE_STRING, &str_len, string, 0, NULL);
+    return data_initialize_object(CPLUS_DATA_TYPE_STRING, &(str_len), string, 0, NULL);
 }
 
 cplus_data cplus_data_new_byte_array(uint32_t array_len, uint8_t * array_bufs)
 {
-    return data_initialize_object(CPLUS_DATA_TYPE_BYTE_ARRAY, &array_len, array_bufs, 0, NULL);
+    return data_initialize_object(CPLUS_DATA_TYPE_BYTE_ARRAY, &(array_len), array_bufs, 0, NULL);
 }
 
 cplus_data cplus_data_new_ex(CPLUS_DATA_TYPE type, void * value1, void * value2, uint32_t key_len, char * key)
@@ -222,72 +231,72 @@ cplus_data cplus_data_new_ex(CPLUS_DATA_TYPE type, void * value1, void * value2,
 
 cplus_data cplus_data_new_bool_ex(bool value, uint32_t key_len, char * key)
 {
-    return data_initialize_object(CPLUS_DATA_TYPE_BOOL, &value, NULL, key_len, key);
+    return data_initialize_object(CPLUS_DATA_TYPE_BOOL, &(value), NULL, key_len, key);
 }
 
 cplus_data cplus_data_new_int8_ex(int8_t value, uint32_t key_len, char * key)
 {
-    return data_initialize_object(CPLUS_DATA_TYPE_INT8, &value, NULL, key_len, key);
+    return data_initialize_object(CPLUS_DATA_TYPE_INT8, &(value), NULL, key_len, key);
 }
 
 cplus_data cplus_data_new_int16_ex(int16_t value, uint32_t key_len, char * key)
 {
-    return data_initialize_object(CPLUS_DATA_TYPE_INT16, &value, NULL, key_len, key);
+    return data_initialize_object(CPLUS_DATA_TYPE_INT16, &(value), NULL, key_len, key);
 }
 
 cplus_data cplus_data_new_int32_ex(int32_t value, uint32_t key_len, char * key)
 {
-    return data_initialize_object(CPLUS_DATA_TYPE_INT32, &value, NULL, key_len, key);
+    return data_initialize_object(CPLUS_DATA_TYPE_INT32, &(value), NULL, key_len, key);
 }
 
 cplus_data cplus_data_new_int64_ex(int64_t value, uint32_t key_len, char * key)
 {
-    return data_initialize_object(CPLUS_DATA_TYPE_INT64, &value, NULL, key_len, key);
+    return data_initialize_object(CPLUS_DATA_TYPE_INT64, &(value), NULL, key_len, key);
 }
 
 cplus_data cplus_data_new_uint8_ex(uint8_t value, uint32_t key_len, char * key)
 {
-    return data_initialize_object(CPLUS_DATA_TYPE_UINT8, &value, NULL, key_len, key);
+    return data_initialize_object(CPLUS_DATA_TYPE_UINT8, &(value), NULL, key_len, key);
 }
 
 cplus_data cplus_data_new_uint16_ex(uint16_t value, uint32_t key_len, char * key)
 {
-    return data_initialize_object(CPLUS_DATA_TYPE_UINT16, &value, NULL, key_len, key);
+    return data_initialize_object(CPLUS_DATA_TYPE_UINT16, &(value), NULL, key_len, key);
 }
 
 cplus_data cplus_data_new_uint32_ex(uint32_t value, uint32_t key_len, char * key)
 {
-    return data_initialize_object(CPLUS_DATA_TYPE_UINT32, &value, NULL, key_len, key);
+    return data_initialize_object(CPLUS_DATA_TYPE_UINT32, &(value), NULL, key_len, key);
 }
 
 cplus_data cplus_data_new_uint64_ex(uint64_t value, uint32_t key_len, char * key)
 {
-    return data_initialize_object(CPLUS_DATA_TYPE_UINT64, &value, NULL, key_len, key);
+    return data_initialize_object(CPLUS_DATA_TYPE_UINT64, &(value), NULL, key_len, key);
 }
 
 cplus_data cplus_data_new_float_ex(float value, uint32_t key_len, char * key)
 {
-    return data_initialize_object(CPLUS_DATA_TYPE_FLOAT, &value, NULL, key_len, key);
+    return data_initialize_object(CPLUS_DATA_TYPE_FLOAT, &(value), NULL, key_len, key);
 }
 
 cplus_data cplus_data_new_double_ex(double value, uint32_t key_len, char * key)
 {
-    return data_initialize_object(CPLUS_DATA_TYPE_DOUBLE, &value, NULL, key_len, key);
+    return data_initialize_object(CPLUS_DATA_TYPE_DOUBLE, &(value), NULL, key_len, key);
 }
 
 cplus_data cplus_data_new_pointer_ex(void * value, uint32_t key_len, char * key)
 {
-    return data_initialize_object(CPLUS_DATA_TYPE_POINTER, &value, NULL, key_len, key);
+    return data_initialize_object(CPLUS_DATA_TYPE_POINTER, &(value), NULL, key_len, key);
 }
 
 cplus_data cplus_data_new_string_ex(uint32_t str_len, char * string, uint32_t key_len, char * key)
 {
-    return data_initialize_object(CPLUS_DATA_TYPE_STRING, &str_len, string, key_len, key);
+    return data_initialize_object(CPLUS_DATA_TYPE_STRING, &(str_len), string, key_len, key);
 }
 
 cplus_data cplus_data_new_byte_array_ex(uint32_t array_len, uint8_t * array_bufs, uint32_t key_len, char * key)
 {
-    return data_initialize_object(CPLUS_DATA_TYPE_BYTE_ARRAY, &array_len, array_bufs, key_len, key);
+    return data_initialize_object(CPLUS_DATA_TYPE_BYTE_ARRAY, &(array_len), array_bufs, key_len, key);
 }
 
 bool cplus_data_check(cplus_object obj)
@@ -297,14 +306,16 @@ bool cplus_data_check(cplus_object obj)
 
 uint32_t cplus_data_get_data_size(cplus_data obj)
 {
-    struct data * dt = (struct data *)obj;
+    struct data * dt = (struct data *)(obj);
     uint32_t size = 0;
     CHECK_OBJECT_TYPE(obj);
 
     switch (dt->data_type)
     {
     default:
-        errno = EINVAL;
+        {
+            errno = EINVAL;
+        }
         return 0;
     case CPLUS_DATA_TYPE_NULL:
         return 0;
@@ -333,14 +344,18 @@ uint32_t cplus_data_get_data_size(cplus_data obj)
     case CPLUS_DATA_TYPE_POINTER:
         return sizeof(intptr_t);
     case CPLUS_DATA_TYPE_STRING:
-        DATA_SPIN_LOCK();
-        size = strlen(dt->value.str.bufs);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            size = strlen(dt->value.str.bufs);
+            DATA_SPIN_UNLOCK();
+        }
         return size;
     case CPLUS_DATA_TYPE_BYTE_ARRAY:
-        DATA_SPIN_LOCK();
-        size = dt->value.byte_array.len;
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            size = dt->value.byte_array.len;
+            DATA_SPIN_UNLOCK();
+        }
         return size;
     }
 }
@@ -348,21 +363,21 @@ uint32_t cplus_data_get_data_size(cplus_data obj)
 int32_t cplus_data_get_type(cplus_data obj)
 {
     CHECK_OBJECT_TYPE(obj);
-    return READ_DATA_BUFS_S(((struct data *)obj)->data_type);
+    return READ_DATA_BUFS_S(((struct data *)(obj))->data_type);
 }
 
 char * cplus_data_get_type_str(CPLUS_DATA_TYPE type)
 {
     CHECK_IN_INTERVAL(type, CPLUS_DATA_TYPE_NULL, CPLUS_DATA_TYPE_UNKNOWN, NULL);
-    return cplus_type_string[type];
+    return (char *)(cplus_type_string[type]);
 }
 
 int32_t cplus_data_set_key(
     cplus_data obj
     , uint32_t key_len
-    , char * key)
+    , const char * key)
 {
-    struct data * dt = (struct data *)obj;
+    struct data * dt = (struct data *)(obj);
 
     CHECK_OBJECT_TYPE(obj);
     CHECK_NOT_NULL(key, CPLUS_FAIL);
@@ -372,7 +387,7 @@ int32_t cplus_data_set_key(
     key_len += 1;
     if (key_len <= dt->key_len)
     {
-        cplus_mem_cpy_ex(dt->key, dt->key_len, key, key_len);
+        cplus_mem_cpy_ex(dt->key, dt->key_len, (void *)(key), key_len);
     }
     else
     {
@@ -395,7 +410,7 @@ int32_t cplus_data_set_key(
                 return CPLUS_FAIL;
             }
         }
-        cplus_mem_cpy_ex(dt->key, dt->key_len, key, dt->key_len);
+        cplus_mem_cpy_ex(dt->key, dt->key_len, (void *)(key), dt->key_len);
     }
     DATA_SPIN_UNLOCK();
 
@@ -404,14 +419,14 @@ int32_t cplus_data_set_key(
 
 char * cplus_data_get_key(cplus_data obj)
 {
-    struct data * dt = (struct data *)obj;
+    struct data * dt = (struct data *)(obj);
     CHECK_OBJECT_TYPE(obj);
     return dt->key;
 }
 
 int32_t cplus_data_set_action_mode(cplus_data obj, uint32_t mode)
 {
-    struct data * dt = (struct data *)obj;
+    struct data * dt = (struct data *)(obj);
     CHECK_OBJECT_TYPE(obj);
 
     SET_VALUE_TO_DATA_BUFS_S(mode, dt->action_mode);
@@ -421,7 +436,7 @@ int32_t cplus_data_set_action_mode(cplus_data obj, uint32_t mode)
 uint32_t cplus_data_get_action_mode(cplus_data obj)
 {
     CHECK_OBJECT_TYPE(obj);
-    return READ_DATA_BUFS_S(((struct data *)obj)->action_mode);
+    return READ_DATA_BUFS_S(((struct data *)(obj))->action_mode);
 }
 
 cplus_data cplus_data_create_group_node(char * data_group_name)
@@ -437,7 +452,7 @@ cplus_data cplus_data_create_group_node(char * data_group_name)
     return data_group_node;
 }
 
-cplus_llist cplus_data_get_group(cplus_data * data_group_node)
+cplus_llist cplus_data_get_group(cplus_data data_group_node)
 {
     cplus_llist data_group = NULL;
 
@@ -452,7 +467,7 @@ cplus_llist cplus_data_get_group(cplus_data * data_group_node)
     return data_group;
 }
 
-int32_t cplus_data_delete_group_node(cplus_data * data_group_node)
+int32_t cplus_data_delete_group_node(cplus_data data_group_node)
 {
     cplus_llist data_group = NULL;
 
@@ -472,7 +487,7 @@ int32_t cplus_data_delete_group_node(cplus_data * data_group_node)
 int32_t cplus_data_get_value(cplus_data obj, void * value1, void * value2)
 {
     int res = CPLUS_SUCCESS;
-    struct data * dt = (struct data *)obj;
+    struct data * dt = (struct data *)(obj);
     CHECK_OBJECT_TYPE(obj);
     CHECK_NOT_NULL(value1, CPLUS_FAIL);
 
@@ -480,94 +495,124 @@ int32_t cplus_data_get_value(cplus_data obj, void * value1, void * value2)
     {
     default:
     case CPLUS_DATA_TYPE_NULL:
-        errno = EINVAL;
+        {
+            errno = EINVAL;
+        }
         return CPLUS_FAIL;
     case CPLUS_DATA_TYPE_BOOL:
-        GET_VALUE_FROM_DATA_BUFS_S(value1, dt->value.b);
-        res = sizeof(bool);
+        {
+            GET_VALUE_FROM_DATA_BUFS_S(value1, dt->value.b);
+            res = sizeof(bool);
+        }
         break;
     case CPLUS_DATA_TYPE_INT8:
-        GET_VALUE_FROM_DATA_BUFS_S(value1, dt->value.i8);
-        res = sizeof(int8_t);
+        {
+            GET_VALUE_FROM_DATA_BUFS_S(value1, dt->value.i8);
+            res = sizeof(int8_t);
+        }
         break;
     case CPLUS_DATA_TYPE_INT16:
-        GET_VALUE_FROM_DATA_BUFS_S(value1, dt->value.i16);
-        res = sizeof(int16_t);
+        {
+            GET_VALUE_FROM_DATA_BUFS_S(value1, dt->value.i16);
+            res = sizeof(int16_t);
+        }
         break;
     case CPLUS_DATA_TYPE_INT32:
-        GET_VALUE_FROM_DATA_BUFS_S(value1, dt->value.i32);
-        res = sizeof(int32_t);
+        {
+            GET_VALUE_FROM_DATA_BUFS_S(value1, dt->value.i32);
+            res = sizeof(int32_t);
+        }
         break;
     case CPLUS_DATA_TYPE_INT64:
-        GET_VALUE_FROM_DATA_BUFS_SPIN(value1, dt->value.i64);
-        res = sizeof(int64_t);
+        {
+            GET_VALUE_FROM_DATA_BUFS_SPIN(value1, dt->value.i64);
+            res = sizeof(int64_t);
+        }
         break;
     case CPLUS_DATA_TYPE_UINT8:
-        GET_VALUE_FROM_DATA_BUFS_S(value1, dt->value.u8);
-        res = sizeof(uint8_t);
+        {
+            GET_VALUE_FROM_DATA_BUFS_S(value1, dt->value.u8);
+            res = sizeof(uint8_t);
+        }
         break;
     case CPLUS_DATA_TYPE_UINT16:
-        GET_VALUE_FROM_DATA_BUFS_S(value1, dt->value.u16);
-        res = sizeof(uint16_t);
+        {
+            GET_VALUE_FROM_DATA_BUFS_S(value1, dt->value.u16);
+            res = sizeof(uint16_t);
+        }
         break;
     case CPLUS_DATA_TYPE_UINT32:
-        GET_VALUE_FROM_DATA_BUFS_S(value1, dt->value.u32);
-        res = sizeof(uint32_t);
+        {
+            GET_VALUE_FROM_DATA_BUFS_S(value1, dt->value.u32);
+            res = sizeof(uint32_t);
+        }
         break;
     case CPLUS_DATA_TYPE_UINT64:
-        GET_VALUE_FROM_DATA_BUFS_SPIN(value1, dt->value.u64);
-        res = sizeof(uint64_t);
+        {
+            GET_VALUE_FROM_DATA_BUFS_SPIN(value1, dt->value.u64);
+            res = sizeof(uint64_t);
+        }
         break;
     case CPLUS_DATA_TYPE_FLOAT:
-        GET_VALUE_FROM_DATA_BUFS_SPIN(value1, dt->value.f);
-        res = sizeof(float);
+        {
+            GET_VALUE_FROM_DATA_BUFS_SPIN(value1, dt->value.f);
+            res = sizeof(float);
+        }
         break;
     case CPLUS_DATA_TYPE_DOUBLE:
-        GET_VALUE_FROM_DATA_BUFS_SPIN(value1, dt->value.db);
-        res = sizeof(double);
+        {
+            GET_VALUE_FROM_DATA_BUFS_SPIN(value1, dt->value.db);
+            res = sizeof(double);
+        }
         break;
     case CPLUS_DATA_TYPE_POINTER:
-        GET_VALUE_FROM_DATA_BUFS_S(value1, dt->value.p);
-        res = sizeof(void*);
+        {
+            GET_VALUE_FROM_DATA_BUFS_S(value1, dt->value.p);
+            res = sizeof(void *);
+        }
         break;
     case CPLUS_DATA_TYPE_STRING:
-        CHECK_NOT_NULL(value2, CPLUS_FAIL);
-        DATA_SPIN_LOCK();
-        if (*((uint32_t *)value1) < (strlen(dt->value.str.bufs) + 1))
         {
-            errno = ENOBUFS;
-            res =  CPLUS_FAIL;
+            CHECK_NOT_NULL(value2, CPLUS_FAIL);
+            DATA_SPIN_LOCK();
+            if (* ((uint32_t *)(value1)) < (strlen(dt->value.str.bufs) + 1))
+            {
+                errno = ENOBUFS;
+                res =  CPLUS_FAIL;
+            }
+            else
+            {
+                res = cplus_str_printf(
+                    value2
+                    , (* ((uint32_t *)(value1)))
+                    , "%s"
+                    , dt->value.str.bufs);
+            }
+            DATA_SPIN_UNLOCK();
         }
-        else
-        {
-            res = cplus_str_printf(
-                value2
-                , *((uint32_t *)value1)
-                , "%s"
-                , dt->value.str.bufs);
-        }
-        DATA_SPIN_UNLOCK();
         break;
     case CPLUS_DATA_TYPE_BYTE_ARRAY:
-        CHECK_NOT_NULL(value2, CPLUS_FAIL);
-        DATA_SPIN_LOCK();
-        if (*((uint32_t *)value1) < dt->value.byte_array.len)
         {
-            errno = ENOBUFS;
-            res =  CPLUS_FAIL;
-        }
-        else
-        {
-            if (NULL == cplus_mem_cpy_ex(value2
-                , *((uint32_t *)value1)
-                , dt->value.byte_array.bufs
-                , dt->value.byte_array.len))
+            CHECK_NOT_NULL(value2, CPLUS_FAIL);
+            DATA_SPIN_LOCK();
+            if ((* ((uint32_t *)(value1))) < dt->value.byte_array.len)
             {
-                return CPLUS_FAIL;
+                errno = ENOBUFS;
+                res =  CPLUS_FAIL;
             }
-            res = dt->value.byte_array.len;
+            else
+            {
+                if (NULL == cplus_mem_cpy_ex(value2
+                    , (* ((uint32_t *)(value1)))
+                    , dt->value.byte_array.bufs
+                    , dt->value.byte_array.len))
+                {
+                    return CPLUS_FAIL;
+                }
+                res = dt->value.byte_array.len;
+            }
+            DATA_SPIN_UNLOCK();
         }
-        DATA_SPIN_UNLOCK();
         break;
     }
     return res;
@@ -575,7 +620,7 @@ int32_t cplus_data_get_value(cplus_data obj, void * value1, void * value2)
 
 int32_t cplus_data_set_value(cplus_data obj, void * value1, void * value2)
 {
-    struct data * dt = (struct data *)obj;
+    struct data * dt = (struct data *)(obj);
     CHECK_OBJECT_TYPE(obj);
     CHECK_NOT_NULL(value1, CPLUS_FAIL);
 
@@ -583,115 +628,145 @@ int32_t cplus_data_set_value(cplus_data obj, void * value1, void * value2)
     {
     default:
     case CPLUS_DATA_TYPE_NULL:
-        errno = EINVAL;
+        {
+            errno = EINVAL;
+        }
         return CPLUS_FAIL;
     case CPLUS_DATA_TYPE_BOOL:
-        SET_POINTER_VALUE_TO_DATA_BUFS_S(value1, dt->value.b);
+        {
+            SET_POINTER_VALUE_TO_DATA_BUFS_S(value1, dt->value.b);
+        }
         break;
     case CPLUS_DATA_TYPE_INT8:
-        SET_POINTER_VALUE_TO_DATA_BUFS_S(value1, dt->value.i8);
+        {
+            SET_POINTER_VALUE_TO_DATA_BUFS_S(value1, dt->value.i8);
+        }
         break;
     case CPLUS_DATA_TYPE_INT16:
-        SET_POINTER_VALUE_TO_DATA_BUFS_S(value1, dt->value.i16);
+        {
+            SET_POINTER_VALUE_TO_DATA_BUFS_S(value1, dt->value.i16);
+        }
         break;
     case CPLUS_DATA_TYPE_INT32:
-        SET_POINTER_VALUE_TO_DATA_BUFS_S(value1, dt->value.i32);
+        {
+            SET_POINTER_VALUE_TO_DATA_BUFS_S(value1, dt->value.i32);
+        }
         break;
     case CPLUS_DATA_TYPE_INT64:
-        SET_VALUE_TO_DATA_BUFS_SPIN(value1, dt->value.i64);
+        {
+            SET_VALUE_TO_DATA_BUFS_SPIN(value1, dt->value.i64);
+        }
         break;
     case CPLUS_DATA_TYPE_UINT8:
-        SET_POINTER_VALUE_TO_DATA_BUFS_S(value1, dt->value.u8);
+        {
+            SET_POINTER_VALUE_TO_DATA_BUFS_S(value1, dt->value.u8);
+        }
         break;
     case CPLUS_DATA_TYPE_UINT16:
-        SET_POINTER_VALUE_TO_DATA_BUFS_S(value1, dt->value.u16);
+        {
+            SET_POINTER_VALUE_TO_DATA_BUFS_S(value1, dt->value.u16);
+        }
         break;
     case CPLUS_DATA_TYPE_UINT32:
-        SET_POINTER_VALUE_TO_DATA_BUFS_S(value1, dt->value.u32);
+        {
+            SET_POINTER_VALUE_TO_DATA_BUFS_S(value1, dt->value.u32);
+        }
         break;
     case CPLUS_DATA_TYPE_UINT64:
-        SET_VALUE_TO_DATA_BUFS_SPIN(value1, dt->value.u64);
+        {
+            SET_VALUE_TO_DATA_BUFS_SPIN(value1, dt->value.u64);
+        }
         break;
     case CPLUS_DATA_TYPE_FLOAT:
-        SET_VALUE_TO_DATA_BUFS_SPIN(value1, dt->value.f);
+        {
+            SET_VALUE_TO_DATA_BUFS_SPIN(value1, dt->value.f);
+        }
         break;
     case CPLUS_DATA_TYPE_DOUBLE:
-        SET_VALUE_TO_DATA_BUFS_SPIN(value1, dt->value.db);
+        {
+            SET_VALUE_TO_DATA_BUFS_SPIN(value1, dt->value.db);
+        }
         break;
     case CPLUS_DATA_TYPE_POINTER:
-        SET_POINTER_VALUE_TO_DATA_BUFS_S(value1, dt->value.p);
+        {
+            SET_POINTER_VALUE_TO_DATA_BUFS_S(value1, dt->value.p);
+        }
         break;
     case CPLUS_DATA_TYPE_STRING:
-        DATA_SPIN_LOCK();
-        if (NULL == dt->value.str.bufs)
         {
-            dt->value.str.len = *((uint32_t *)value1) + 1;
-            dt->value.str.bufs = (char *)cplus_malloc(dt->value.str.len * sizeof(char));
-        }
-        else
-        {
-            if ((*((uint32_t *)value1) + 1) > dt->value.str.len)
+            DATA_SPIN_LOCK();
+            if (NULL == dt->value.str.bufs)
             {
-                dt->value.str.len = *((uint32_t *)value1) + 1;
-                dt->value.str.bufs = (char *)cplus_realloc(dt->value.str.bufs, dt->value.str.len);
-            }
-        }
-        if (NULL == dt->value.str.bufs)
-        {
-            errno = ENOMEM;
-            DATA_SPIN_UNLOCK();
-            return CPLUS_FAIL;
-        }
-        else
-        {
-            if (value2)
-            {
-                cplus_str_printf(dt->value.str.bufs
-                    , dt->value.str.len, "%s", (char *)value2);
+                dt->value.str.len = (* ((uint32_t *)(value1))) + 1;
+                dt->value.str.bufs = (char *)cplus_malloc(dt->value.str.len * sizeof(char));
             }
             else
             {
-                cplus_mem_set(dt->value.str.bufs, 0x00, dt->value.str.len);
+                if ((* ((uint32_t *)(value1)) + 1) > dt->value.str.len)
+                {
+                    dt->value.str.len = (* ((uint32_t *)(value1))) + 1;
+                    dt->value.str.bufs = (char *)cplus_realloc(dt->value.str.bufs, dt->value.str.len);
+                }
             }
+            if (NULL == dt->value.str.bufs)
+            {
+                errno = ENOMEM;
+                DATA_SPIN_UNLOCK();
+                return CPLUS_FAIL;
+            }
+            else
+            {
+                if (value2)
+                {
+                    cplus_str_printf(dt->value.str.bufs
+                        , dt->value.str.len, "%s", (char *)(value2));
+                }
+                else
+                {
+                    cplus_mem_set(dt->value.str.bufs, 0x00, dt->value.str.len);
+                }
+            }
+            DATA_SPIN_UNLOCK();
         }
-        DATA_SPIN_UNLOCK();
         break;
     case CPLUS_DATA_TYPE_BYTE_ARRAY:
-        DATA_SPIN_LOCK();
-        dt->bufs_size = dt->value.byte_array.len;
-        dt->value.byte_array.len = *((uint32_t *)value1);
-        if (NULL == dt->value.byte_array.bufs)
         {
+            DATA_SPIN_LOCK();
             dt->bufs_size = dt->value.byte_array.len;
-            dt->value.byte_array.bufs = (uint8_t *)cplus_malloc(dt->bufs_size * sizeof(uint8_t));
-        }
-        else
-        {
-            if (*((uint32_t *)value1) > dt->bufs_size)
+            dt->value.byte_array.len = (* ((uint32_t *)(value1)));
+            if (NULL == dt->value.byte_array.bufs)
             {
                 dt->bufs_size = dt->value.byte_array.len;
-                dt->value.byte_array.bufs = (uint8_t *)cplus_realloc(dt->value.byte_array.bufs, dt->bufs_size * sizeof(uint8_t));
-            }
-        }
-        if (NULL == dt->value.byte_array.bufs)
-        {
-            errno = ENOMEM;
-            DATA_SPIN_UNLOCK();
-            return CPLUS_FAIL;
-        }
-        else
-        {
-            if (value2)
-            {
-                cplus_mem_cpy_ex(dt->value.byte_array.bufs
-                    , dt->bufs_size, value2, *((uint32_t *)value1));
+                dt->value.byte_array.bufs = (uint8_t *)cplus_malloc(dt->bufs_size * sizeof(uint8_t));
             }
             else
             {
-                cplus_mem_set(dt->value.byte_array.bufs, 0x00, dt->bufs_size);
+                if ((* ((uint32_t *)(value1))) > dt->bufs_size)
+                {
+                    dt->bufs_size = dt->value.byte_array.len;
+                    dt->value.byte_array.bufs = (uint8_t *)cplus_realloc(dt->value.byte_array.bufs, dt->bufs_size * sizeof(uint8_t));
+                }
             }
+            if (NULL == dt->value.byte_array.bufs)
+            {
+                errno = ENOMEM;
+                DATA_SPIN_UNLOCK();
+                return CPLUS_FAIL;
+            }
+            else
+            {
+                if (value2)
+                {
+                    cplus_mem_cpy_ex(dt->value.byte_array.bufs
+                        , dt->bufs_size, value2, (* ((uint32_t *)(value1))));
+                }
+                else
+                {
+                    cplus_mem_set(dt->value.byte_array.bufs, 0x00, dt->bufs_size);
+                }
+            }
+            DATA_SPIN_UNLOCK();
         }
-        DATA_SPIN_UNLOCK();
         break;
     }
     dt->is_valid = true;
@@ -700,8 +775,8 @@ int32_t cplus_data_set_value(cplus_data obj, void * value1, void * value2)
 
 int32_t cplus_data_clone_value(cplus_data dest, cplus_data src)
 {
-    struct data * dt_dest = (struct data *)dest;
-    struct data * dt_src = (struct data *)src;
+    struct data * dt_dest = (struct data *)(dest);
+    struct data * dt_src = (struct data *)(src);
     CHECK_OBJECT_TYPE(dest);
     CHECK_OBJECT_TYPE(src);
 
@@ -753,77 +828,77 @@ int32_t cplus_data_clone_value(cplus_data dest, cplus_data src)
 
 int32_t cplus_data_set_bool(cplus_data obj, bool value)
 {
-    return cplus_data_set_value(obj, &value, NULL);
+    return cplus_data_set_value(obj, &(value), NULL);
 }
 
 int32_t cplus_data_set_int8(cplus_data obj, int8_t value)
 {
-    return cplus_data_set_value(obj, &value, NULL);
+    return cplus_data_set_value(obj, &(value), NULL);
 }
 
 int32_t cplus_data_set_int16(cplus_data obj, int16_t value)
 {
-    return cplus_data_set_value(obj, &value, NULL);
+    return cplus_data_set_value(obj, &(value), NULL);
 }
 
 int32_t cplus_data_set_int32(cplus_data obj, int32_t value)
 {
-    return cplus_data_set_value(obj, &value, NULL);
+    return cplus_data_set_value(obj, &(value), NULL);
 }
 
 int32_t cplus_data_set_int64(cplus_data obj, int64_t value)
 {
-    return cplus_data_set_value(obj, &value, NULL);
+    return cplus_data_set_value(obj, &(value), NULL);
 }
 
 int32_t cplus_data_set_uint8(cplus_data obj, uint8_t value)
 {
-    return cplus_data_set_value(obj, &value, NULL);
+    return cplus_data_set_value(obj, &(value), NULL);
 }
 
 int32_t cplus_data_set_uint16(cplus_data obj, uint16_t value)
 {
-    return cplus_data_set_value(obj, &value, NULL);
+    return cplus_data_set_value(obj, &(value), NULL);
 }
 
 int32_t cplus_data_set_uint32(cplus_data obj, uint32_t value)
 {
-    return cplus_data_set_value(obj, &value, NULL);
+    return cplus_data_set_value(obj, &(value), NULL);
 }
 
 int32_t cplus_data_set_uint64(cplus_data obj, uint64_t value)
 {
-    return cplus_data_set_value(obj, &value, NULL);
+    return cplus_data_set_value(obj, &(value), NULL);
 }
 
 int32_t cplus_data_set_float(cplus_data obj, float value)
 {
-    return cplus_data_set_value(obj, &value, NULL);
+    return cplus_data_set_value(obj, &(value), NULL);
 }
 
 int32_t cplus_data_set_double(cplus_data obj, double value)
 {
-    return cplus_data_set_value(obj, &value, NULL);
+    return cplus_data_set_value(obj, &(value), NULL);
 }
 
 int32_t cplus_data_set_pointer(cplus_data obj, void * value)
 {
-    return cplus_data_set_value(obj, &value, NULL);
+    return cplus_data_set_value(obj, &(value), NULL);
 }
 
 int32_t cplus_data_set_string(cplus_data obj, uint32_t str_len, char * str_bufs)
 {
-    return cplus_data_set_value(obj, &str_len, str_bufs);
+    return cplus_data_set_value(obj, &(str_len), str_bufs);
 }
 
 int32_t cplus_data_set_byte_array(cplus_data obj, uint32_t array_len, uint8_t * array_bufs)
 {
-    return cplus_data_set_value(obj, &array_len, array_bufs);
+    return cplus_data_set_value(obj, &(array_len), array_bufs);
 }
 
 int32_t cplus_data_set_string_code(cplus_data obj, uint32_t code)
 {
-    struct data * dt = (struct data *)obj;
+    struct data * dt = (struct data *)(obj);
     CHECK_OBJECT_TYPE(obj);
 
     switch (dt->data_type)
@@ -831,7 +906,9 @@ int32_t cplus_data_set_string_code(cplus_data obj, uint32_t code)
     default:
         return CPLUS_FAIL;
     case CPLUS_DATA_TYPE_STRING:
-        SET_VALUE_TO_DATA_BUFS_S(code, dt->str_code);
+        {
+            SET_VALUE_TO_DATA_BUFS_S(code, dt->str_code);
+        }
         break;
     }
     return CPLUS_SUCCESS;
@@ -840,237 +917,253 @@ int32_t cplus_data_set_string_code(cplus_data obj, uint32_t code)
 bool cplus_data_get_bool(cplus_data obj)
 {
     CHECK_OBJECT_TYPE(obj);
-    assert(CPLUS_DATA_TYPE_BOOL == ((struct data *)obj)->data_type);
-
-    return READ_DATA_BUFS_S(((struct data *)obj)->value.b);
+    assert(CPLUS_DATA_TYPE_BOOL == ((struct data *)(obj))->data_type);
+    return READ_DATA_BUFS_S(((struct data *)(obj))->value.b);
 }
 
 int8_t cplus_data_get_int8(cplus_data obj)
 {
     CHECK_OBJECT_TYPE(obj);
-    assert(CPLUS_DATA_TYPE_INT8 == ((struct data *)obj)->data_type);
-
-    return READ_DATA_BUFS_S(((struct data *)obj)->value.i8);
+    assert(CPLUS_DATA_TYPE_INT8 == ((struct data *)(obj))->data_type);
+    return READ_DATA_BUFS_S(((struct data *)(obj))->value.i8);
 }
 
 int16_t cplus_data_get_int16(cplus_data obj)
 {
     CHECK_OBJECT_TYPE(obj);
-    assert(CPLUS_DATA_TYPE_INT16 == ((struct data *)obj)->data_type);
-
-    return READ_DATA_BUFS_S(((struct data *)obj)->value.i16);
+    assert(CPLUS_DATA_TYPE_INT16 == ((struct data *)(obj))->data_type);
+    return READ_DATA_BUFS_S(((struct data *)(obj))->value.i16);
 }
 
 int32_t cplus_data_get_int32(cplus_data obj)
 {
     CHECK_OBJECT_TYPE(obj);
-    assert(CPLUS_DATA_TYPE_INT32 == ((struct data *)obj)->data_type);
-
-    return READ_DATA_BUFS_S(((struct data *)obj)->value.i32);
+    assert(CPLUS_DATA_TYPE_INT32 == ((struct data *)(obj))->data_type);
+    return READ_DATA_BUFS_S(((struct data *)(obj))->value.i32);
 }
 
 int64_t cplus_data_get_int64(cplus_data obj)
 {
     int64_t i64 = 0;
-    struct data * dt = (struct data *)obj;
+    struct data * dt = (struct data *)(obj);
     CHECK_OBJECT_TYPE(obj);
     assert(CPLUS_DATA_TYPE_INT64 == dt->data_type);
-
-    GET_VALUE_FROM_DATA_BUFS_SPIN(&i64, dt->value.i64);
+    GET_VALUE_FROM_DATA_BUFS_SPIN(&(i64), dt->value.i64);
     return i64;
 }
 
 uint8_t cplus_data_get_uint8(cplus_data obj)
 {
     CHECK_OBJECT_TYPE(obj);
-    assert(CPLUS_DATA_TYPE_UINT8 == ((struct data *)obj)->data_type);
-
-    return READ_DATA_BUFS_S(((struct data *)obj)->value.u8);
+    assert(CPLUS_DATA_TYPE_UINT8 == ((struct data *)(obj))->data_type);
+    return READ_DATA_BUFS_S(((struct data *)(obj))->value.u8);
 }
 
 uint16_t cplus_data_get_uint16(cplus_data obj)
 {
     CHECK_OBJECT_TYPE(obj);
-    assert(CPLUS_DATA_TYPE_UINT16 == ((struct data *)obj)->data_type);
-
-    return READ_DATA_BUFS_S(((struct data *)obj)->value.u16);
+    assert(CPLUS_DATA_TYPE_UINT16 == ((struct data *)(obj))->data_type);
+    return READ_DATA_BUFS_S(((struct data *)(obj))->value.u16);
 }
 
 uint32_t cplus_data_get_uint32(cplus_data obj)
 {
     CHECK_OBJECT_TYPE(obj);
-    assert(CPLUS_DATA_TYPE_UINT32 == ((struct data *)obj)->data_type);
-
-    return READ_DATA_BUFS_S(((struct data *)obj)->value.u32);
+    assert(CPLUS_DATA_TYPE_UINT32 == ((struct data *)(obj))->data_type);
+    return READ_DATA_BUFS_S(((struct data *)(obj))->value.u32);
 }
 
 uint64_t cplus_data_get_uint64(cplus_data obj)
 {
     uint64_t u64 = 0;
-    struct data * dt = (struct data *)obj;
+    struct data * dt = (struct data *)(obj);
     CHECK_OBJECT_TYPE(obj);
     assert(CPLUS_DATA_TYPE_UINT64 == dt->data_type);
-
-    GET_VALUE_FROM_DATA_BUFS_SPIN(&u64, dt->value.u64);
+    GET_VALUE_FROM_DATA_BUFS_SPIN(&(u64), dt->value.u64);
     return u64;
 }
 
 float cplus_data_get_float(cplus_data obj)
 {
     float f = 0;
-    struct data * dt = (struct data *)obj;
+    struct data * dt = (struct data *)(obj);
     CHECK_OBJECT_TYPE(obj);
     assert(CPLUS_DATA_TYPE_FLOAT == dt->data_type);
-
-    GET_VALUE_FROM_DATA_BUFS_SPIN(&f, dt->value.f);
+    GET_VALUE_FROM_DATA_BUFS_SPIN(&(f), dt->value.f);
     return f;
 }
 
 double cplus_data_get_double(cplus_data obj)
 {
     double db = 0;
-    struct data * dt = (struct data *)obj;
+    struct data * dt = (struct data *)(obj);
     CHECK_OBJECT_TYPE(obj);
     assert(CPLUS_DATA_TYPE_DOUBLE == dt->data_type);
-
-    GET_VALUE_FROM_DATA_BUFS_SPIN(&db, dt->value.db);
+    GET_VALUE_FROM_DATA_BUFS_SPIN(&(db), dt->value.db);
     return db;
 }
 
 void * cplus_data_get_pointer(cplus_data obj)
 {
     CHECK_OBJECT_TYPE(obj);
-    assert(CPLUS_DATA_TYPE_POINTER == ((struct data *)obj)->data_type);
-
-    return READ_DATA_BUFS_S(((struct data *)obj)->value.p);
+    assert(CPLUS_DATA_TYPE_POINTER == ((struct data *)(obj))->data_type);
+    return READ_DATA_BUFS_S(((struct data *)(obj))->value.p);
 }
 
 char * cplus_data_get_string(cplus_data obj)
 {
     CHECK_OBJECT_TYPE(obj);
-    assert(CPLUS_DATA_TYPE_STRING == ((struct data *)obj)->data_type);
-
-    return ((struct data *)obj)->value.str.bufs;
+    assert(CPLUS_DATA_TYPE_STRING == ((struct data *)(obj))->data_type);
+    return ((struct data *)(obj))->value.str.bufs;
 }
 
 uint8_t * cplus_data_get_byte_array(cplus_data obj)
 {
     CHECK_OBJECT_TYPE(obj);
-    assert(CPLUS_DATA_TYPE_BYTE_ARRAY == ((struct data *)obj)->data_type);
-
-    return ((struct data *)obj)->value.byte_array.bufs;
+    assert(CPLUS_DATA_TYPE_BYTE_ARRAY == ((struct data *)(obj))->data_type);
+    return ((struct data *)(obj))->value.byte_array.bufs;
 }
 
 uint32_t cplus_data_get_string_code(cplus_data obj)
 {
     CHECK_OBJECT_TYPE(obj);
-    assert(CPLUS_DATA_TYPE_STRING == ((struct data *)obj)->data_type);
+    assert(CPLUS_DATA_TYPE_STRING == ((struct data *)(obj))->data_type);
 
-    return READ_DATA_BUFS_S(((struct data *)obj)->str_code);
+    return READ_DATA_BUFS_S(((struct data *)(obj))->str_code);
 }
 
 int32_t cplus_data_get_as_bool(cplus_data obj, bool * value)
 {
-    struct data * dt = (struct data *)obj;
+    struct data * dt = (struct data *)(obj);
     CHECK_OBJECT_TYPE(obj);
 
     switch (dt->data_type)
     {
     default:
     case CPLUS_DATA_TYPE_NULL:
-        errno = EINVAL;
+        {
+            errno = EINVAL;
+        }
         return CPLUS_FAIL;
     case CPLUS_DATA_TYPE_BOOL:
-        GET_VALUE_FROM_DATA_BUFS_S(value, dt->value.b);
+        {
+            GET_VALUE_FROM_DATA_BUFS_S(value, dt->value.b);
+        }
         break;
     case CPLUS_DATA_TYPE_INT8:
-        *value = COMPARE_DATA_BUFS_S(0, dt->value.i8);
+        {
+            (* value) = COMPARE_DATA_BUFS_S(0, dt->value.i8);
+        }
         break;
     case CPLUS_DATA_TYPE_INT16:
-        *value = COMPARE_DATA_BUFS_S(0, dt->value.i16);
+        {
+            (* value) = COMPARE_DATA_BUFS_S(0, dt->value.i16);
+        }
         break;
     case CPLUS_DATA_TYPE_INT32:
-        *value = COMPARE_DATA_BUFS_S(0, dt->value.i32);
+        {
+            (* value) = COMPARE_DATA_BUFS_S(0, dt->value.i32);
+        }
         break;
     case CPLUS_DATA_TYPE_INT64:
-        DATA_SPIN_LOCK();
-        *value = (0 != dt->value.i64);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            (* value) = (0 != dt->value.i64);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_UINT8:
-        *value = COMPARE_DATA_BUFS_S(0, dt->value.u8);
+        {
+            (* value) = COMPARE_DATA_BUFS_S(0, dt->value.u8);
+        }
         break;
     case CPLUS_DATA_TYPE_UINT16:
-        *value = COMPARE_DATA_BUFS_S(0, dt->value.u16);
+        {
+            (* value) = COMPARE_DATA_BUFS_S(0, dt->value.u16);
+        }
         break;
     case CPLUS_DATA_TYPE_UINT32:
-        *value = COMPARE_DATA_BUFS_S(0, dt->value.u32);
+        {
+            (* value) = COMPARE_DATA_BUFS_S(0, dt->value.u32);
+        }
         break;
     case CPLUS_DATA_TYPE_UINT64:
-        DATA_SPIN_LOCK();
-        *value = (0 != dt->value.u64);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            (* value) = (0 != dt->value.u64);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_FLOAT:
-        DATA_SPIN_LOCK();
-        *value = (0 != dt->value.f);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            (* value) = (0 != dt->value.f);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_DOUBLE:
-        DATA_SPIN_LOCK();
-        *value = (0 != dt->value.db);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            (* value) = (0 != dt->value.db);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_POINTER:
-        *value = COMPARE_DATA_BUFS_S(0, dt->value.p);
+        {
+            (* value) = COMPARE_DATA_BUFS_S(0, dt->value.p);
+        }
         break;
     case CPLUS_DATA_TYPE_STRING:
-        DATA_SPIN_LOCK();
-        if (0 >= dt->value.str.len or NULL == dt->value.str.bufs)
         {
-            errno = ENOMEM;
+            DATA_SPIN_LOCK();
+            if (0 >= dt->value.str.len OR NULL == dt->value.str.bufs)
+            {
+                errno = ENOMEM;
+                DATA_SPIN_UNLOCK();
+                return CPLUS_FAIL;
+            }
+            if (0 == strcasecmp("true", dt->value.str.bufs))
+            {
+                (* value) = true;
+            }
+            else if (0 == strcasecmp("false", dt->value.str.bufs))
+            {
+                (* value) = false;
+            }
+            else
+            {
+                errno = ENOMEM;
+                DATA_SPIN_UNLOCK();
+                return CPLUS_FAIL;
+            }
             DATA_SPIN_UNLOCK();
-            return CPLUS_FAIL;
         }
-        if (0 == strcasecmp("true", dt->value.str.bufs))
-        {
-            *value = true;
-        }
-        else if (0 == strcasecmp("false", dt->value.str.bufs))
-        {
-            *value = false;
-        }
-        else
-        {
-            errno = ENOMEM;
-            DATA_SPIN_UNLOCK();
-            return CPLUS_FAIL;
-        }
-        DATA_SPIN_UNLOCK();
         break;
     case CPLUS_DATA_TYPE_BYTE_ARRAY:
-        DATA_SPIN_LOCK();
-        if (0 >= dt->value.byte_array.len or NULL == dt->value.byte_array.bufs)
         {
-            errno = ENOMEM;
+            DATA_SPIN_LOCK();
+            if (0 >= dt->value.byte_array.len OR NULL == dt->value.byte_array.bufs)
+            {
+                errno = ENOMEM;
+                DATA_SPIN_UNLOCK();
+                return CPLUS_FAIL;
+            }
+            if (((uint8_t)0) < dt->value.byte_array.bufs[0])
+            {
+                (* value) = true;
+            }
+            else if (((uint8_t)0) == dt->value.byte_array.bufs[0])
+            {
+                (* value) = false;
+            }
+            else
+            {
+                errno = ENOMEM;
+                DATA_SPIN_UNLOCK();
+                return CPLUS_FAIL;
+            }
             DATA_SPIN_UNLOCK();
-            return CPLUS_FAIL;
         }
-        if (((uint8_t)0) < dt->value.byte_array.bufs[0])
-        {
-            *value = true;
-        }
-        else if (((uint8_t)0) == dt->value.byte_array.bufs[0])
-        {
-            *value = false;
-        }
-        else
-        {
-            errno = ENOMEM;
-            DATA_SPIN_UNLOCK();
-            return CPLUS_FAIL;
-        }
-        DATA_SPIN_UNLOCK();
         break;
     }
     return CPLUS_SUCCESS;
@@ -1078,7 +1171,7 @@ int32_t cplus_data_get_as_bool(cplus_data obj, bool * value)
 
 int32_t cplus_data_get_as_int8(cplus_data obj, int8_t * value)
 {
-    struct data * dt = (struct data *)obj;
+    struct data * dt = (struct data *)(obj);
     int32_t i32 = 0;
     CHECK_OBJECT_TYPE(obj);
 
@@ -1086,69 +1179,99 @@ int32_t cplus_data_get_as_int8(cplus_data obj, int8_t * value)
     {
     default:
     case CPLUS_DATA_TYPE_NULL:
-        errno = EINVAL;
+        {
+            errno = EINVAL;
+        }
         return CPLUS_FAIL;
     case CPLUS_DATA_TYPE_BOOL:
-        GET_VALUE_FROM_DATA_BUFS_S(value, (int8_t)(dt->value.b));
+        {
+            GET_VALUE_FROM_DATA_BUFS_S(value, (int8_t)(dt->value.b));
+        }
         break;
     case CPLUS_DATA_TYPE_INT8:
-        GET_VALUE_FROM_DATA_BUFS_S(value, dt->value.i8);
+        {
+            GET_VALUE_FROM_DATA_BUFS_S(value, dt->value.i8);
+        }
         break;
     case CPLUS_DATA_TYPE_INT16:
-        GET_VALUE_FROM_DATA_BUFS_S(value, (int8_t)(dt->value.i16));
+        {
+            GET_VALUE_FROM_DATA_BUFS_S(value, (int8_t)(dt->value.i16));
+        }
         break;
     case CPLUS_DATA_TYPE_INT32:
-        GET_VALUE_FROM_DATA_BUFS_S(value, (int8_t)(dt->value.i32));
+        {
+            GET_VALUE_FROM_DATA_BUFS_S(value, (int8_t)(dt->value.i32));
+        }
         break;
     case CPLUS_DATA_TYPE_INT64:
-        DATA_SPIN_LOCK();
-        *value = (int8_t)(dt->value.i64);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            (* value) = (int8_t)(dt->value.i64);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_UINT8:
-        GET_VALUE_FROM_DATA_BUFS_S(value, (int8_t)(dt->value.u8));
+        {
+            GET_VALUE_FROM_DATA_BUFS_S(value, (int8_t)(dt->value.u8));
+        }
         break;
     case CPLUS_DATA_TYPE_UINT16:
-        GET_VALUE_FROM_DATA_BUFS_S(value, (int8_t)(dt->value.u16));
+        {
+            GET_VALUE_FROM_DATA_BUFS_S(value, (int8_t)(dt->value.u16));
+        }
         break;
     case CPLUS_DATA_TYPE_UINT32:
-        GET_VALUE_FROM_DATA_BUFS_S(value, (int8_t)(dt->value.u32));
+        {
+            GET_VALUE_FROM_DATA_BUFS_S(value, (int8_t)(dt->value.u32));
+        }
         break;
     case CPLUS_DATA_TYPE_UINT64:
-        DATA_SPIN_LOCK();
-        *value = (int8_t)(dt->value.u64);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            (* value) = (int8_t)(dt->value.u64);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_FLOAT:
-        DATA_SPIN_LOCK();
-        *value = (int8_t)(dt->value.f);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            (* value) = (int8_t)(dt->value.f);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_DOUBLE:
-        DATA_SPIN_LOCK();
-        *value = (int8_t)(dt->value.db);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            (* value) = (int8_t)(dt->value.db);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_POINTER:
-        GET_VALUE_FROM_DATA_BUFS_S(value, (int8_t)((intptr_t)(dt->value.p)));
+        {
+            GET_VALUE_FROM_DATA_BUFS_S(value, (int8_t)((intptr_t)(dt->value.p)));
+        }
         break;
     case CPLUS_DATA_TYPE_STRING:
-        DATA_SPIN_LOCK();
-        if (1 != sscanf(dt->value.str.bufs, "%d", &i32))
         {
-            errno = ENOENT;
+            DATA_SPIN_LOCK();
+            if (1 != sscanf(dt->value.str.bufs, "%d", &(i32)))
+            {
+                errno = ENOENT;
+                DATA_SPIN_UNLOCK();
+                return CPLUS_FAIL;
+            }
+            (* value) = (int8_t)(i32);
             DATA_SPIN_UNLOCK();
-            return CPLUS_FAIL;
         }
-        *value = (int8_t)i32;
-        DATA_SPIN_UNLOCK();
         break;
     case CPLUS_DATA_TYPE_BYTE_ARRAY:
-        DATA_SPIN_LOCK();
-       cplus_mem_cpy(value
-            , dt->value.byte_array.bufs
-            , (dt->value.byte_array.len > sizeof((* value)))? sizeof((* value)): dt->value.byte_array.len);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            cplus_mem_cpy(value
+                , dt->value.byte_array.bufs
+                , (dt->value.byte_array.len > sizeof((* value)))? sizeof((* value)): dt->value.byte_array.len);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     }
     return CPLUS_SUCCESS;
@@ -1156,7 +1279,7 @@ int32_t cplus_data_get_as_int8(cplus_data obj, int8_t * value)
 
 int32_t cplus_data_get_as_int16(cplus_data obj, int16_t * value)
 {
-    struct data * dt = (struct data *)obj;
+    struct data * dt = (struct data *)(obj);
     int32_t i32 = 0;
     CHECK_OBJECT_TYPE(obj);
 
@@ -1164,69 +1287,99 @@ int32_t cplus_data_get_as_int16(cplus_data obj, int16_t * value)
     {
     default:
     case CPLUS_DATA_TYPE_NULL:
-        errno = EINVAL;
+        {
+            errno = EINVAL;
+        }
         return CPLUS_FAIL;
     case CPLUS_DATA_TYPE_BOOL:
-        GET_VALUE_FROM_DATA_BUFS_S(value, (int16_t)(dt->value.b));
+        {
+            GET_VALUE_FROM_DATA_BUFS_S(value, (int16_t)(dt->value.b));
+        }
         break;
     case CPLUS_DATA_TYPE_INT8:
-        GET_VALUE_FROM_DATA_BUFS_S(value, (int16_t)(dt->value.i8));
+        {
+            GET_VALUE_FROM_DATA_BUFS_S(value, (int16_t)(dt->value.i8));
+        }
         break;
     case CPLUS_DATA_TYPE_INT16:
-        GET_VALUE_FROM_DATA_BUFS_S(value, (dt->value.i16));
+        {
+            GET_VALUE_FROM_DATA_BUFS_S(value, (dt->value.i16));
+        }
         break;
     case CPLUS_DATA_TYPE_INT32:
-        GET_VALUE_FROM_DATA_BUFS_S(value, (int16_t)(dt->value.i32));
+        {
+            GET_VALUE_FROM_DATA_BUFS_S(value, (int16_t)(dt->value.i32));
+        }
         break;
     case CPLUS_DATA_TYPE_INT64:
-        DATA_SPIN_LOCK();
-        *value = (int16_t)(dt->value.i64);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            (* value) = (int16_t)(dt->value.i64);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_UINT8:
-        GET_VALUE_FROM_DATA_BUFS_S(value, (int16_t)(dt->value.u8));
+        {
+            GET_VALUE_FROM_DATA_BUFS_S(value, (int16_t)(dt->value.u8));
+        }
         break;
     case CPLUS_DATA_TYPE_UINT16:
-        GET_VALUE_FROM_DATA_BUFS_S(value, (int16_t)(dt->value.u16));
+        {
+            GET_VALUE_FROM_DATA_BUFS_S(value, (int16_t)(dt->value.u16));
+        }
         break;
     case CPLUS_DATA_TYPE_UINT32:
-        GET_VALUE_FROM_DATA_BUFS_S(value, (int16_t)(dt->value.u32));
+        {
+            GET_VALUE_FROM_DATA_BUFS_S(value, (int16_t)(dt->value.u32));
+        }
         break;
     case CPLUS_DATA_TYPE_UINT64:
-        DATA_SPIN_LOCK();
-        *value = (int16_t)(dt->value.u64);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            (* value) = (int16_t)(dt->value.u64);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_FLOAT:
-        DATA_SPIN_LOCK();
-        *value = (int16_t)(dt->value.f);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            (* value) = (int16_t)(dt->value.f);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_DOUBLE:
-        DATA_SPIN_LOCK();
-        *value = (int16_t)(dt->value.db);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            (* value) = (int16_t)(dt->value.db);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_POINTER:
-        GET_VALUE_FROM_DATA_BUFS_S(value, (int16_t)((intptr_t)(dt->value.p)));
+        {
+            GET_VALUE_FROM_DATA_BUFS_S(value, (int16_t)((intptr_t)(dt->value.p)));
+        }
         break;
     case CPLUS_DATA_TYPE_STRING:
-        DATA_SPIN_LOCK();
-        if (1 != sscanf(dt->value.str.bufs, "%d", &i32))
         {
-            errno = ENOENT;
+            DATA_SPIN_LOCK();
+            if (1 != sscanf(dt->value.str.bufs, "%d", &(i32)))
+            {
+                errno = ENOENT;
+                DATA_SPIN_UNLOCK();
+                return CPLUS_FAIL;
+            }
+            (* value) = (int16_t)(i32);
             DATA_SPIN_UNLOCK();
-            return CPLUS_FAIL;
         }
-        *value = (int16_t)i32;
-        DATA_SPIN_UNLOCK();
         break;
     case CPLUS_DATA_TYPE_BYTE_ARRAY:
-        DATA_SPIN_LOCK();
-        cplus_mem_cpy(value
-            , dt->value.byte_array.bufs
-            , (dt->value.byte_array.len > sizeof((* value)))? sizeof((* value)): dt->value.byte_array.len);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            cplus_mem_cpy(value
+                , dt->value.byte_array.bufs
+                , (dt->value.byte_array.len > sizeof((* value)))? sizeof((* value)): dt->value.byte_array.len);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     }
     return CPLUS_SUCCESS;
@@ -1234,7 +1387,7 @@ int32_t cplus_data_get_as_int16(cplus_data obj, int16_t * value)
 
 int32_t cplus_data_get_as_int32(cplus_data obj, int32_t * value)
 {
-    struct data * dt = (struct data *)obj;
+    struct data * dt = (struct data *)(obj);
     int32_t i32 = 0;
     CHECK_OBJECT_TYPE(obj);
 
@@ -1242,69 +1395,99 @@ int32_t cplus_data_get_as_int32(cplus_data obj, int32_t * value)
     {
     default:
     case CPLUS_DATA_TYPE_NULL:
-        errno = EINVAL;
+        {
+            errno = EINVAL;
+        }
         return CPLUS_FAIL;
     case CPLUS_DATA_TYPE_BOOL:
-        GET_VALUE_FROM_DATA_BUFS_S(value, (int32_t)(dt->value.b));
+        {
+            GET_VALUE_FROM_DATA_BUFS_S(value, (int32_t)(dt->value.b));
+        }
         break;
     case CPLUS_DATA_TYPE_INT8:
-        GET_VALUE_FROM_DATA_BUFS_S(value, (int32_t)(dt->value.i8));
+        {
+            GET_VALUE_FROM_DATA_BUFS_S(value, (int32_t)(dt->value.i8));
+        }
         break;
     case CPLUS_DATA_TYPE_INT16:
-        GET_VALUE_FROM_DATA_BUFS_S(value, (int32_t)(dt->value.i16));
+        {
+            GET_VALUE_FROM_DATA_BUFS_S(value, (int32_t)(dt->value.i16));
+        }
         break;
     case CPLUS_DATA_TYPE_INT32:
-        GET_VALUE_FROM_DATA_BUFS_S(value, dt->value.i32);
+        {
+            GET_VALUE_FROM_DATA_BUFS_S(value, dt->value.i32);
+        }
         break;
     case CPLUS_DATA_TYPE_INT64:
-        DATA_SPIN_LOCK();
-        *value = (int32_t)(dt->value.i64);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            (* value) = (int32_t)(dt->value.i64);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_UINT8:
-        GET_VALUE_FROM_DATA_BUFS_S(value, (int32_t)(dt->value.u8));
+        {
+            GET_VALUE_FROM_DATA_BUFS_S(value, (int32_t)(dt->value.u8));
+        }
         break;
     case CPLUS_DATA_TYPE_UINT16:
-        GET_VALUE_FROM_DATA_BUFS_S(value, (int32_t)(dt->value.u16));
+        {
+            GET_VALUE_FROM_DATA_BUFS_S(value, (int32_t)(dt->value.u16));
+        }
         break;
     case CPLUS_DATA_TYPE_UINT32:
-        GET_VALUE_FROM_DATA_BUFS_S(value, (int32_t)(dt->value.u32));
+        {
+            GET_VALUE_FROM_DATA_BUFS_S(value, (int32_t)(dt->value.u32));
+        }
         break;
     case CPLUS_DATA_TYPE_UINT64:
-        DATA_SPIN_LOCK();
-        *value = (int32_t)(dt->value.u64);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            (* value) = (int32_t)(dt->value.u64);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_FLOAT:
-        DATA_SPIN_LOCK();
-        *value = (int32_t)(dt->value.f);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            (* value) = (int32_t)(dt->value.f);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_DOUBLE:
-        DATA_SPIN_LOCK();
-        *value = (int32_t)(dt->value.db);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            (* value) = (int32_t)(dt->value.db);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_POINTER:
-        GET_VALUE_FROM_DATA_BUFS_S(value, (int32_t)((intptr_t)(dt->value.p)));
+        {
+            GET_VALUE_FROM_DATA_BUFS_S(value, (int32_t)((intptr_t)(dt->value.p)));
+        }
         break;
     case CPLUS_DATA_TYPE_STRING:
-        DATA_SPIN_LOCK();
-        if (1 != sscanf(dt->value.str.bufs, "%d", &i32))
         {
-            errno = ENOENT;
+            DATA_SPIN_LOCK();
+            if (1 != sscanf(dt->value.str.bufs, "%d", &(i32)))
+            {
+                errno = ENOENT;
+                DATA_SPIN_UNLOCK();
+                return CPLUS_FAIL;
+            }
+            (* value) = i32;
             DATA_SPIN_UNLOCK();
-            return CPLUS_FAIL;
         }
-        *value = i32;
-        DATA_SPIN_UNLOCK();
         break;
     case CPLUS_DATA_TYPE_BYTE_ARRAY:
-        DATA_SPIN_LOCK();
-        cplus_mem_cpy(value
-            , dt->value.byte_array.bufs
-            , (dt->value.byte_array.len > sizeof((* value)))? sizeof((* value)): dt->value.byte_array.len);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            cplus_mem_cpy(value
+                , dt->value.byte_array.bufs
+                , (dt->value.byte_array.len > sizeof((* value)))? sizeof((* value)): dt->value.byte_array.len);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     }
     return CPLUS_SUCCESS;
@@ -1312,7 +1495,7 @@ int32_t cplus_data_get_as_int32(cplus_data obj, int32_t * value)
 
 int32_t cplus_data_get_as_int64(cplus_data obj, int64_t * value)
 {
-    struct data * dt = (struct data *)obj;
+    struct data * dt = (struct data *)(obj);
     int64_t i64 = 0;
     CHECK_OBJECT_TYPE(obj);
 
@@ -1320,69 +1503,99 @@ int32_t cplus_data_get_as_int64(cplus_data obj, int64_t * value)
     {
     default:
     case CPLUS_DATA_TYPE_NULL:
-        errno = EINVAL;
+        {
+            errno = EINVAL;
+        }
         return CPLUS_FAIL;
     case CPLUS_DATA_TYPE_BOOL:
-        GET_VALUE_FROM_DATA_BUFS_S(value, (int64_t)(dt->value.b));
+        {
+            GET_VALUE_FROM_DATA_BUFS_S(value, (int64_t)(dt->value.b));
+        }
         break;
     case CPLUS_DATA_TYPE_INT8:
-        GET_VALUE_FROM_DATA_BUFS_S(value, (int64_t)(dt->value.i8));
+        {
+            GET_VALUE_FROM_DATA_BUFS_S(value, (int64_t)(dt->value.i8));
+        }
         break;
     case CPLUS_DATA_TYPE_INT16:
-        GET_VALUE_FROM_DATA_BUFS_S(value, (int64_t)(dt->value.i16));
+        {
+            GET_VALUE_FROM_DATA_BUFS_S(value, (int64_t)(dt->value.i16));
+        }
         break;
     case CPLUS_DATA_TYPE_INT32:
-        GET_VALUE_FROM_DATA_BUFS_S(value, (int64_t)(dt->value.i32));
+        {
+            GET_VALUE_FROM_DATA_BUFS_S(value, (int64_t)(dt->value.i32));
+        }
         break;
     case CPLUS_DATA_TYPE_INT64:
-        DATA_SPIN_LOCK();
-        *value = dt->value.i64;
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            (* value) = dt->value.i64;
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_UINT8:
-        GET_VALUE_FROM_DATA_BUFS_S(value, (int64_t)(dt->value.u8));
+        {
+            GET_VALUE_FROM_DATA_BUFS_S(value, (int64_t)(dt->value.u8));
+        }
         break;
     case CPLUS_DATA_TYPE_UINT16:
-        GET_VALUE_FROM_DATA_BUFS_S(value, (int64_t)(dt->value.u16));
+        {
+            GET_VALUE_FROM_DATA_BUFS_S(value, (int64_t)(dt->value.u16));
+        }
         break;
     case CPLUS_DATA_TYPE_UINT32:
-        GET_VALUE_FROM_DATA_BUFS_S(value, (int64_t)(dt->value.u32));
+        {
+            GET_VALUE_FROM_DATA_BUFS_S(value, (int64_t)(dt->value.u32));
+        }
         break;
     case CPLUS_DATA_TYPE_UINT64:
-        DATA_SPIN_LOCK();
-        *value = (int64_t)(dt->value.u64);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            (* value) = (int64_t)(dt->value.u64);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_FLOAT:
-        DATA_SPIN_LOCK();
-        *value = (int64_t)(dt->value.f);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            (* value) = (int64_t)(dt->value.f);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_DOUBLE:
-        DATA_SPIN_LOCK();
-        *value = (int64_t)(dt->value.db);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            (* value) = (int64_t)(dt->value.db);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_POINTER:
-        GET_VALUE_FROM_DATA_BUFS_S(value, (int64_t)((intptr_t)(dt->value.p)));
+        {
+            GET_VALUE_FROM_DATA_BUFS_S(value, (int64_t)((intptr_t)(dt->value.p)));
+        }
         break;
     case CPLUS_DATA_TYPE_STRING:
-        DATA_SPIN_LOCK();
-        if (1 != sscanf(dt->value.str.bufs, REG_LD, &i64))
         {
-            errno = ENOENT;
+            DATA_SPIN_LOCK();
+            if (1 != sscanf(dt->value.str.bufs, REG_LD, &(i64)))
+            {
+                errno = ENOENT;
+                DATA_SPIN_UNLOCK();
+                return CPLUS_FAIL;
+            }
+            (* value) = i64;
             DATA_SPIN_UNLOCK();
-            return CPLUS_FAIL;
         }
-        *value = i64;
-        DATA_SPIN_UNLOCK();
         break;
     case CPLUS_DATA_TYPE_BYTE_ARRAY:
-        DATA_SPIN_LOCK();
-        cplus_mem_cpy(value
-            , dt->value.byte_array.bufs
-            , (dt->value.byte_array.len > sizeof((* value)))? sizeof((* value)): dt->value.byte_array.len);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            cplus_mem_cpy(value
+                , dt->value.byte_array.bufs
+                , (dt->value.byte_array.len > sizeof((* value)))? sizeof((* value)): dt->value.byte_array.len);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     }
     return CPLUS_SUCCESS;
@@ -1390,7 +1603,7 @@ int32_t cplus_data_get_as_int64(cplus_data obj, int64_t * value)
 
 int32_t cplus_data_get_as_uint8(cplus_data obj, uint8_t * value)
 {
-    struct data * dt = (struct data *)obj;
+    struct data * dt = (struct data *)(obj);
     uint32_t u32 = 0;
     CHECK_OBJECT_TYPE(obj);
 
@@ -1398,69 +1611,99 @@ int32_t cplus_data_get_as_uint8(cplus_data obj, uint8_t * value)
     {
     default:
     case CPLUS_DATA_TYPE_NULL:
-        errno = EINVAL;
+        {
+            errno = EINVAL;
+        }
         return CPLUS_FAIL;
     case CPLUS_DATA_TYPE_BOOL:
-        GET_VALUE_FROM_DATA_BUFS_S(value, (uint8_t)(dt->value.b));
+        {
+            GET_VALUE_FROM_DATA_BUFS_S(value, (uint8_t)(dt->value.b));
+        }
         break;
     case CPLUS_DATA_TYPE_INT8:
-        GET_VALUE_FROM_DATA_BUFS_S(value, (uint8_t)(dt->value.i8));
+        {
+            GET_VALUE_FROM_DATA_BUFS_S(value, (uint8_t)(dt->value.i8));
+        }
         break;
     case CPLUS_DATA_TYPE_INT16:
-        GET_VALUE_FROM_DATA_BUFS_S(value, (uint8_t)(dt->value.i16));
+        {
+            GET_VALUE_FROM_DATA_BUFS_S(value, (uint8_t)(dt->value.i16));
+        }
         break;
     case CPLUS_DATA_TYPE_INT32:
-        GET_VALUE_FROM_DATA_BUFS_S(value, (uint8_t)(dt->value.i32));
+        {
+            GET_VALUE_FROM_DATA_BUFS_S(value, (uint8_t)(dt->value.i32));
+        }
         break;
     case CPLUS_DATA_TYPE_INT64:
-        DATA_SPIN_LOCK();
-        *value = (uint8_t)(dt->value.i64);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            (* value) = (uint8_t)(dt->value.i64);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_UINT8:
-        GET_VALUE_FROM_DATA_BUFS_S(value, dt->value.u8);
+        {
+            GET_VALUE_FROM_DATA_BUFS_S(value, dt->value.u8);
+        }
         break;
     case CPLUS_DATA_TYPE_UINT16:
-        GET_VALUE_FROM_DATA_BUFS_S(value, (uint8_t)(dt->value.u16));
+        {
+            GET_VALUE_FROM_DATA_BUFS_S(value, (uint8_t)(dt->value.u16));
+        }
         break;
     case CPLUS_DATA_TYPE_UINT32:
-        GET_VALUE_FROM_DATA_BUFS_S(value, (uint8_t)(dt->value.u32));
+        {
+            GET_VALUE_FROM_DATA_BUFS_S(value, (uint8_t)(dt->value.u32));
+        }
         break;
     case CPLUS_DATA_TYPE_UINT64:
-        DATA_SPIN_LOCK();
-        *value = (uint8_t)(dt->value.u64);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            (* value) = (uint8_t)(dt->value.u64);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_FLOAT:
-        DATA_SPIN_LOCK();
-        *value = (uint8_t)(dt->value.f);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            (* value) = (uint8_t)(dt->value.f);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_DOUBLE:
-        DATA_SPIN_LOCK();
-        *value = (uint8_t)(dt->value.db);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            (* value) = (uint8_t)(dt->value.db);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_POINTER:
-        GET_VALUE_FROM_DATA_BUFS_S(value, (uint8_t)((intptr_t)(dt->value.p)));
+        {
+            GET_VALUE_FROM_DATA_BUFS_S(value, (uint8_t)((intptr_t)(dt->value.p)));
+        }
         break;
     case CPLUS_DATA_TYPE_STRING:
-        DATA_SPIN_LOCK();
-        if (1 != sscanf(dt->value.str.bufs, "%u", &u32))
         {
-            errno = ENOENT;
+            DATA_SPIN_LOCK();
+            if (1 != sscanf(dt->value.str.bufs, "%u", &(u32)))
+            {
+                errno = ENOENT;
+                DATA_SPIN_UNLOCK();
+                return CPLUS_FAIL;
+            }
+            (* value) = (uint8_t)(u32);
             DATA_SPIN_UNLOCK();
-            return CPLUS_FAIL;
         }
-        *value = (uint8_t)u32;
-        DATA_SPIN_UNLOCK();
         break;
     case CPLUS_DATA_TYPE_BYTE_ARRAY:
-        DATA_SPIN_LOCK();
-        cplus_mem_cpy(value
-            , dt->value.byte_array.bufs
-            , (dt->value.byte_array.len > sizeof((* value)))? sizeof((* value)): dt->value.byte_array.len);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            cplus_mem_cpy(value
+                , dt->value.byte_array.bufs
+                , (dt->value.byte_array.len > sizeof((* value)))? sizeof((* value)): dt->value.byte_array.len);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     }
     return CPLUS_SUCCESS;
@@ -1468,7 +1711,7 @@ int32_t cplus_data_get_as_uint8(cplus_data obj, uint8_t * value)
 
 int32_t cplus_data_get_as_uint16(cplus_data obj, uint16_t * value)
 {
-    struct data * dt = (struct data *)obj;
+    struct data * dt = (struct data *)(obj);
     uint32_t u32 = 0;
     CHECK_OBJECT_TYPE(obj);
 
@@ -1476,69 +1719,99 @@ int32_t cplus_data_get_as_uint16(cplus_data obj, uint16_t * value)
     {
     default:
     case CPLUS_DATA_TYPE_NULL:
-        errno = EINVAL;
+        {
+            errno = EINVAL;
+        }
         return CPLUS_FAIL;
     case CPLUS_DATA_TYPE_BOOL:
-        GET_VALUE_FROM_DATA_BUFS_S(value, (uint16_t)(dt->value.b));
+        {
+            GET_VALUE_FROM_DATA_BUFS_S(value, (uint16_t)(dt->value.b));
+        }
         break;
     case CPLUS_DATA_TYPE_INT8:
-        GET_VALUE_FROM_DATA_BUFS_S(value, (uint16_t)(dt->value.i8));
+        {
+            GET_VALUE_FROM_DATA_BUFS_S(value, (uint16_t)(dt->value.i8));
+        }
         break;
     case CPLUS_DATA_TYPE_INT16:
-        GET_VALUE_FROM_DATA_BUFS_S(value, (uint16_t)(dt->value.i16));
+        {
+            GET_VALUE_FROM_DATA_BUFS_S(value, (uint16_t)(dt->value.i16));
+        }
         break;
     case CPLUS_DATA_TYPE_INT32:
-        GET_VALUE_FROM_DATA_BUFS_S(value, (uint16_t)(dt->value.i32));
+        {
+            GET_VALUE_FROM_DATA_BUFS_S(value, (uint16_t)(dt->value.i32));
+        }
         break;
     case CPLUS_DATA_TYPE_INT64:
-        DATA_SPIN_LOCK();
-        *value = (uint16_t)(dt->value.i64);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            (* value) = (uint16_t)(dt->value.i64);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_UINT8:
-        GET_VALUE_FROM_DATA_BUFS_S(value, (uint16_t)(dt->value.u8));
+        {
+            GET_VALUE_FROM_DATA_BUFS_S(value, (uint16_t)(dt->value.u8));
+        }
         break;
     case CPLUS_DATA_TYPE_UINT16:
-        GET_VALUE_FROM_DATA_BUFS_S(value, dt->value.u16);
+        {
+            GET_VALUE_FROM_DATA_BUFS_S(value, dt->value.u16);
+        }
         break;
     case CPLUS_DATA_TYPE_UINT32:
-        GET_VALUE_FROM_DATA_BUFS_S(value, (uint16_t)(dt->value.u32));
+        {
+            GET_VALUE_FROM_DATA_BUFS_S(value, (uint16_t)(dt->value.u32));
+        }
         break;
     case CPLUS_DATA_TYPE_UINT64:
-        DATA_SPIN_LOCK();
-        *value = (uint16_t)(dt->value.u64);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            (* value) = (uint16_t)(dt->value.u64);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_FLOAT:
-        DATA_SPIN_LOCK();
-        *value = (uint16_t)(dt->value.f);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            (* value) = (uint16_t)(dt->value.f);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_DOUBLE:
-        DATA_SPIN_LOCK();
-        *value = (uint16_t)(dt->value.db);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            (* value) = (uint16_t)(dt->value.db);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_POINTER:
-        GET_VALUE_FROM_DATA_BUFS_S(value, (uint16_t)((intptr_t)(dt->value.p)));
+        {
+            GET_VALUE_FROM_DATA_BUFS_S(value, (uint16_t)((intptr_t)(dt->value.p)));
+        }
         break;
     case CPLUS_DATA_TYPE_STRING:
-        DATA_SPIN_LOCK();
-        if (1 != sscanf(dt->value.str.bufs, "%u", &u32))
         {
-            errno = ENOENT;
+            DATA_SPIN_LOCK();
+            if (1 != sscanf(dt->value.str.bufs, "%u", &(u32)))
+            {
+                errno = ENOENT;
+                DATA_SPIN_UNLOCK();
+                return CPLUS_FAIL;
+            }
+            (* value) = (uint16_t)(u32);
             DATA_SPIN_UNLOCK();
-            return CPLUS_FAIL;
         }
-        *value = (uint16_t)u32;
-        DATA_SPIN_UNLOCK();
         break;
     case CPLUS_DATA_TYPE_BYTE_ARRAY:
-        DATA_SPIN_LOCK();
-        cplus_mem_cpy(value
-            , dt->value.byte_array.bufs
-            , (dt->value.byte_array.len > sizeof((* value)))? sizeof((* value)): dt->value.byte_array.len);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            cplus_mem_cpy(value
+                , dt->value.byte_array.bufs
+                , (dt->value.byte_array.len > sizeof((* value)))? sizeof((* value)): dt->value.byte_array.len);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     }
     return CPLUS_SUCCESS;
@@ -1546,7 +1819,7 @@ int32_t cplus_data_get_as_uint16(cplus_data obj, uint16_t * value)
 
 int32_t cplus_data_get_as_uint32(cplus_data obj, uint32_t * value)
 {
-    struct data * dt = (struct data *)obj;
+    struct data * dt = (struct data *)(obj);
     uint32_t u32 = 0;
     CHECK_OBJECT_TYPE(obj);
 
@@ -1554,69 +1827,99 @@ int32_t cplus_data_get_as_uint32(cplus_data obj, uint32_t * value)
     {
     default:
     case CPLUS_DATA_TYPE_NULL:
-        errno = EINVAL;
+        {
+            errno = EINVAL;
+        }
         return CPLUS_FAIL;
     case CPLUS_DATA_TYPE_BOOL:
-        GET_VALUE_FROM_DATA_BUFS_S(value, (uint32_t)(dt->value.b));
+        {
+            GET_VALUE_FROM_DATA_BUFS_S(value, (uint32_t)(dt->value.b));
+        }
         break;
     case CPLUS_DATA_TYPE_INT8:
-        GET_VALUE_FROM_DATA_BUFS_S(value, (uint32_t)(dt->value.i8));
+        {
+            GET_VALUE_FROM_DATA_BUFS_S(value, (uint32_t)(dt->value.i8));
+        }
         break;
     case CPLUS_DATA_TYPE_INT16:
-        GET_VALUE_FROM_DATA_BUFS_S(value, (uint32_t)(dt->value.i16));
+        {
+            GET_VALUE_FROM_DATA_BUFS_S(value, (uint32_t)(dt->value.i16));
+        }
         break;
     case CPLUS_DATA_TYPE_INT32:
-        GET_VALUE_FROM_DATA_BUFS_S(value, (uint32_t)(dt->value.i32));
+        {
+            GET_VALUE_FROM_DATA_BUFS_S(value, (uint32_t)(dt->value.i32));
+        }
         break;
     case CPLUS_DATA_TYPE_INT64:
-        DATA_SPIN_LOCK();
-        *value = (uint32_t)(dt->value.i64);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            (* value) = (uint32_t)(dt->value.i64);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_UINT8:
-        GET_VALUE_FROM_DATA_BUFS_S(value, (uint32_t)(dt->value.u8));
+        {
+            GET_VALUE_FROM_DATA_BUFS_S(value, (uint32_t)(dt->value.u8));
+        }
         break;
     case CPLUS_DATA_TYPE_UINT16:
-        GET_VALUE_FROM_DATA_BUFS_S(value, (uint32_t)(dt->value.u16));
+        {
+            GET_VALUE_FROM_DATA_BUFS_S(value, (uint32_t)(dt->value.u16));
+        }
         break;
     case CPLUS_DATA_TYPE_UINT32:
-        GET_VALUE_FROM_DATA_BUFS_S(value, dt->value.u32);
+        {
+            GET_VALUE_FROM_DATA_BUFS_S(value, dt->value.u32);
+        }
         break;
     case CPLUS_DATA_TYPE_UINT64:
-        DATA_SPIN_LOCK();
-        *value = (uint32_t)(dt->value.u64);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            (* value) = (uint32_t)(dt->value.u64);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_FLOAT:
-        DATA_SPIN_LOCK();
-        *value = (uint32_t)(dt->value.f);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            (* value) = (uint32_t)(dt->value.f);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_DOUBLE:
-        DATA_SPIN_LOCK();
-        *value = (uint32_t)(dt->value.db);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            (* value) = (uint32_t)(dt->value.db);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_POINTER:
-        GET_VALUE_FROM_DATA_BUFS_S(value, (uint32_t)((intptr_t)(dt->value.p)));
+        {
+            GET_VALUE_FROM_DATA_BUFS_S(value, (uint32_t)((intptr_t)(dt->value.p)));
+        }
         break;
     case CPLUS_DATA_TYPE_STRING:
-        DATA_SPIN_LOCK();
-        if (1 != sscanf(dt->value.str.bufs, "%u", &u32))
         {
-            errno = ENOENT;
+            DATA_SPIN_LOCK();
+            if (1 != sscanf(dt->value.str.bufs, "%u", &(u32)))
+            {
+                errno = ENOENT;
+                DATA_SPIN_UNLOCK();
+                return CPLUS_FAIL;
+            }
+            (* value) = u32;
             DATA_SPIN_UNLOCK();
-            return CPLUS_FAIL;
         }
-        *value = u32;
-        DATA_SPIN_UNLOCK();
         break;
     case CPLUS_DATA_TYPE_BYTE_ARRAY:
-        DATA_SPIN_LOCK();
-        cplus_mem_cpy(value
-            , dt->value.byte_array.bufs
-            , (dt->value.byte_array.len > sizeof((* value)))? sizeof((* value)): dt->value.byte_array.len);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            cplus_mem_cpy(value
+                , dt->value.byte_array.bufs
+                , (dt->value.byte_array.len > sizeof((* value)))? sizeof((* value)): dt->value.byte_array.len);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     }
     return CPLUS_SUCCESS;
@@ -1624,7 +1927,7 @@ int32_t cplus_data_get_as_uint32(cplus_data obj, uint32_t * value)
 
 int32_t cplus_data_get_as_uint64(cplus_data obj, uint64_t * value)
 {
-    struct data * dt = (struct data *)obj;
+    struct data * dt = (struct data *)(obj);
     uint64_t u64 = 0;
     CHECK_OBJECT_TYPE(obj);
 
@@ -1632,69 +1935,99 @@ int32_t cplus_data_get_as_uint64(cplus_data obj, uint64_t * value)
     {
     default:
     case CPLUS_DATA_TYPE_NULL:
-        errno = EINVAL;
+        {
+            errno = EINVAL;
+        }
         return CPLUS_FAIL;
     case CPLUS_DATA_TYPE_BOOL:
-        GET_VALUE_FROM_DATA_BUFS_S(value, (uint64_t)(dt->value.b));
+        {
+            GET_VALUE_FROM_DATA_BUFS_S(value, (uint64_t)(dt->value.b));
+        }
         break;
     case CPLUS_DATA_TYPE_INT8:
-        GET_VALUE_FROM_DATA_BUFS_S(value, (uint64_t)(dt->value.i8));
+        {
+            GET_VALUE_FROM_DATA_BUFS_S(value, (uint64_t)(dt->value.i8));
+        }
         break;
     case CPLUS_DATA_TYPE_INT16:
-        GET_VALUE_FROM_DATA_BUFS_S(value, (uint64_t)(dt->value.i16));
+        {
+            GET_VALUE_FROM_DATA_BUFS_S(value, (uint64_t)(dt->value.i16));
+        }
         break;
     case CPLUS_DATA_TYPE_INT32:
-        GET_VALUE_FROM_DATA_BUFS_S(value, (uint64_t)(dt->value.i32));
+        {
+            GET_VALUE_FROM_DATA_BUFS_S(value, (uint64_t)(dt->value.i32));
+        }
         break;
     case CPLUS_DATA_TYPE_INT64:
-        DATA_SPIN_LOCK();
-        *value = (uint64_t)(dt->value.i64);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            (* value) = (uint64_t)(dt->value.i64);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_UINT8:
-        GET_VALUE_FROM_DATA_BUFS_S(value, (uint64_t)(dt->value.u8));
+        {
+            GET_VALUE_FROM_DATA_BUFS_S(value, (uint64_t)(dt->value.u8));
+        }
         break;
     case CPLUS_DATA_TYPE_UINT16:
-        GET_VALUE_FROM_DATA_BUFS_S(value, (uint64_t)(dt->value.u16));
+        {
+            GET_VALUE_FROM_DATA_BUFS_S(value, (uint64_t)(dt->value.u16));
+        }
         break;
     case CPLUS_DATA_TYPE_UINT32:
-        GET_VALUE_FROM_DATA_BUFS_S(value, (uint64_t)(dt->value.u32));
+        {
+            GET_VALUE_FROM_DATA_BUFS_S(value, (uint64_t)(dt->value.u32));
+        }
         break;
     case CPLUS_DATA_TYPE_UINT64:
-        DATA_SPIN_LOCK();
-        *value = (dt->value.u64);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            (* value) = (dt->value.u64);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_FLOAT:
-        DATA_SPIN_LOCK();
-        *value = (uint64_t)(dt->value.f);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            (* value) = (uint64_t)(dt->value.f);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_DOUBLE:
-        DATA_SPIN_LOCK();
-        *value = (uint64_t)(dt->value.db);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            (* value) = (uint64_t)(dt->value.db);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_POINTER:
-        GET_VALUE_FROM_DATA_BUFS_S(value, (uint64_t)((intptr_t)(dt->value.p)));
+        {
+            GET_VALUE_FROM_DATA_BUFS_S(value, (uint64_t)((intptr_t)(dt->value.p)));
+        }
         break;
     case CPLUS_DATA_TYPE_STRING:
-        DATA_SPIN_LOCK();
-        if (1 != sscanf(dt->value.str.bufs, REG_LU, &u64))
         {
-            errno = ENOENT;
+            DATA_SPIN_LOCK();
+            if (1 != sscanf(dt->value.str.bufs, REG_LU, &(u64)))
+            {
+                errno = ENOENT;
+                DATA_SPIN_UNLOCK();
+                return CPLUS_FAIL;
+            }
+            (* value) = u64;
             DATA_SPIN_UNLOCK();
-            return CPLUS_FAIL;
         }
-        *value = u64;
-        DATA_SPIN_UNLOCK();
         break;
     case CPLUS_DATA_TYPE_BYTE_ARRAY:
-        DATA_SPIN_LOCK();
-        cplus_mem_cpy(value
-            , dt->value.byte_array.bufs
-            , (dt->value.byte_array.len > sizeof((* value)))? sizeof((* value)): dt->value.byte_array.len);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            cplus_mem_cpy(value
+                , dt->value.byte_array.bufs
+                , (dt->value.byte_array.len > sizeof((* value)))? sizeof((* value)): dt->value.byte_array.len);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     }
     return CPLUS_SUCCESS;
@@ -1702,7 +2035,7 @@ int32_t cplus_data_get_as_uint64(cplus_data obj, uint64_t * value)
 
 int32_t cplus_data_get_as_float(cplus_data obj, float * value)
 {
-    struct data * dt = (struct data *)obj;
+    struct data * dt = (struct data *)(obj);
     float f = 0;
     CHECK_OBJECT_TYPE(obj);
 
@@ -1710,85 +2043,115 @@ int32_t cplus_data_get_as_float(cplus_data obj, float * value)
     {
     default:
     case CPLUS_DATA_TYPE_NULL:
-        errno = EINVAL;
+        {
+            errno = EINVAL;
+        }
         return CPLUS_FAIL;
     case CPLUS_DATA_TYPE_BOOL:
-        DATA_SPIN_LOCK();
-        *value = (float)dt->value.b;
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            (* value) = (float)dt->value.b;
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_INT8:
-        DATA_SPIN_LOCK();
-        *value = (float)dt->value.i8;
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            (* value) = (float)dt->value.i8;
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_INT16:
-        DATA_SPIN_LOCK();
-        *value = (float)dt->value.i16;
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            (* value) = (float)dt->value.i16;
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_INT32:
-        DATA_SPIN_LOCK();
-        *value = (float)dt->value.i32;
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            (* value) = (float)dt->value.i32;
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_INT64:
-        DATA_SPIN_LOCK();
-        *value = (float)dt->value.i64;
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            (* value) = (float)dt->value.i64;
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_UINT8:
-        DATA_SPIN_LOCK();
-        *value = (float)dt->value.u8;
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            (* value) = (float)dt->value.u8;
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_UINT16:
-        DATA_SPIN_LOCK();
-        *value = (float)dt->value.u16;
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            (* value) = (float)dt->value.u16;
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_UINT32:
-        DATA_SPIN_LOCK();
-        *value = (float)dt->value.u32;
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            (* value) = (float)dt->value.u32;
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_UINT64:
-        DATA_SPIN_LOCK();
-        *value = (float)dt->value.u64;
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            (* value) = (float)dt->value.u64;
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_FLOAT:
-        DATA_SPIN_LOCK();
-        *value = dt->value.f;
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            (* value) = dt->value.f;
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_DOUBLE:
-        DATA_SPIN_LOCK();
-        *value = (float)dt->value.db;
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            (* value) = (float)dt->value.db;
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_POINTER:
-        DATA_SPIN_LOCK();
-        *value = (float)((intptr_t)(dt->value.p));
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            (* value) = (float)((intptr_t)(dt->value.p));
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_STRING:
-        DATA_SPIN_LOCK();
-        if (1 != sscanf(dt->value.str.bufs, "%f", &f))
         {
-            errno = ENOENT;
+            DATA_SPIN_LOCK();
+            if (1 != sscanf(dt->value.str.bufs, "%f", &(f)))
+            {
+                errno = ENOENT;
+                DATA_SPIN_UNLOCK();
+                return CPLUS_FAIL;
+            }
+            (* value) = f;
             DATA_SPIN_UNLOCK();
-            return CPLUS_FAIL;
         }
-        *value = f;
-        DATA_SPIN_UNLOCK();
         break;
     case CPLUS_DATA_TYPE_BYTE_ARRAY:
-        DATA_SPIN_LOCK();
-        cplus_mem_cpy(value
-            , dt->value.byte_array.bufs
-            , (dt->value.byte_array.len > sizeof((* value)))? sizeof((* value)): dt->value.byte_array.len);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            cplus_mem_cpy(value
+                , dt->value.byte_array.bufs
+                , (dt->value.byte_array.len > sizeof((* value)))? sizeof((* value)): dt->value.byte_array.len);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     }
     return CPLUS_SUCCESS;
@@ -1796,7 +2159,7 @@ int32_t cplus_data_get_as_float(cplus_data obj, float * value)
 
 int32_t cplus_data_get_as_double(cplus_data obj, double * value)
 {
-    struct data * dt = (struct data *)obj;
+    struct data * dt = (struct data *)(obj);
     double db = 0;
     CHECK_OBJECT_TYPE(obj);
 
@@ -1804,85 +2167,115 @@ int32_t cplus_data_get_as_double(cplus_data obj, double * value)
     {
     default:
     case CPLUS_DATA_TYPE_NULL:
-        errno = EINVAL;
+        {
+            errno = EINVAL;
+        }
         return CPLUS_FAIL;
     case CPLUS_DATA_TYPE_BOOL:
-        DATA_SPIN_LOCK();
-        *value = (double)dt->value.b;
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            (* value) = (double)dt->value.b;
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_INT8:
-        DATA_SPIN_LOCK();
-        *value = (double)dt->value.i8;
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            (* value) = (double)dt->value.i8;
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_INT16:
-        DATA_SPIN_LOCK();
-        *value = (double)dt->value.i16;
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            (* value) = (double)dt->value.i16;
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_INT32:
-        DATA_SPIN_LOCK();
-        *value = (double)dt->value.i32;
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            (* value) = (double)dt->value.i32;
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_INT64:
-        DATA_SPIN_LOCK();
-        *value = (double)dt->value.i64;
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            (* value) = (double)dt->value.i64;
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_UINT8:
-        DATA_SPIN_LOCK();
-        *value = (double)dt->value.u8;
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            (* value) = (double)dt->value.u8;
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_UINT16:
-        DATA_SPIN_LOCK();
-        *value = (double)dt->value.u16;
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            (* value) = (double)dt->value.u16;
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_UINT32:
-        DATA_SPIN_LOCK();
-        *value = (double)dt->value.u32;
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            (* value) = (double)dt->value.u32;
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_UINT64:
-        DATA_SPIN_LOCK();
-        *value = (double)dt->value.u64;
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            (* value) = (double)dt->value.u64;
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_FLOAT:
-        DATA_SPIN_LOCK();
-        *value = (double)dt->value.f;
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            (* value) = (double)dt->value.f;
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_DOUBLE:
-        DATA_SPIN_LOCK();
-        *value = dt->value.db;
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            (* value) = dt->value.db;
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_POINTER:
-        DATA_SPIN_LOCK();
-        *value = (double)((intptr_t)(dt->value.p));
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            (* value) = (double)((intptr_t)(dt->value.p));
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_STRING:
-        DATA_SPIN_LOCK();
-        if (1 != sscanf(dt->value.str.bufs, "%lf", &db))
         {
-            errno = ENOENT;
+            DATA_SPIN_LOCK();
+            if (1 != sscanf(dt->value.str.bufs, "%lf", &(db)))
+            {
+                errno = ENOENT;
+                DATA_SPIN_UNLOCK();
+                return CPLUS_FAIL;
+            }
+            (* value) = db;
             DATA_SPIN_UNLOCK();
-            return CPLUS_FAIL;
         }
-        *value = db;
-        DATA_SPIN_UNLOCK();
         break;
     case CPLUS_DATA_TYPE_BYTE_ARRAY:
-        DATA_SPIN_LOCK();
-        cplus_mem_cpy(value
-            , dt->value.byte_array.bufs
-            , (dt->value.byte_array.len > sizeof((* value)))? sizeof((* value)): dt->value.byte_array.len);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            cplus_mem_cpy(value
+                , dt->value.byte_array.bufs
+                , (dt->value.byte_array.len > sizeof((* value)))? sizeof((* value)): dt->value.byte_array.len);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     }
     return CPLUS_SUCCESS;
@@ -1891,7 +2284,7 @@ int32_t cplus_data_get_as_double(cplus_data obj, double * value)
 /*
 int32_t cplus_data_get_as_pointer(cplus_data obj, void ** value)
 {
-    struct data * dt = (struct data *)obj;
+    struct data * dt = (struct data *)(obj);
     void *p = NULL;
     CHECK_OBJECT_TYPE(obj);
 
@@ -1900,53 +2293,81 @@ int32_t cplus_data_get_as_pointer(cplus_data obj, void ** value)
     {
     default:
     case CPLUS_DATA_TYPE_NULL:
-        errno = EINVAL;
-        DATA_SPIN_UNLOCK();
+        {
+            errno = EINVAL;
+            DATA_SPIN_UNLOCK();
+        }
         return CPLUS_FAIL;
     case CPLUS_DATA_TYPE_BOOL:
-        *value = (void *)((intptr_t)dt->value.b);
+        {
+            (* value) = (void *)((intptr_t)(dt->value.b));
+        }
         break;
     case CPLUS_DATA_TYPE_INT8:
-        *value = (void *)((intptr_t)dt->value.i8);
+        {
+            (* value) = (void *)((intptr_t)(dt->value.i8));
+        }
         break;
     case CPLUS_DATA_TYPE_INT16:
-        *value = (void *)((intptr_t)dt->value.i16);
+        {
+            (* value) = (void *)((intptr_t)(dt->value.i16));
+        }
         break;
     case CPLUS_DATA_TYPE_INT32:
-        *value = (void *)((intptr_t)dt->value.i32);
+        {
+            (* value) = (void *)((intptr_t)(dt->value.i32));
+        }
         break;
     case CPLUS_DATA_TYPE_INT64:
-        *value = (void *)((intptr_t)dt->value.i64);
+        {
+            (* value) = (void *)((intptr_t)(dt->value.i64));
+        }
         break;
     case CPLUS_DATA_TYPE_UINT8:
-        *value = (void *)((intptr_t)dt->value.u8);
+        {
+            (* value) = (void *)((intptr_t)(dt->value.u8));
+        }
         break;
     case CPLUS_DATA_TYPE_UINT16:
-        *value = (void *)((intptr_t)dt->value.u16);
+        {
+            (* value) = (void *)((intptr_t)(dt->value.u16));
+        }
         break;
     case CPLUS_DATA_TYPE_UINT32:
-        *value = (void *)((intptr_t)dt->value.u32);
+        {
+            (* value) = (void *)((intptr_t)(dt->value.u32));
+        }
         break;
     case CPLUS_DATA_TYPE_UINT64:
-        *value = (void *)((intptr_t)dt->value.u64);
+        {
+            (* value) = (void *)((intptr_t)(dt->value.u64));
+        }
         break;
     case CPLUS_DATA_TYPE_FLOAT:
-        *value = (void *)((intptr_t)dt->value.f);
+        {
+            (* value) = (void *)((intptr_t)(dt->value.f));
+        }
         break;
     case CPLUS_DATA_TYPE_DOUBLE:
-        *value = (void *)((intptr_t)dt->value.db);
+        {
+            (* value) = (void *)((intptr_t)(dt->value.db));
+        }
         break;
     case CPLUS_DATA_TYPE_POINTER:
-        *value = (void *)((intptr_t)dt->value.p);
+        {
+            (* value) = (void *)((intptr_t)(dt->value.p));
+        }
         break;
     case CPLUS_DATA_TYPE_STRING:
-        if (1 != sscanf(dt->value.str.bufs, "%p", &p))
         {
-            errno = ENOENT;
-            DATA_SPIN_UNLOCK();
-            return CPLUS_FAIL;
+            if (1 != sscanf(dt->value.str.bufs, "%p", &p))
+            {
+                errno = ENOENT;
+                DATA_SPIN_UNLOCK();
+                return CPLUS_FAIL;
+            }
+            (* value) = (void *)((intptr_t)(p));
         }
-        *value = (void *)((intptr_t)p);
         break;
     }
     DATA_SPIN_UNLOCK();
@@ -1959,7 +2380,7 @@ int32_t cplus_data_get_as_string(
     , uint32_t str_len
     , char * str_bufs)
 {
-    struct data * dt = (struct data *)obj;
+    struct data * dt = (struct data *)(obj);
     char tmp_bufs[256] = {0};
     uint32_t tmp_len = 0;
 
@@ -1971,90 +2392,120 @@ int32_t cplus_data_get_as_string(
     {
     default:
     case CPLUS_DATA_TYPE_NULL:
-        errno = EINVAL;
+        {
+            errno = EINVAL;
+        }
         return CPLUS_FAIL;
     case CPLUS_DATA_TYPE_BOOL:
-        DATA_SPIN_LOCK();
-        tmp_len = cplus_str_printf(tmp_bufs, sizeof(tmp_bufs), "%s", dt->value.b? "true": "false");
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            tmp_len = cplus_str_printf(tmp_bufs, sizeof(tmp_bufs), "%s", dt->value.b? "true": "false");
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_INT8:
-        DATA_SPIN_LOCK();
-        tmp_len = cplus_str_printf(tmp_bufs, sizeof(tmp_bufs), "%d", dt->value.i8);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            tmp_len = cplus_str_printf(tmp_bufs, sizeof(tmp_bufs), "%d", dt->value.i8);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_INT16:
-        DATA_SPIN_LOCK();
-        tmp_len = cplus_str_printf(tmp_bufs, sizeof(tmp_bufs), "%d", dt->value.i16);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            tmp_len = cplus_str_printf(tmp_bufs, sizeof(tmp_bufs), "%d", dt->value.i16);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_INT32:
-        DATA_SPIN_LOCK();
-        tmp_len = cplus_str_printf(tmp_bufs, sizeof(tmp_bufs), "%d", dt->value.i32);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            tmp_len = cplus_str_printf(tmp_bufs, sizeof(tmp_bufs), "%d", dt->value.i32);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_INT64:
-        DATA_SPIN_LOCK();
-        tmp_len = cplus_str_printf(tmp_bufs, sizeof(tmp_bufs), REG_LD, dt->value.i64);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            tmp_len = cplus_str_printf(tmp_bufs, sizeof(tmp_bufs), REG_LD, dt->value.i64);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_UINT8:
-        DATA_SPIN_LOCK();
-        tmp_len = cplus_str_printf(tmp_bufs, sizeof(tmp_bufs), "%u", dt->value.u8);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            tmp_len = cplus_str_printf(tmp_bufs, sizeof(tmp_bufs), "%u", dt->value.u8);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_UINT16:
-        DATA_SPIN_LOCK();
-        tmp_len = cplus_str_printf(tmp_bufs, sizeof(tmp_bufs), "%u", dt->value.u16);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            tmp_len = cplus_str_printf(tmp_bufs, sizeof(tmp_bufs), "%u", dt->value.u16);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_UINT32:
-        DATA_SPIN_LOCK();
-        tmp_len = cplus_str_printf(tmp_bufs, sizeof(tmp_bufs), "%u", dt->value.u32);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            tmp_len = cplus_str_printf(tmp_bufs, sizeof(tmp_bufs), "%u", dt->value.u32);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_UINT64:
-        DATA_SPIN_LOCK();
-        tmp_len = cplus_str_printf(tmp_bufs, sizeof(tmp_bufs), REG_LU, dt->value.u64);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            tmp_len = cplus_str_printf(tmp_bufs, sizeof(tmp_bufs), REG_LU, dt->value.u64);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_FLOAT:
-        DATA_SPIN_LOCK();
-        tmp_len = cplus_str_printf(tmp_bufs, sizeof(tmp_bufs), "%f", dt->value.f);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            tmp_len = cplus_str_printf(tmp_bufs, sizeof(tmp_bufs), "%f", dt->value.f);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_DOUBLE:
-        DATA_SPIN_LOCK();
-        tmp_len = cplus_str_printf(tmp_bufs, sizeof(tmp_bufs), "%lf", dt->value.db);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            tmp_len = cplus_str_printf(tmp_bufs, sizeof(tmp_bufs), "%lf", dt->value.db);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_POINTER:
-        DATA_SPIN_LOCK();
-        tmp_len = cplus_str_printf(tmp_bufs, sizeof(tmp_bufs), "%p", dt->value.p);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            tmp_len = cplus_str_printf(tmp_bufs, sizeof(tmp_bufs), "%p", dt->value.p);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_STRING:
-        DATA_SPIN_LOCK();
-        tmp_len = cplus_str_printf(tmp_bufs, sizeof(tmp_bufs), "%s", dt->value.str.bufs);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            tmp_len = cplus_str_printf(tmp_bufs, sizeof(tmp_bufs), "%s", dt->value.str.bufs);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_BYTE_ARRAY:
-        DATA_SPIN_LOCK();
-        if (str_len < (dt->value.byte_array.len + 1))
         {
-            errno = ENOBUFS;
-            DATA_SPIN_UNLOCK();
-            return CPLUS_FAIL;
-        }
-        else
-        {
-            cplus_mem_cpy_ex(str_bufs
-                , str_len
-                , dt->value.byte_array.bufs
-                , dt->value.byte_array.len);
-            str_bufs[(dt->value.byte_array.len - 1)] = '\0';
-            DATA_SPIN_UNLOCK();
-            return dt->value.byte_array.len;
+            DATA_SPIN_LOCK();
+            if (str_len < (dt->value.byte_array.len + 1))
+            {
+                errno = ENOBUFS;
+                DATA_SPIN_UNLOCK();
+                return CPLUS_FAIL;
+            }
+            else
+            {
+                cplus_mem_cpy_ex(str_bufs
+                    , str_len
+                    , dt->value.byte_array.bufs
+                    , dt->value.byte_array.len);
+                str_bufs[(dt->value.byte_array.len - 1)] = '\0';
+                DATA_SPIN_UNLOCK();
+                return dt->value.byte_array.len;
+            }
         }
         break;
     }
@@ -2068,7 +2519,7 @@ int32_t cplus_data_get_as_string(
 
 int32_t cplus_data_get_as_byte_array(cplus_data obj, uint32_t array_len, uint8_t * array_bufs)
 {
-    struct data * dt = (struct data *)obj;
+    struct data * dt = (struct data *)(obj);
     uint32_t len = 0;
 
     CHECK_OBJECT_TYPE(obj);
@@ -2079,95 +2530,125 @@ int32_t cplus_data_get_as_byte_array(cplus_data obj, uint32_t array_len, uint8_t
     {
     default:
     case CPLUS_DATA_TYPE_NULL:
-        errno = EINVAL;
+        {
+            errno = EINVAL;
+        }
         return CPLUS_FAIL;
     case CPLUS_DATA_TYPE_BOOL:
-        DATA_SPIN_LOCK();
-        len = (sizeof(bool) > array_len)? array_len: sizeof(bool);
-        cplus_mem_cpy(array_bufs, &(dt->value.b), len);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            len = (sizeof(bool) > array_len)? array_len: sizeof(bool);
+            cplus_mem_cpy(array_bufs, &(dt->value.b), len);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_INT8:
-        DATA_SPIN_LOCK();
-        len = (sizeof(int8_t) > array_len)? array_len: sizeof(int8_t);
-        cplus_mem_cpy(array_bufs, &(dt->value.i8), len);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            len = (sizeof(int8_t) > array_len)? array_len: sizeof(int8_t);
+            cplus_mem_cpy(array_bufs, &(dt->value.i8), len);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_INT16:
-        DATA_SPIN_LOCK();
-        len = (sizeof(int16_t) > array_len)? array_len: sizeof(int16_t);
-        cplus_mem_cpy(array_bufs, &(dt->value.i16), len);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            len = (sizeof(int16_t) > array_len)? array_len: sizeof(int16_t);
+            cplus_mem_cpy(array_bufs, &(dt->value.i16), len);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_INT32:
-        DATA_SPIN_LOCK();
-        len = (sizeof(int32_t) > array_len)? array_len: sizeof(int32_t);
-        cplus_mem_cpy(array_bufs, &(dt->value.i32), len);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            len = (sizeof(int32_t) > array_len)? array_len: sizeof(int32_t);
+            cplus_mem_cpy(array_bufs, &(dt->value.i32), len);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_INT64:
-        DATA_SPIN_LOCK();
-        len = (sizeof(int64_t) > array_len)? array_len: sizeof(int64_t);
-        cplus_mem_cpy(array_bufs, &(dt->value.i64), len);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            len = (sizeof(int64_t) > array_len)? array_len: sizeof(int64_t);
+            cplus_mem_cpy(array_bufs, &(dt->value.i64), len);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_UINT8:
-        DATA_SPIN_LOCK();
-        len = (sizeof(uint8_t) > array_len)? array_len: sizeof(uint8_t);
-        cplus_mem_cpy(array_bufs, &(dt->value.u8), len);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            len = (sizeof(uint8_t) > array_len)? array_len: sizeof(uint8_t);
+            cplus_mem_cpy(array_bufs, &(dt->value.u8), len);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_UINT16:
-        DATA_SPIN_LOCK();
-        len = (sizeof(uint16_t) > array_len)? array_len: sizeof(uint16_t);
-        cplus_mem_cpy(array_bufs, &(dt->value.u16), len);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            len = (sizeof(uint16_t) > array_len)? array_len: sizeof(uint16_t);
+            cplus_mem_cpy(array_bufs, &(dt->value.u16), len);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_UINT32:
-        DATA_SPIN_LOCK();
-        len = (sizeof(uint32_t) > array_len)? array_len: sizeof(uint32_t);
-        cplus_mem_cpy(array_bufs, &(dt->value.u32), len);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            len = (sizeof(uint32_t) > array_len)? array_len: sizeof(uint32_t);
+            cplus_mem_cpy(array_bufs, &(dt->value.u32), len);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_UINT64:
-        DATA_SPIN_LOCK();
-        len = (sizeof(uint64_t) > array_len)? array_len: sizeof(uint64_t);
-        cplus_mem_cpy(array_bufs, &(dt->value.u64), len);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            len = (sizeof(uint64_t) > array_len)? array_len: sizeof(uint64_t);
+            cplus_mem_cpy(array_bufs, &(dt->value.u64), len);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_FLOAT:
-        DATA_SPIN_LOCK();
-        len = (sizeof(float) > array_len)? array_len: sizeof(float);
-        cplus_mem_cpy(array_bufs, &(dt->value.f), len);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            len = (sizeof(float) > array_len)? array_len: sizeof(float);
+            cplus_mem_cpy(array_bufs, &(dt->value.f), len);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_DOUBLE:
-        DATA_SPIN_LOCK();
-        len = (sizeof(double) > array_len)? array_len: sizeof(double);
-        cplus_mem_cpy(array_bufs, &(dt->value.db), len);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            len = (sizeof(double) > array_len)? array_len: sizeof(double);
+            cplus_mem_cpy(array_bufs, &(dt->value.db), len);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_POINTER:
-        DATA_SPIN_LOCK();
-        len = (sizeof(intptr_t) > array_len)? array_len: sizeof(intptr_t);
-        cplus_mem_cpy(array_bufs, &(dt->value.p), len);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            len = (sizeof(intptr_t) > array_len)? array_len: sizeof(intptr_t);
+            cplus_mem_cpy(array_bufs, &(dt->value.p), len);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_STRING:
-        DATA_SPIN_LOCK();
-        len = (dt->value.str.len > array_len)? array_len: dt->value.str.len;
-        cplus_mem_cpy(array_bufs
-            , dt->value.str.bufs
-            , len);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            len = (dt->value.str.len > array_len)? array_len: dt->value.str.len;
+            cplus_mem_cpy(array_bufs
+                , dt->value.str.bufs
+                , len);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_BYTE_ARRAY:
-        DATA_SPIN_LOCK();
-        len = (dt->value.byte_array.len > array_len)? array_len: dt->value.byte_array.len;
-        cplus_mem_cpy(array_bufs
-            , dt->value.byte_array.bufs
-            , len);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            len = (dt->value.byte_array.len > array_len)? array_len: dt->value.byte_array.len;
+            cplus_mem_cpy(array_bufs
+                , dt->value.byte_array.bufs
+                , len);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     }
     return len;
@@ -2175,64 +2656,96 @@ int32_t cplus_data_get_as_byte_array(cplus_data obj, uint32_t array_len, uint8_t
 
 int32_t cplus_data_set_as_bool(cplus_data obj, bool value)
 {
-    struct data * dt = (struct data *)obj;
+    struct data * dt = (struct data *)(obj);
     CHECK_OBJECT_TYPE(obj);
 
     switch (dt->data_type)
     {
     default:
     case CPLUS_DATA_TYPE_NULL:
-        errno = EINVAL;
+        {
+            errno = EINVAL;
+        }
         return CPLUS_FAIL;
     case CPLUS_DATA_TYPE_BOOL:
-        SET_VALUE_TO_DATA_BUFS_S(value, dt->value.b);
+        {
+            SET_VALUE_TO_DATA_BUFS_S(value, dt->value.b);
+        }
         break;
     case CPLUS_DATA_TYPE_INT8:
-        SET_VALUE_TO_DATA_BUFS_S(value, dt->value.i8);
+        {
+            SET_VALUE_TO_DATA_BUFS_S(value, dt->value.i8);
+        }
         break;
     case CPLUS_DATA_TYPE_INT16:
-        SET_VALUE_TO_DATA_BUFS_S(value, dt->value.i16);
+        {
+            SET_VALUE_TO_DATA_BUFS_S(value, dt->value.i16);
+        }
         break;
     case CPLUS_DATA_TYPE_INT32:
-        SET_VALUE_TO_DATA_BUFS_S(value, dt->value.i32);
+        {
+            SET_VALUE_TO_DATA_BUFS_S(value, dt->value.i32);
+        }
         break;
     case CPLUS_DATA_TYPE_INT64:
-        DATA_SPIN_LOCK();
-        dt->value.i64 = value;
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            dt->value.i64 = value;
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_UINT8:
-        SET_VALUE_TO_DATA_BUFS_S(value, dt->value.u8);
+        {
+            SET_VALUE_TO_DATA_BUFS_S(value, dt->value.u8);
+        }
         break;
     case CPLUS_DATA_TYPE_UINT16:
-        SET_VALUE_TO_DATA_BUFS_S(value, dt->value.u16);
+        {
+            SET_VALUE_TO_DATA_BUFS_S(value, dt->value.u16);
+        }
         break;
     case CPLUS_DATA_TYPE_UINT32:
-        SET_VALUE_TO_DATA_BUFS_S(value, dt->value.u32);
+        {
+            SET_VALUE_TO_DATA_BUFS_S(value, dt->value.u32);
+        }
         break;
     case CPLUS_DATA_TYPE_UINT64:
-        DATA_SPIN_LOCK();
-        dt->value.u64 = value;
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            dt->value.u64 = value;
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_FLOAT:
-        DATA_SPIN_LOCK();
-        dt->value.f = value;
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            dt->value.f = value;
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_DOUBLE:
-        DATA_SPIN_LOCK();
-        dt->value.db = value;
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            dt->value.db = value;
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_POINTER:
-        SET_VALUE_TO_DATA_BUFS_S(value, dt->value.p);
+        {
+            SET_VALUE_TO_DATA_BUFS_S(value, dt->value.p);
+        }
         break;
     case CPLUS_DATA_TYPE_STRING:
-        cplus_data_set_string(dt, (value? strlen("true"): strlen("false")), (value? "true": "false"));
+        {
+            cplus_data_set_string(dt
+                , (value? strlen("true"): strlen("false"))
+                , (value? (char *)("true"): (char *)("false")));
+        }
         break;
     case CPLUS_DATA_TYPE_BYTE_ARRAY:
-        cplus_data_set_byte_array(dt, sizeof(bool), (uint8_t *)(&value));
+        {
+            cplus_data_set_byte_array(dt, sizeof(bool), (uint8_t *)(&(value)));
+        }
         break;
     }
     dt->is_valid = true;
@@ -2241,7 +2754,7 @@ int32_t cplus_data_set_as_bool(cplus_data obj, bool value)
 
 int32_t cplus_data_set_as_int8(cplus_data obj, int8_t value)
 {
-    struct data * dt = (struct data *)obj;
+    struct data * dt = (struct data *)(obj);
     uint32_t written = 0;
     CHECK_OBJECT_TYPE(obj);
 
@@ -2249,81 +2762,111 @@ int32_t cplus_data_set_as_int8(cplus_data obj, int8_t value)
     {
     default:
     case CPLUS_DATA_TYPE_NULL:
-        errno = EINVAL;
+        {
+            errno = EINVAL;
+        }
         return CPLUS_FAIL;
     case CPLUS_DATA_TYPE_BOOL:
-        DATA_SPIN_LOCK();
-        dt->value.b = (0 != value);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            dt->value.b = (0 != value);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_INT8:
-        SET_VALUE_TO_DATA_BUFS_S(value, dt->value.i8);
+        {
+            SET_VALUE_TO_DATA_BUFS_S(value, dt->value.i8);
+        }
         break;
     case CPLUS_DATA_TYPE_INT16:
-        SET_VALUE_TO_DATA_BUFS_S(value, dt->value.i16);
+        {
+            SET_VALUE_TO_DATA_BUFS_S(value, dt->value.i16);
+        }
         break;
     case CPLUS_DATA_TYPE_INT32:
-        SET_VALUE_TO_DATA_BUFS_S(value, dt->value.i32);
+        {
+            SET_VALUE_TO_DATA_BUFS_S(value, dt->value.i32);
+        }
         break;
     case CPLUS_DATA_TYPE_INT64:
-        DATA_SPIN_LOCK();
-        dt->value.i64 = value;
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            dt->value.i64 = value;
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_UINT8:
-        SET_VALUE_TO_DATA_BUFS_S(value, dt->value.u8);
+        {
+            SET_VALUE_TO_DATA_BUFS_S(value, dt->value.u8);
+        }
         break;
     case CPLUS_DATA_TYPE_UINT16:
-        SET_VALUE_TO_DATA_BUFS_S(value, dt->value.u16);
+        {
+            SET_VALUE_TO_DATA_BUFS_S(value, dt->value.u16);
+        }
         break;
     case CPLUS_DATA_TYPE_UINT32:
-        SET_VALUE_TO_DATA_BUFS_S(value, dt->value.u32);
+        {
+            SET_VALUE_TO_DATA_BUFS_S(value, dt->value.u32);
+        }
         break;
     case CPLUS_DATA_TYPE_UINT64:
-        DATA_SPIN_LOCK();
-        dt->value.u64 = value;
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            dt->value.u64 = value;
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_FLOAT:
-        DATA_SPIN_LOCK();
-        dt->value.f = value;
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            dt->value.f = value;
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_DOUBLE:
-        DATA_SPIN_LOCK();
-        dt->value.db = value;
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            dt->value.db = value;
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_POINTER:
-        SET_VALUE_TO_POINTER_DATA_BUFS_S(value, dt->value.p);
+        {
+            SET_VALUE_TO_POINTER_DATA_BUFS_S(value, dt->value.p);
+        }
         break;
     case CPLUS_DATA_TYPE_STRING:
-        DATA_SPIN_LOCK();
-        written = cplus_str_printf(NULL, 0, "%d", value);
-        if (NULL == dt->value.str.bufs)
         {
-            dt->value.str.len = written + 1;
-            dt->value.str.bufs = (char *)cplus_malloc(dt->value.str.len * sizeof(char));
-        }
-        else
-        {
-            if ((written + 1) > dt->value.str.len)
+            DATA_SPIN_LOCK();
+            written = cplus_str_printf(NULL, 0, "%d", value);
+            if (NULL == dt->value.str.bufs)
             {
                 dt->value.str.len = written + 1;
-                dt->value.str.bufs = (char *)cplus_realloc(dt->value.str.bufs, dt->value.str.len);
+                dt->value.str.bufs = (char *)cplus_malloc(dt->value.str.len * sizeof(char));
             }
-        }
-        if (NULL == dt->value.str.bufs)
-        {
-            errno = ENOMEM;
+            else
+            {
+                if ((written + 1) > dt->value.str.len)
+                {
+                    dt->value.str.len = written + 1;
+                    dt->value.str.bufs = (char *)cplus_realloc(dt->value.str.bufs, dt->value.str.len);
+                }
+            }
+            if (NULL == dt->value.str.bufs)
+            {
+                errno = ENOMEM;
+                DATA_SPIN_UNLOCK();
+                return CPLUS_FAIL;
+            }
+            cplus_str_printf(dt->value.str.bufs, dt->value.str.len, "%d", value);
             DATA_SPIN_UNLOCK();
-            return CPLUS_FAIL;
         }
-        cplus_str_printf(dt->value.str.bufs, dt->value.str.len, "%d", value);
-        DATA_SPIN_UNLOCK();
         break;
     case CPLUS_DATA_TYPE_BYTE_ARRAY:
-        cplus_data_set_byte_array(dt, sizeof(int8_t), (uint8_t *)(&value));
+        {
+            cplus_data_set_byte_array(dt, sizeof(int8_t), (uint8_t *)(&(value)));
+        }
         break;
     }
     dt->is_valid = true;
@@ -2332,7 +2875,7 @@ int32_t cplus_data_set_as_int8(cplus_data obj, int8_t value)
 
 int32_t cplus_data_set_as_int16(cplus_data obj, int16_t value)
 {
-    struct data * dt = (struct data *)obj;
+    struct data * dt = (struct data *)(obj);
     uint32_t written = 0;
     CHECK_OBJECT_TYPE(obj);
 
@@ -2340,81 +2883,111 @@ int32_t cplus_data_set_as_int16(cplus_data obj, int16_t value)
     {
     default:
     case CPLUS_DATA_TYPE_NULL:
-        errno = EINVAL;
+        {
+            errno = EINVAL;
+        }
         return CPLUS_FAIL;
     case CPLUS_DATA_TYPE_BOOL:
-        DATA_SPIN_LOCK();
-        dt->value.b = (0 != value);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            dt->value.b = (0 != value);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_INT8:
-        SET_VALUE_TO_DATA_BUFS_S(value, dt->value.i8);
+        {
+            SET_VALUE_TO_DATA_BUFS_S(value, dt->value.i8);
+        }
         break;
     case CPLUS_DATA_TYPE_INT16:
-        SET_VALUE_TO_DATA_BUFS_S(value, dt->value.i16);
+        {
+            SET_VALUE_TO_DATA_BUFS_S(value, dt->value.i16);
+        }
         break;
     case CPLUS_DATA_TYPE_INT32:
-        SET_VALUE_TO_DATA_BUFS_S(value, dt->value.i32);
+        {
+            SET_VALUE_TO_DATA_BUFS_S(value, dt->value.i32);
+        }
         break;
     case CPLUS_DATA_TYPE_INT64:
-        DATA_SPIN_LOCK();
-        dt->value.i64 = value;
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            dt->value.i64 = value;
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_UINT8:
-        SET_VALUE_TO_DATA_BUFS_S(value, dt->value.u8);
+        {
+            SET_VALUE_TO_DATA_BUFS_S(value, dt->value.u8);
+        }
         break;
     case CPLUS_DATA_TYPE_UINT16:
-        SET_VALUE_TO_DATA_BUFS_S(value, dt->value.u16);
+        {
+            SET_VALUE_TO_DATA_BUFS_S(value, dt->value.u16);
+        }
         break;
     case CPLUS_DATA_TYPE_UINT32:
-        SET_VALUE_TO_DATA_BUFS_S(value, dt->value.u32);
+        {
+            SET_VALUE_TO_DATA_BUFS_S(value, dt->value.u32);
+        }
         break;
     case CPLUS_DATA_TYPE_UINT64:
-        DATA_SPIN_LOCK();
-        dt->value.u64 = value;
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            dt->value.u64 = value;
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_FLOAT:
-        DATA_SPIN_LOCK();
-        dt->value.f = value;
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            dt->value.f = value;
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_DOUBLE:
-        DATA_SPIN_LOCK();
-        dt->value.db = value;
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            dt->value.db = value;
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_POINTER:
-        SET_VALUE_TO_POINTER_DATA_BUFS_S(value, dt->value.p);
+        {
+            SET_VALUE_TO_POINTER_DATA_BUFS_S(value, dt->value.p);
+        }
         break;
     case CPLUS_DATA_TYPE_STRING:
-        DATA_SPIN_LOCK();
-        written = cplus_str_printf(NULL, 0, "%d", value);
-        if (NULL == dt->value.str.bufs)
         {
-            dt->value.str.len = written + 1;
-            dt->value.str.bufs = (char *)cplus_malloc(dt->value.str.len * sizeof(char));
-        }
-        else
-        {
-            if ((written + 1) > dt->value.str.len)
+            DATA_SPIN_LOCK();
+            written = cplus_str_printf(NULL, 0, "%d", value);
+            if (NULL == dt->value.str.bufs)
             {
                 dt->value.str.len = written + 1;
-                dt->value.str.bufs = (char *)cplus_realloc(dt->value.str.bufs, dt->value.str.len);
+                dt->value.str.bufs = (char *)cplus_malloc(dt->value.str.len * sizeof(char));
             }
-        }
-        if (NULL == dt->value.str.bufs)
-        {
-            errno = ENOMEM;
+            else
+            {
+                if ((written + 1) > dt->value.str.len)
+                {
+                    dt->value.str.len = written + 1;
+                    dt->value.str.bufs = (char *)cplus_realloc(dt->value.str.bufs, dt->value.str.len);
+                }
+            }
+            if (NULL == dt->value.str.bufs)
+            {
+                errno = ENOMEM;
+                DATA_SPIN_UNLOCK();
+                return CPLUS_FAIL;
+            }
+            cplus_str_printf(dt->value.str.bufs, dt->value.str.len, "%d", value);
             DATA_SPIN_UNLOCK();
-            return CPLUS_FAIL;
         }
-        cplus_str_printf(dt->value.str.bufs, dt->value.str.len, "%d", value);
-        DATA_SPIN_UNLOCK();
         break;
     case CPLUS_DATA_TYPE_BYTE_ARRAY:
-        cplus_data_set_byte_array(dt, sizeof(int16_t), (uint8_t *)(&value));
+        {
+            cplus_data_set_byte_array(dt, sizeof(int16_t), (uint8_t *)(&(value)));
+        }
         break;
     }
     dt->is_valid = true;
@@ -2423,7 +2996,7 @@ int32_t cplus_data_set_as_int16(cplus_data obj, int16_t value)
 
 int32_t cplus_data_set_as_int32(cplus_data obj, int32_t value)
 {
-    struct data * dt = (struct data *)obj;
+    struct data * dt = (struct data *)(obj);
     uint32_t written = 0;
     CHECK_OBJECT_TYPE(obj);
 
@@ -2431,81 +3004,111 @@ int32_t cplus_data_set_as_int32(cplus_data obj, int32_t value)
     {
     default:
     case CPLUS_DATA_TYPE_NULL:
-        errno = EINVAL;
+        {
+            errno = EINVAL;
+        }
         return CPLUS_FAIL;
     case CPLUS_DATA_TYPE_BOOL:
-        DATA_SPIN_LOCK();
-        dt->value.b = (0 != value);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            dt->value.b = (0 != value);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_INT8:
-        SET_VALUE_TO_DATA_BUFS_S(value, dt->value.i8);
+        {
+            SET_VALUE_TO_DATA_BUFS_S(value, dt->value.i8);
+        }
         break;
     case CPLUS_DATA_TYPE_INT16:
-        SET_VALUE_TO_DATA_BUFS_S(value, dt->value.i16);
+        {
+            SET_VALUE_TO_DATA_BUFS_S(value, dt->value.i16);
+        }
         break;
     case CPLUS_DATA_TYPE_INT32:
-        SET_VALUE_TO_DATA_BUFS_S(value, dt->value.i32);
+        {
+            SET_VALUE_TO_DATA_BUFS_S(value, dt->value.i32);
+        }
         break;
     case CPLUS_DATA_TYPE_INT64:
-        DATA_SPIN_LOCK();
-        dt->value.i64 = value;
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            dt->value.i64 = value;
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_UINT8:
-        SET_VALUE_TO_DATA_BUFS_S(value, dt->value.u8);
+        {
+            SET_VALUE_TO_DATA_BUFS_S(value, dt->value.u8);
+        }
         break;
     case CPLUS_DATA_TYPE_UINT16:
-        SET_VALUE_TO_DATA_BUFS_S(value, dt->value.u16);
+        {
+            SET_VALUE_TO_DATA_BUFS_S(value, dt->value.u16);
+        }
         break;
     case CPLUS_DATA_TYPE_UINT32:
-        SET_VALUE_TO_DATA_BUFS_S(value, dt->value.u32);
+        {
+            SET_VALUE_TO_DATA_BUFS_S(value, dt->value.u32);
+        }
         break;
     case CPLUS_DATA_TYPE_UINT64:
-        DATA_SPIN_LOCK();
-        dt->value.u64 = value;
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            dt->value.u64 = value;
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_FLOAT:
-        DATA_SPIN_LOCK();
-        dt->value.f = (float)value;
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            dt->value.f = (float)(value);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_DOUBLE:
-        DATA_SPIN_LOCK();
-        dt->value.db = (double)value;
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            dt->value.db = (double)(value);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_POINTER:
-        SET_VALUE_TO_POINTER_DATA_BUFS_S(value, dt->value.p);
+        {
+            SET_VALUE_TO_POINTER_DATA_BUFS_S(value, dt->value.p);
+        }
         break;
     case CPLUS_DATA_TYPE_STRING:
-        DATA_SPIN_LOCK();
-        written = cplus_str_printf(NULL, 0, "%d", value);
-        if (NULL == dt->value.str.bufs)
         {
-            dt->value.str.len = written + 1;
-            dt->value.str.bufs = (char *)cplus_malloc(dt->value.str.len * sizeof(char));
-        }
-        else
-        {
-            if ((written + 1) > dt->value.str.len)
+            DATA_SPIN_LOCK();
+            written = cplus_str_printf(NULL, 0, "%d", value);
+            if (NULL == dt->value.str.bufs)
             {
                 dt->value.str.len = written + 1;
-                dt->value.str.bufs = (char *)cplus_realloc(dt->value.str.bufs, dt->value.str.len);
+                dt->value.str.bufs = (char *)cplus_malloc(dt->value.str.len * sizeof(char));
             }
-        }
-        if (NULL == dt->value.str.bufs)
-        {
-            errno = ENOMEM;
+            else
+            {
+                if ((written + 1) > dt->value.str.len)
+                {
+                    dt->value.str.len = written + 1;
+                    dt->value.str.bufs = (char *)cplus_realloc(dt->value.str.bufs, dt->value.str.len);
+                }
+            }
+            if (NULL == dt->value.str.bufs)
+            {
+                errno = ENOMEM;
+                DATA_SPIN_UNLOCK();
+                return CPLUS_FAIL;
+            }
+            cplus_str_printf(dt->value.str.bufs, dt->value.str.len, "%d", value);
             DATA_SPIN_UNLOCK();
-            return CPLUS_FAIL;
         }
-        cplus_str_printf(dt->value.str.bufs, dt->value.str.len, "%d", value);
-        DATA_SPIN_UNLOCK();
         break;
     case CPLUS_DATA_TYPE_BYTE_ARRAY:
-        cplus_data_set_byte_array(dt, sizeof(int32_t), (uint8_t *)(&value));
+        {
+            cplus_data_set_byte_array(dt, sizeof(int32_t), (uint8_t *)(&(value)));
+        }
         break;
     }
     dt->is_valid = true;
@@ -2514,7 +3117,7 @@ int32_t cplus_data_set_as_int32(cplus_data obj, int32_t value)
 
 int32_t cplus_data_set_as_int64(cplus_data obj, int64_t value)
 {
-    struct data * dt = (struct data *)obj;
+    struct data * dt = (struct data *)(obj);
     uint32_t written = 0;
     CHECK_OBJECT_TYPE(obj);
 
@@ -2522,81 +3125,111 @@ int32_t cplus_data_set_as_int64(cplus_data obj, int64_t value)
     {
     default:
     case CPLUS_DATA_TYPE_NULL:
-        errno = EINVAL;
+        {
+            errno = EINVAL;
+        }
         return CPLUS_FAIL;
     case CPLUS_DATA_TYPE_BOOL:
-        DATA_SPIN_LOCK();
-        dt->value.b = (0 != value);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            dt->value.b = (0 != value);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_INT8:
-        SET_VALUE_TO_DATA_BUFS_S(value, dt->value.i8);
+        {
+            SET_VALUE_TO_DATA_BUFS_S(value, dt->value.i8);
+        }
         break;
     case CPLUS_DATA_TYPE_INT16:
-        SET_VALUE_TO_DATA_BUFS_S(value, dt->value.i16);
+        {
+            SET_VALUE_TO_DATA_BUFS_S(value, dt->value.i16);
+        }
         break;
     case CPLUS_DATA_TYPE_INT32:
-        SET_VALUE_TO_DATA_BUFS_S(value, dt->value.i32);
+        {
+            SET_VALUE_TO_DATA_BUFS_S(value, dt->value.i32);
+        }
         break;
     case CPLUS_DATA_TYPE_INT64:
-        DATA_SPIN_LOCK();
-        dt->value.i64 = value;
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            dt->value.i64 = value;
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_UINT8:
-        SET_VALUE_TO_DATA_BUFS_S(value, dt->value.u8);
+        {
+            SET_VALUE_TO_DATA_BUFS_S(value, dt->value.u8);
+        }
         break;
     case CPLUS_DATA_TYPE_UINT16:
-        SET_VALUE_TO_DATA_BUFS_S(value, dt->value.u16);
+        {
+            SET_VALUE_TO_DATA_BUFS_S(value, dt->value.u16);
+        }
         break;
     case CPLUS_DATA_TYPE_UINT32:
-        SET_VALUE_TO_DATA_BUFS_S(value, dt->value.u32);
+        {
+            SET_VALUE_TO_DATA_BUFS_S(value, dt->value.u32);
+        }
         break;
     case CPLUS_DATA_TYPE_UINT64:
-        DATA_SPIN_LOCK();
-        dt->value.u64 = value;
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            dt->value.u64 = value;
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_FLOAT:
-        DATA_SPIN_LOCK();
-        dt->value.f = (float)value;
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            dt->value.f = (float)(value);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_DOUBLE:
-        DATA_SPIN_LOCK();
-        dt->value.db = (double)value;
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            dt->value.db = (double)(value);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_POINTER:
-        SET_VALUE_TO_POINTER_DATA_BUFS_S(value, dt->value.p);
+        {
+            SET_VALUE_TO_POINTER_DATA_BUFS_S(value, dt->value.p);
+        }
         break;
     case CPLUS_DATA_TYPE_STRING:
-        DATA_SPIN_LOCK();
-        written = cplus_str_printf(NULL, 0, REG_LD, value);
-        if (NULL == dt->value.str.bufs)
         {
-            dt->value.str.len = written + 1;
-            dt->value.str.bufs = (char *)cplus_malloc(dt->value.str.len * sizeof(char));
-        }
-        else
-        {
-            if ((written + 1) > dt->value.str.len)
+            DATA_SPIN_LOCK();
+            written = cplus_str_printf(NULL, 0, REG_LD, value);
+            if (NULL == dt->value.str.bufs)
             {
                 dt->value.str.len = written + 1;
-                dt->value.str.bufs = (char *)cplus_realloc(dt->value.str.bufs, dt->value.str.len);
+                dt->value.str.bufs = (char *)cplus_malloc(dt->value.str.len * sizeof(char));
             }
-        }
-        if (NULL == dt->value.str.bufs)
-        {
-            errno = ENOMEM;
+            else
+            {
+                if ((written + 1) > dt->value.str.len)
+                {
+                    dt->value.str.len = written + 1;
+                    dt->value.str.bufs = (char *)cplus_realloc(dt->value.str.bufs, dt->value.str.len);
+                }
+            }
+            if (NULL == dt->value.str.bufs)
+            {
+                errno = ENOMEM;
+                DATA_SPIN_UNLOCK();
+                return CPLUS_FAIL;
+            }
+            cplus_str_printf(dt->value.str.bufs, dt->value.str.len, REG_LD, value);
             DATA_SPIN_UNLOCK();
-            return CPLUS_FAIL;
         }
-        cplus_str_printf(dt->value.str.bufs, dt->value.str.len, REG_LD, value);
-        DATA_SPIN_UNLOCK();
         break;
     case CPLUS_DATA_TYPE_BYTE_ARRAY:
-        cplus_data_set_byte_array(dt, sizeof(int64_t), (uint8_t *)(&value));
+        {
+            cplus_data_set_byte_array(dt, sizeof(int64_t), (uint8_t *)(&(value)));
+        }
         break;
     }
     dt->is_valid = true;
@@ -2605,7 +3238,7 @@ int32_t cplus_data_set_as_int64(cplus_data obj, int64_t value)
 
 int32_t cplus_data_set_as_uint8(cplus_data obj, uint8_t value)
 {
-    struct data * dt = (struct data *)obj;
+    struct data * dt = (struct data *)(obj);
     uint32_t written = 0;
     CHECK_OBJECT_TYPE(obj);
 
@@ -2613,81 +3246,111 @@ int32_t cplus_data_set_as_uint8(cplus_data obj, uint8_t value)
     {
     default:
     case CPLUS_DATA_TYPE_NULL:
-        errno = EINVAL;
+        {
+            errno = EINVAL;
+        }
         return CPLUS_FAIL;
     case CPLUS_DATA_TYPE_BOOL:
-        DATA_SPIN_LOCK();
-        dt->value.b = (0 != value);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            dt->value.b = (0 != value);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_INT8:
-        SET_VALUE_TO_DATA_BUFS_S(value, dt->value.i8);
+        {
+            SET_VALUE_TO_DATA_BUFS_S(value, dt->value.i8);
+        }
         break;
     case CPLUS_DATA_TYPE_INT16:
-        SET_VALUE_TO_DATA_BUFS_S(value, dt->value.i16);
+        {
+            SET_VALUE_TO_DATA_BUFS_S(value, dt->value.i16);
+        }
         break;
     case CPLUS_DATA_TYPE_INT32:
-        SET_VALUE_TO_DATA_BUFS_S(value, dt->value.i32);
+        {
+            SET_VALUE_TO_DATA_BUFS_S(value, dt->value.i32);
+        }
         break;
     case CPLUS_DATA_TYPE_INT64:
-        DATA_SPIN_LOCK();
-        dt->value.i64 = value;
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            dt->value.i64 = value;
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_UINT8:
-        SET_VALUE_TO_DATA_BUFS_S(value, dt->value.u8);
+        {
+            SET_VALUE_TO_DATA_BUFS_S(value, dt->value.u8);
+        }
         break;
     case CPLUS_DATA_TYPE_UINT16:
-        SET_VALUE_TO_DATA_BUFS_S(value, dt->value.u16);
+        {
+            SET_VALUE_TO_DATA_BUFS_S(value, dt->value.u16);
+        }
         break;
     case CPLUS_DATA_TYPE_UINT32:
-        SET_VALUE_TO_DATA_BUFS_S(value, dt->value.u32);
+        {
+            SET_VALUE_TO_DATA_BUFS_S(value, dt->value.u32);
+        }
         break;
     case CPLUS_DATA_TYPE_UINT64:
-        DATA_SPIN_LOCK();
-        dt->value.u64 = value;
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            dt->value.u64 = value;
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_FLOAT:
-        DATA_SPIN_LOCK();
-        dt->value.f = (float)value;
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            dt->value.f = (float)(value);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_DOUBLE:
-        DATA_SPIN_LOCK();
-        dt->value.db = (double)value;
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            dt->value.db = (double)(value);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_POINTER:
-        SET_VALUE_TO_POINTER_DATA_BUFS_S(value, dt->value.p);
+        {
+            SET_VALUE_TO_POINTER_DATA_BUFS_S(value, dt->value.p);
+        }
         break;
     case CPLUS_DATA_TYPE_STRING:
-        DATA_SPIN_LOCK();
-        written = cplus_str_printf(NULL, 0, "%u", value);
-        if (NULL == dt->value.str.bufs)
         {
-            dt->value.str.len = written + 1;
-            dt->value.str.bufs = (char *)cplus_malloc(dt->value.str.len * sizeof(char));
-        }
-        else
-        {
-            if ((written + 1) > dt->value.str.len)
+            DATA_SPIN_LOCK();
+            written = cplus_str_printf(NULL, 0, "%u", value);
+            if (NULL == dt->value.str.bufs)
             {
                 dt->value.str.len = written + 1;
-                dt->value.str.bufs = (char *)cplus_realloc(dt->value.str.bufs, dt->value.str.len);
+                dt->value.str.bufs = (char *)cplus_malloc(dt->value.str.len * sizeof(char));
             }
-        }
-        if (NULL == dt->value.str.bufs)
-        {
-            errno = ENOMEM;
+            else
+            {
+                if ((written + 1) > dt->value.str.len)
+                {
+                    dt->value.str.len = written + 1;
+                    dt->value.str.bufs = (char *)cplus_realloc(dt->value.str.bufs, dt->value.str.len);
+                }
+            }
+            if (NULL == dt->value.str.bufs)
+            {
+                errno = ENOMEM;
+                DATA_SPIN_UNLOCK();
+                return CPLUS_FAIL;
+            }
+            cplus_str_printf(dt->value.str.bufs, dt->value.str.len, "%u", value);
             DATA_SPIN_UNLOCK();
-            return CPLUS_FAIL;
         }
-        cplus_str_printf(dt->value.str.bufs, dt->value.str.len, "%u", value);
-        DATA_SPIN_UNLOCK();
         break;
     case CPLUS_DATA_TYPE_BYTE_ARRAY:
-        cplus_data_set_byte_array(dt, sizeof(uint8_t), (uint8_t *)(&value));
+        {
+            cplus_data_set_byte_array(dt, sizeof(uint8_t), (uint8_t *)(&(value)));
+        }
         break;
     }
     dt->is_valid = true;
@@ -2696,7 +3359,7 @@ int32_t cplus_data_set_as_uint8(cplus_data obj, uint8_t value)
 
 int32_t cplus_data_set_as_uint16(cplus_data obj, uint16_t value)
 {
-    struct data * dt = (struct data *)obj;
+    struct data * dt = (struct data *)(obj);
     uint32_t written = 0;
     CHECK_OBJECT_TYPE(obj);
 
@@ -2704,81 +3367,111 @@ int32_t cplus_data_set_as_uint16(cplus_data obj, uint16_t value)
     {
     default:
     case CPLUS_DATA_TYPE_NULL:
-        errno = EINVAL;
+        {
+            errno = EINVAL;
+        }
         return CPLUS_FAIL;
     case CPLUS_DATA_TYPE_BOOL:
-        DATA_SPIN_LOCK();
-        dt->value.b = (0 != value);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            dt->value.b = (0 != value);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_INT8:
-        SET_VALUE_TO_DATA_BUFS_S(value, dt->value.i8);
+        {
+            SET_VALUE_TO_DATA_BUFS_S(value, dt->value.i8);
+        }
         break;
     case CPLUS_DATA_TYPE_INT16:
-        SET_VALUE_TO_DATA_BUFS_S(value, dt->value.i16);
+        {
+            SET_VALUE_TO_DATA_BUFS_S(value, dt->value.i16);
+        }
         break;
     case CPLUS_DATA_TYPE_INT32:
-        SET_VALUE_TO_DATA_BUFS_S(value, dt->value.i32);
+        {
+            SET_VALUE_TO_DATA_BUFS_S(value, dt->value.i32);
+        }
         break;
     case CPLUS_DATA_TYPE_INT64:
-        DATA_SPIN_LOCK();
-        dt->value.i64 = value;
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            dt->value.i64 = value;
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_UINT8:
-        SET_VALUE_TO_DATA_BUFS_S(value, dt->value.u8);
+        {
+            SET_VALUE_TO_DATA_BUFS_S(value, dt->value.u8);
+        }
         break;
     case CPLUS_DATA_TYPE_UINT16:
-        SET_VALUE_TO_DATA_BUFS_S(value, dt->value.u16);
+        {
+            SET_VALUE_TO_DATA_BUFS_S(value, dt->value.u16);
+        }
         break;
     case CPLUS_DATA_TYPE_UINT32:
-        SET_VALUE_TO_DATA_BUFS_S(value, dt->value.u32);
+        {
+            SET_VALUE_TO_DATA_BUFS_S(value, dt->value.u32);
+        }
         break;
     case CPLUS_DATA_TYPE_UINT64:
-        DATA_SPIN_LOCK();
-        dt->value.u64 = value;
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            dt->value.u64 = value;
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_FLOAT:
-        DATA_SPIN_LOCK();
-        dt->value.f = (float)value;
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            dt->value.f = (float)(value);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_DOUBLE:
-        DATA_SPIN_LOCK();
-        dt->value.db = (double)value;
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            dt->value.db = (double)(value);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_POINTER:
-        SET_VALUE_TO_POINTER_DATA_BUFS_S(value, dt->value.p);
+        {
+            SET_VALUE_TO_POINTER_DATA_BUFS_S(value, dt->value.p);
+        }
         break;
     case CPLUS_DATA_TYPE_STRING:
-        DATA_SPIN_LOCK();
-        written = cplus_str_printf(NULL, 0, "%u", value);
-        if (NULL == dt->value.str.bufs)
         {
-            dt->value.str.len = written + 1;
-            dt->value.str.bufs = (char *)cplus_malloc(dt->value.str.len * sizeof(char));
-        }
-        else
-        {
-            if ((written + 1) > dt->value.str.len)
+            DATA_SPIN_LOCK();
+            written = cplus_str_printf(NULL, 0, "%u", value);
+            if (NULL == dt->value.str.bufs)
             {
                 dt->value.str.len = written + 1;
-                dt->value.str.bufs = (char *)cplus_realloc(dt->value.str.bufs, dt->value.str.len);
+                dt->value.str.bufs = (char *)cplus_malloc(dt->value.str.len * sizeof(char));
             }
-        }
-        if (NULL == dt->value.str.bufs)
-        {
-            errno = ENOMEM;
+            else
+            {
+                if ((written + 1) > dt->value.str.len)
+                {
+                    dt->value.str.len = written + 1;
+                    dt->value.str.bufs = (char *)cplus_realloc(dt->value.str.bufs, dt->value.str.len);
+                }
+            }
+            if (NULL == dt->value.str.bufs)
+            {
+                errno = ENOMEM;
+                DATA_SPIN_UNLOCK();
+                return CPLUS_FAIL;
+            }
+            cplus_str_printf(dt->value.str.bufs, dt->value.str.len, "%u", value);
             DATA_SPIN_UNLOCK();
-            return CPLUS_FAIL;
         }
-        cplus_str_printf(dt->value.str.bufs, dt->value.str.len, "%u", value);
-        DATA_SPIN_UNLOCK();
         break;
     case CPLUS_DATA_TYPE_BYTE_ARRAY:
-        cplus_data_set_byte_array(dt, sizeof(uint16_t), (uint8_t *)(&value));
+        {
+            cplus_data_set_byte_array(dt, sizeof(uint16_t), (uint8_t *)(&(value)));
+        }
         break;
     }
     dt->is_valid = true;
@@ -2787,7 +3480,7 @@ int32_t cplus_data_set_as_uint16(cplus_data obj, uint16_t value)
 
 int32_t cplus_data_set_as_uint32(cplus_data obj, uint32_t value)
 {
-    struct data * dt = (struct data *)obj;
+    struct data * dt = (struct data *)(obj);
     uint32_t written = 0;
     CHECK_OBJECT_TYPE(obj);
 
@@ -2795,81 +3488,111 @@ int32_t cplus_data_set_as_uint32(cplus_data obj, uint32_t value)
     {
     default:
     case CPLUS_DATA_TYPE_NULL:
-        errno = EINVAL;
+        {
+            errno = EINVAL;
+        }
         return CPLUS_FAIL;
     case CPLUS_DATA_TYPE_BOOL:
-        DATA_SPIN_LOCK();
-        dt->value.b = (0 != value);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            dt->value.b = (0 != value);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_INT8:
-        SET_VALUE_TO_DATA_BUFS_S(value, dt->value.i8);
+        {
+            SET_VALUE_TO_DATA_BUFS_S(value, dt->value.i8);
+        }
         break;
     case CPLUS_DATA_TYPE_INT16:
-        SET_VALUE_TO_DATA_BUFS_S(value, dt->value.i16);
+        {
+            SET_VALUE_TO_DATA_BUFS_S(value, dt->value.i16);
+        }
         break;
     case CPLUS_DATA_TYPE_INT32:
-        SET_VALUE_TO_DATA_BUFS_S(value, dt->value.i32);
+        {
+            SET_VALUE_TO_DATA_BUFS_S(value, dt->value.i32);
+        }
         break;
     case CPLUS_DATA_TYPE_INT64:
-        DATA_SPIN_LOCK();
-        dt->value.i64 = value;
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            dt->value.i64 = (value);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_UINT8:
-        SET_VALUE_TO_DATA_BUFS_S(value, dt->value.u8);
+        {
+            SET_VALUE_TO_DATA_BUFS_S(value, dt->value.u8);
+        }
         break;
     case CPLUS_DATA_TYPE_UINT16:
-        SET_VALUE_TO_DATA_BUFS_S(value, dt->value.u16);
+        {
+            SET_VALUE_TO_DATA_BUFS_S(value, dt->value.u16);
+        }
         break;
     case CPLUS_DATA_TYPE_UINT32:
-        SET_VALUE_TO_DATA_BUFS_S(value, dt->value.u32);
+        {
+            SET_VALUE_TO_DATA_BUFS_S(value, dt->value.u32);
+        }
         break;
     case CPLUS_DATA_TYPE_UINT64:
-        DATA_SPIN_LOCK();
-        dt->value.u64 = value;
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            dt->value.u64 = value;
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_FLOAT:
-        DATA_SPIN_LOCK();
-        dt->value.f = (float)value;
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            dt->value.f = (float)(value);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_DOUBLE:
-        DATA_SPIN_LOCK();
-        dt->value.db = (double)value;
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            dt->value.db = (double)(value);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_POINTER:
-        SET_VALUE_TO_POINTER_DATA_BUFS_S(value, dt->value.p);
+        {
+            SET_VALUE_TO_POINTER_DATA_BUFS_S(value, dt->value.p);
+        }
         break;
     case CPLUS_DATA_TYPE_STRING:
-        DATA_SPIN_LOCK();
-        written = cplus_str_printf(NULL, 0, "%u", value);
-        if (NULL == dt->value.str.bufs)
         {
-            dt->value.str.len = written + 1;
-            dt->value.str.bufs = (char *)cplus_malloc(dt->value.str.len * sizeof(char));
-        }
-        else
-        {
-            if ((written + 1) > dt->value.str.len)
+            DATA_SPIN_LOCK();
+            written = cplus_str_printf(NULL, 0, "%u", value);
+            if (NULL == dt->value.str.bufs)
             {
                 dt->value.str.len = written + 1;
-                dt->value.str.bufs = (char *)cplus_realloc(dt->value.str.bufs, dt->value.str.len);
+                dt->value.str.bufs = (char *)cplus_malloc(dt->value.str.len * sizeof(char));
             }
-        }
-        if (NULL == dt->value.str.bufs)
-        {
-            errno = ENOMEM;
+            else
+            {
+                if ((written + 1) > dt->value.str.len)
+                {
+                    dt->value.str.len = written + 1;
+                    dt->value.str.bufs = (char *)cplus_realloc(dt->value.str.bufs, dt->value.str.len);
+                }
+            }
+            if (NULL == dt->value.str.bufs)
+            {
+                errno = ENOMEM;
+                DATA_SPIN_UNLOCK();
+                return CPLUS_FAIL;
+            }
+            cplus_str_printf(dt->value.str.bufs, dt->value.str.len, "%u", value);
             DATA_SPIN_UNLOCK();
-            return CPLUS_FAIL;
         }
-        cplus_str_printf(dt->value.str.bufs, dt->value.str.len, "%u", value);
-        DATA_SPIN_UNLOCK();
         break;
     case CPLUS_DATA_TYPE_BYTE_ARRAY:
-        cplus_data_set_byte_array(dt, sizeof(uint32_t), (uint8_t *)(&value));
+        {
+            cplus_data_set_byte_array(dt, sizeof(uint32_t), (uint8_t *)(&(value)));
+        }
         break;
     }
     dt->is_valid = true;
@@ -2878,7 +3601,7 @@ int32_t cplus_data_set_as_uint32(cplus_data obj, uint32_t value)
 
 int32_t cplus_data_set_as_uint64(cplus_data obj, uint64_t value)
 {
-    struct data * dt = (struct data *)obj;
+    struct data * dt = (struct data *)(obj);
     uint32_t written = 0;
     CHECK_OBJECT_TYPE(obj);
 
@@ -2886,81 +3609,111 @@ int32_t cplus_data_set_as_uint64(cplus_data obj, uint64_t value)
     {
     default:
     case CPLUS_DATA_TYPE_NULL:
-        errno = EINVAL;
+        {
+            errno = EINVAL;
+        }
         return CPLUS_FAIL;
     case CPLUS_DATA_TYPE_BOOL:
-        DATA_SPIN_LOCK();
-        dt->value.b = (0 != value);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            dt->value.b = (0 != value);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_INT8:
-        SET_VALUE_TO_DATA_BUFS_S(value, dt->value.i8);
+        {
+            SET_VALUE_TO_DATA_BUFS_S(value, dt->value.i8);
+        }
         break;
     case CPLUS_DATA_TYPE_INT16:
-        SET_VALUE_TO_DATA_BUFS_S(value, dt->value.i16);
+        {
+            SET_VALUE_TO_DATA_BUFS_S(value, dt->value.i16);
+        }
         break;
     case CPLUS_DATA_TYPE_INT32:
-        SET_VALUE_TO_DATA_BUFS_S(value, dt->value.i32);
+        {
+            SET_VALUE_TO_DATA_BUFS_S(value, dt->value.i32);
+        }
         break;
     case CPLUS_DATA_TYPE_INT64:
-        DATA_SPIN_LOCK();
-        dt->value.i64 = value;
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            dt->value.i64 = value;
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_UINT8:
-        SET_VALUE_TO_DATA_BUFS_S(value, dt->value.u8);
+        {
+            SET_VALUE_TO_DATA_BUFS_S(value, dt->value.u8);
+        }
         break;
     case CPLUS_DATA_TYPE_UINT16:
-        SET_VALUE_TO_DATA_BUFS_S(value, dt->value.u16);
+        {
+            SET_VALUE_TO_DATA_BUFS_S(value, dt->value.u16);
+        }
         break;
     case CPLUS_DATA_TYPE_UINT32:
-        SET_VALUE_TO_DATA_BUFS_S(value, dt->value.u32);
+        {
+            SET_VALUE_TO_DATA_BUFS_S(value, dt->value.u32);
+        }
         break;
     case CPLUS_DATA_TYPE_UINT64:
-        DATA_SPIN_LOCK();
-        dt->value.u64 = value;
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            dt->value.u64 = value;
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_FLOAT:
-        DATA_SPIN_LOCK();
-        dt->value.f = (float)value;
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            dt->value.f = (float)(value);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_DOUBLE:
-        DATA_SPIN_LOCK();
-        dt->value.db = (double)value;
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            dt->value.db = (double)(value);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_POINTER:
-        SET_VALUE_TO_POINTER_DATA_BUFS_S(value, dt->value.p);
+        {
+            SET_VALUE_TO_POINTER_DATA_BUFS_S(value, dt->value.p);
+        }
         break;
     case CPLUS_DATA_TYPE_STRING:
-        DATA_SPIN_LOCK();
-        written = cplus_str_printf(NULL, 0, REG_LU, value);
-        if (NULL == dt->value.str.bufs)
         {
-            dt->value.str.len = written + 1;
-            dt->value.str.bufs = (char *)cplus_malloc(dt->value.str.len * sizeof(char));
-        }
-        else
-        {
-            if ((written + 1) > dt->value.str.len)
+            DATA_SPIN_LOCK();
+            written = cplus_str_printf(NULL, 0, REG_LU, value);
+            if (NULL == dt->value.str.bufs)
             {
                 dt->value.str.len = written + 1;
-                dt->value.str.bufs = (char *)cplus_realloc(dt->value.str.bufs, dt->value.str.len);
+                dt->value.str.bufs = (char *)cplus_malloc(dt->value.str.len * sizeof(char));
             }
-        }
-        if (NULL == dt->value.str.bufs)
-        {
-            errno = ENOMEM;
+            else
+            {
+                if ((written + 1) > dt->value.str.len)
+                {
+                    dt->value.str.len = written + 1;
+                    dt->value.str.bufs = (char *)cplus_realloc(dt->value.str.bufs, dt->value.str.len);
+                }
+            }
+            if (NULL == dt->value.str.bufs)
+            {
+                errno = ENOMEM;
+                DATA_SPIN_UNLOCK();
+                return CPLUS_FAIL;
+            }
+            cplus_str_printf(dt->value.str.bufs, dt->value.str.len, REG_LU, value);
             DATA_SPIN_UNLOCK();
-            return CPLUS_FAIL;
         }
-        cplus_str_printf(dt->value.str.bufs, dt->value.str.len, REG_LU, value);
-        DATA_SPIN_UNLOCK();
         break;
     case CPLUS_DATA_TYPE_BYTE_ARRAY:
-        cplus_data_set_byte_array(dt, sizeof(uint64_t), (uint8_t *)(&value));
+        {
+            cplus_data_set_byte_array(dt, sizeof(uint64_t), (uint8_t *)(&(value)));
+        }
         break;
     }
     dt->is_valid = true;
@@ -2969,7 +3722,7 @@ int32_t cplus_data_set_as_uint64(cplus_data obj, uint64_t value)
 
 int32_t cplus_data_set_as_float(cplus_data obj, float value)
 {
-    struct data * dt = (struct data *)obj;
+    struct data * dt = (struct data *)(obj);
     uint32_t written = 0;
     CHECK_OBJECT_TYPE(obj);
 
@@ -2977,95 +3730,125 @@ int32_t cplus_data_set_as_float(cplus_data obj, float value)
     {
     default:
     case CPLUS_DATA_TYPE_NULL:
-        errno = EINVAL;
+        {
+            errno = EINVAL;
+        }
         return CPLUS_FAIL;
     case CPLUS_DATA_TYPE_BOOL:
-        DATA_SPIN_LOCK();
-        dt->value.b = (0 != value);
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            dt->value.b = (0 != value);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_INT8:
-        DATA_SPIN_LOCK();
-        dt->value.i8 = (int8_t)value;
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            dt->value.i8 = (int8_t)(value);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_INT16:
-        DATA_SPIN_LOCK();
-        dt->value.i16 = (int16_t)value;
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            dt->value.i16 = (int16_t)(value);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_INT32:
-        DATA_SPIN_LOCK();
-        dt->value.i32 = (int32_t)value;
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            dt->value.i32 = (int32_t)(value);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_INT64:
-        DATA_SPIN_LOCK();
-        dt->value.i64 = (int64_t)value;
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            dt->value.i64 = (int64_t)(value);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_UINT8:
-        DATA_SPIN_LOCK();
-        dt->value.u8 = (uint8_t)value;
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            dt->value.u8 = (uint8_t)(value);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_UINT16:
-        DATA_SPIN_LOCK();
-        dt->value.u16 = (uint16_t)value;
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            dt->value.u16 = (uint16_t)(value);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_UINT32:
-        DATA_SPIN_LOCK();
-        dt->value.u32 = (uint32_t)value;
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            dt->value.u32 = (uint32_t)(value);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_UINT64:
-        DATA_SPIN_LOCK();
-        dt->value.u64 = (uint64_t)value;
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            dt->value.u64 = (uint64_t)(value);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_FLOAT:
-        DATA_SPIN_LOCK();
-        dt->value.f = value;
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            dt->value.f = value;
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_DOUBLE:
-        DATA_SPIN_LOCK();
-        dt->value.db = (double)value;
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            dt->value.db = (double)(value);
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_POINTER:
-        DATA_SPIN_LOCK();
-        dt->value.p = (void *)((intptr_t)(value));
-        DATA_SPIN_UNLOCK();
+        {
+            DATA_SPIN_LOCK();
+            dt->value.p = (void *)((intptr_t)(value));
+            DATA_SPIN_UNLOCK();
+        }
         break;
     case CPLUS_DATA_TYPE_STRING:
-        DATA_SPIN_LOCK();
-        written = cplus_str_printf(NULL, 0, "%f", value);
-        if (NULL == dt->value.str.bufs)
         {
-            dt->value.str.len = written + 1;
-            dt->value.str.bufs = (char *)cplus_malloc(dt->value.str.len * sizeof(char));
-        }
-        else
-        {
-            if ((written + 1) > dt->value.str.len)
+            DATA_SPIN_LOCK();
+            written = cplus_str_printf(NULL, 0, "%f", value);
+            if (NULL == dt->value.str.bufs)
             {
                 dt->value.str.len = written + 1;
-                dt->value.str.bufs = (char *)cplus_realloc(dt->value.str.bufs, dt->value.str.len);
+                dt->value.str.bufs = (char *)cplus_malloc(dt->value.str.len * sizeof(char));
             }
-        }
-        if (NULL == dt->value.str.bufs)
-        {
-            errno = ENOMEM;
+            else
+            {
+                if ((written + 1) > dt->value.str.len)
+                {
+                    dt->value.str.len = written + 1;
+                    dt->value.str.bufs = (char *)cplus_realloc(dt->value.str.bufs, dt->value.str.len);
+                }
+            }
+            if (NULL == dt->value.str.bufs)
+            {
+                errno = ENOMEM;
+                DATA_SPIN_UNLOCK();
+                return CPLUS_FAIL;
+            }
+            cplus_str_printf(dt->value.str.bufs, dt->value.str.len, "%f", value);
             DATA_SPIN_UNLOCK();
-            return CPLUS_FAIL;
         }
-        cplus_str_printf(dt->value.str.bufs, dt->value.str.len, "%f", value);
-        DATA_SPIN_UNLOCK();
         break;
     case CPLUS_DATA_TYPE_BYTE_ARRAY:
-        cplus_data_set_byte_array(dt, sizeof(float), (uint8_t *)(&value));
+        {
+            cplus_data_set_byte_array(dt, sizeof(float), (uint8_t *)(&(value)));
+        }
         break;
     }
     dt->is_valid = true;
@@ -3074,7 +3857,7 @@ int32_t cplus_data_set_as_float(cplus_data obj, float value)
 
 int32_t cplus_data_set_as_double(cplus_data obj, double value)
 {
-    struct data * dt = (struct data *)obj;
+    struct data * dt = (struct data *)(obj);
     uint32_t written = 0;
     CHECK_OBJECT_TYPE(obj);
 
@@ -3083,70 +3866,100 @@ int32_t cplus_data_set_as_double(cplus_data obj, double value)
     {
     default:
     case CPLUS_DATA_TYPE_NULL:
-        errno = EINVAL;
-        DATA_SPIN_UNLOCK();
+        {
+            errno = EINVAL;
+            DATA_SPIN_UNLOCK();
+        }
         return CPLUS_FAIL;
     case CPLUS_DATA_TYPE_BOOL:
-        dt->value.b = (0 != value);
+        {
+            dt->value.b = (0 != value);
+        }
         break;
     case CPLUS_DATA_TYPE_INT8:
-        dt->value.i8 = (int8_t)value;
+        {
+            dt->value.i8 = (int8_t)(value);
+        }
         break;
     case CPLUS_DATA_TYPE_INT16:
-        dt->value.i16 = (int16_t)value;
+        {
+            dt->value.i16 = (int16_t)(value);
+        }
         break;
     case CPLUS_DATA_TYPE_INT32:
-        dt->value.i32 = (int32_t)value;
+        {
+            dt->value.i32 = (int32_t)(value);
+        }
         break;
     case CPLUS_DATA_TYPE_INT64:
-        dt->value.i64 = (int64_t)value;
+        {
+            dt->value.i64 = (int64_t)(value);
+        }
         break;
     case CPLUS_DATA_TYPE_UINT8:
-        dt->value.u8 = (uint8_t)value;
+        {
+            dt->value.u8 = (uint8_t)(value);
+        }
         break;
     case CPLUS_DATA_TYPE_UINT16:
-        dt->value.u16 = (uint16_t)value;
+        {
+            dt->value.u16 = (uint16_t)(value);
+        }
         break;
     case CPLUS_DATA_TYPE_UINT32:
-        dt->value.u32 = (uint32_t)value;
+        {
+            dt->value.u32 = (uint32_t)(value);
+        }
         break;
     case CPLUS_DATA_TYPE_UINT64:
-        dt->value.u64 = (uint64_t)value;
+        {
+            dt->value.u64 = (uint64_t)(value);
+        }
         break;
     case CPLUS_DATA_TYPE_FLOAT:
-        dt->value.f = (float)value;
+        {
+            dt->value.f = (float)(value);
+        }
         break;
     case CPLUS_DATA_TYPE_DOUBLE:
-        dt->value.db = value;
+        {
+            dt->value.db = value;
+        }
         break;
     case CPLUS_DATA_TYPE_POINTER:
-        dt->value.p = (void *)((intptr_t)(value));
+        {
+            dt->value.p = (void *)((intptr_t)(value));
+        }
         break;
     case CPLUS_DATA_TYPE_STRING:
-        written = cplus_str_printf(NULL, 0, "%lf", value);
-        if (NULL == dt->value.str.bufs)
         {
-            dt->value.str.len = written + 1;
-            dt->value.str.bufs = (char *)cplus_malloc(dt->value.str.len * sizeof(char));
-        }
-        else
-        {
-            if ((written + 1) > dt->value.str.len)
+            written = cplus_str_printf(NULL, 0, "%lf", value);
+            if (NULL == dt->value.str.bufs)
             {
                 dt->value.str.len = written + 1;
-                dt->value.str.bufs = (char *)cplus_realloc(dt->value.str.bufs, dt->value.str.len);
+                dt->value.str.bufs = (char *)cplus_malloc(dt->value.str.len * sizeof(char));
             }
+            else
+            {
+                if ((written + 1) > dt->value.str.len)
+                {
+                    dt->value.str.len = written + 1;
+                    dt->value.str.bufs = (char *)cplus_realloc(dt->value.str.bufs, dt->value.str.len);
+                }
+            }
+            if (NULL == dt->value.str.bufs)
+            {
+                errno = ENOMEM;
+                DATA_SPIN_UNLOCK();
+                return CPLUS_FAIL;
+            }
+            cplus_str_printf(dt->value.str.bufs, dt->value.str.len, "%lf", value);
         }
-        if (NULL == dt->value.str.bufs)
-        {
-            errno = ENOMEM;
-            DATA_SPIN_UNLOCK();
-            return CPLUS_FAIL;
-        }
-        cplus_str_printf(dt->value.str.bufs, dt->value.str.len, "%lf", value);
         break;
     case CPLUS_DATA_TYPE_BYTE_ARRAY:
-        cplus_data_set_byte_array(dt, sizeof(double), (uint8_t *)(&value));
+        {
+            cplus_data_set_byte_array(dt, sizeof(double), (uint8_t *)(&(value)));
+        }
         break;
     }
     DATA_SPIN_UNLOCK();
@@ -3156,7 +3969,7 @@ int32_t cplus_data_set_as_double(cplus_data obj, double value)
 
 int32_t cplus_data_set_as_pointer(cplus_data obj, void * value)
 {
-    struct data * dt = (struct data *)obj;
+    struct data * dt = (struct data *)(obj);
     uint32_t written = 0;
     CHECK_OBJECT_TYPE(obj);
 
@@ -3165,70 +3978,100 @@ int32_t cplus_data_set_as_pointer(cplus_data obj, void * value)
     {
     default:
     case CPLUS_DATA_TYPE_NULL:
-        errno = EINVAL;
-        DATA_SPIN_UNLOCK();
+        {
+            errno = EINVAL;
+            DATA_SPIN_UNLOCK();
+        }
         return CPLUS_FAIL;
     case CPLUS_DATA_TYPE_BOOL:
-        dt->value.b = (0 != ((intptr_t)value));
+        {
+            dt->value.b = (0 != ((intptr_t)(value)));
+        }
         break;
     case CPLUS_DATA_TYPE_INT8:
-        dt->value.i8 = (int8_t)((intptr_t)value);
+        {
+            dt->value.i8 = (int8_t)((intptr_t)(value));
+        }
         break;
     case CPLUS_DATA_TYPE_INT16:
-        dt->value.i16 = (int16_t)((intptr_t)value);
+        {
+            dt->value.i16 = (int16_t)((intptr_t)(value));
+        }
         break;
     case CPLUS_DATA_TYPE_INT32:
-        dt->value.i32 = (int32_t)((intptr_t)value);
+        {
+            dt->value.i32 = (int32_t)((intptr_t)(value));
+        }
         break;
     case CPLUS_DATA_TYPE_INT64:
-        dt->value.i64 = (int64_t)((intptr_t)value);
+        {
+            dt->value.i64 = (int64_t)((intptr_t)(value));
+        }
         break;
     case CPLUS_DATA_TYPE_UINT8:
-        dt->value.u8 = (uint8_t)((intptr_t)value);
+        {
+            dt->value.u8 = (uint8_t)((intptr_t)(value));
+        }
         break;
     case CPLUS_DATA_TYPE_UINT16:
-        dt->value.u16 = (uint16_t)((intptr_t)value);
+        {
+            dt->value.u16 = (uint16_t)((intptr_t)(value));
+        }
         break;
     case CPLUS_DATA_TYPE_UINT32:
-        dt->value.u32 = (uint32_t)((intptr_t)value);
+        {
+            dt->value.u32 = (uint32_t)((intptr_t)(value));
+        }
         break;
     case CPLUS_DATA_TYPE_UINT64:
-        dt->value.u64 = (uint64_t)((intptr_t)value);
+        {
+            dt->value.u64 = (uint64_t)((intptr_t)(value));
+        }
         break;
     case CPLUS_DATA_TYPE_FLOAT:
-        dt->value.f = (float)((intptr_t)value);
+        {
+            dt->value.f = (float)((intptr_t)(value));
+        }
         break;
     case CPLUS_DATA_TYPE_DOUBLE:
-        dt->value.db = ((intptr_t)value);
+        {
+            dt->value.db = ((intptr_t)(value));
+        }
         break;
     case CPLUS_DATA_TYPE_POINTER:
-        dt->value.p = value;
+        {
+            dt->value.p = value;
+        }
         break;
     case CPLUS_DATA_TYPE_STRING:
-        written = cplus_str_printf(NULL, 0, "%p", value);
-        if (NULL == dt->value.str.bufs)
         {
-            dt->value.str.len = written + 1;
-            dt->value.str.bufs = (char *)cplus_malloc(dt->value.str.len * sizeof(char));
-        }
-        else
-        {
-            if ((written + 1) > dt->value.str.len)
+            written = cplus_str_printf(NULL, 0, "%p", value);
+            if (NULL == dt->value.str.bufs)
             {
                 dt->value.str.len = written + 1;
-                dt->value.str.bufs = (char *)cplus_realloc(dt->value.str.bufs, dt->value.str.len);
+                dt->value.str.bufs = (char *)cplus_malloc(dt->value.str.len * sizeof(char));
             }
+            else
+            {
+                if ((written + 1) > dt->value.str.len)
+                {
+                    dt->value.str.len = written + 1;
+                    dt->value.str.bufs = (char *)cplus_realloc(dt->value.str.bufs, dt->value.str.len);
+                }
+            }
+            if (NULL == dt->value.str.bufs)
+            {
+                errno = ENOMEM;
+                DATA_SPIN_UNLOCK();
+                return CPLUS_FAIL;
+            }
+            cplus_str_printf(dt->value.str.bufs, dt->value.str.len, "%p", value);
         }
-        if (NULL == dt->value.str.bufs)
-        {
-            errno = ENOMEM;
-            DATA_SPIN_UNLOCK();
-            return CPLUS_FAIL;
-        }
-        cplus_str_printf(dt->value.str.bufs, dt->value.str.len, "%p", value);
         break;
     case CPLUS_DATA_TYPE_BYTE_ARRAY:
-        cplus_data_set_byte_array(dt, sizeof(intptr_t), (uint8_t *)(&value));
+        {
+            cplus_data_set_byte_array(dt, sizeof(intptr_t), (uint8_t *)(&(value)));
+        }
         break;
     }
     DATA_SPIN_UNLOCK();
@@ -3242,7 +4085,7 @@ int32_t cplus_data_set_as_string(
     , char * str_bufs)
 {
     int32_t res = CPLUS_FAIL;
-    struct data * dt = (struct data *)obj;
+    struct data * dt = (struct data *)(obj);
     CHECK_OBJECT_TYPE(obj);
     CHECK_IF_NOT(str_bufs, CPLUS_FAIL);
 
@@ -3255,161 +4098,191 @@ int32_t cplus_data_set_as_string(
     {
     default:
     case CPLUS_DATA_TYPE_NULL:
-        errno = EINVAL;
+        {
+            errno = EINVAL;
+        }
         return CPLUS_FAIL;
     case CPLUS_DATA_TYPE_BOOL:
-        DATA_SPIN_LOCK();
-        if (0 == strcasecmp("true", str_bufs))
         {
-            dt->value.b = true;
+            DATA_SPIN_LOCK();
+            if (0 == strcasecmp("true", str_bufs))
+            {
+                dt->value.b = true;
+            }
+            else if (0 == strcasecmp("false", str_bufs))
+            {
+                dt->value.b = false;
+            }
+            else
+            {
+                errno = EINVAL;
+                res = CPLUS_FAIL;
+            }
+            DATA_SPIN_UNLOCK();
         }
-        else if (0 == strcasecmp("false", str_bufs))
-        {
-            dt->value.b = false;
-        }
-        else
-        {
-            errno = EINVAL;
-            res = CPLUS_FAIL;
-        }
-        DATA_SPIN_UNLOCK();
         break;
     case CPLUS_DATA_TYPE_INT8:
-        DATA_SPIN_LOCK();
-        if (1 != sscanf(str_bufs, "%d", &i32))
         {
-            errno = EINVAL;
-            res = CPLUS_FAIL;
+            DATA_SPIN_LOCK();
+            if (1 != sscanf(str_bufs, "%d", &(i32)))
+            {
+                errno = EINVAL;
+                res = CPLUS_FAIL;
+            }
+            else
+            {
+                dt->value.i8 = (int8_t)(i32);
+            }
+            DATA_SPIN_UNLOCK();
         }
-        else
-        {
-            dt->value.i8 = (int8_t)i32;
-        }
-        DATA_SPIN_UNLOCK();
         break;
     case CPLUS_DATA_TYPE_INT16:
-        DATA_SPIN_LOCK();
-        if (1 != sscanf(str_bufs, "%d", &i32))
         {
-            errno = EINVAL;
-            res = CPLUS_FAIL;
+            DATA_SPIN_LOCK();
+            if (1 != sscanf(str_bufs, "%d", &(i32)))
+            {
+                errno = EINVAL;
+                res = CPLUS_FAIL;
+            }
+            else
+            {
+                dt->value.i16 = (int16_t)(i32);
+            }
+            DATA_SPIN_UNLOCK();
         }
-        else
-        {
-            dt->value.i16 = (int16_t)i32;
-        }
-        DATA_SPIN_UNLOCK();
         break;
     case CPLUS_DATA_TYPE_INT32:
-        DATA_SPIN_LOCK();
-        if (1 != sscanf(str_bufs, "%d", &i32))
         {
-            errno = EINVAL;
-            res = CPLUS_FAIL;
+            DATA_SPIN_LOCK();
+            if (1 != sscanf(str_bufs, "%d", &(i32)))
+            {
+                errno = EINVAL;
+                res = CPLUS_FAIL;
+            }
+            else
+            {
+                dt->value.i32 = i32;
+            }
+            DATA_SPIN_UNLOCK();
         }
-        else
-        {
-            dt->value.i32 = i32;
-        }
-        DATA_SPIN_UNLOCK();
         break;
     case CPLUS_DATA_TYPE_INT64:
-        DATA_SPIN_LOCK();
-        if (1 != sscanf(str_bufs, REG_LD, &i64))
         {
-            errno = EINVAL;
-            res = CPLUS_FAIL;
+            DATA_SPIN_LOCK();
+            if (1 != sscanf(str_bufs, REG_LD, &(i64)))
+            {
+                errno = EINVAL;
+                res = CPLUS_FAIL;
+            }
+            else
+            {
+                dt->value.i64 = i64;
+            }
+            DATA_SPIN_UNLOCK();
         }
-        else
-        {
-            dt->value.i64 = i64;
-        }
-        DATA_SPIN_UNLOCK();
         break;
     case CPLUS_DATA_TYPE_UINT8:
-        DATA_SPIN_LOCK();
-        if (1 != sscanf(str_bufs, "%u", &u32))
         {
-            errno = EINVAL;
-            res = CPLUS_FAIL;
+            DATA_SPIN_LOCK();
+            if (1 != sscanf(str_bufs, "%u", &(u32)))
+            {
+                errno = EINVAL;
+                res = CPLUS_FAIL;
+            }
+            else
+            {
+                dt->value.u8 = (uint8_t)(u32);
+            }
+            DATA_SPIN_UNLOCK();
         }
-        else
-        {
-            dt->value.u8 = (uint8_t)u32;
-        }
-        DATA_SPIN_UNLOCK();
         break;
     case CPLUS_DATA_TYPE_UINT16:
-        DATA_SPIN_LOCK();
-        if (1 != sscanf(str_bufs, "%u", &u32))
         {
-            errno = EINVAL;
-            res = CPLUS_FAIL;
+            DATA_SPIN_LOCK();
+            if (1 != sscanf(str_bufs, "%u", &(u32)))
+            {
+                errno = EINVAL;
+                res = CPLUS_FAIL;
+            }
+            else
+            {
+                dt->value.u16 = (uint16_t)(u32);
+            }
+            DATA_SPIN_UNLOCK();
         }
-        else
-        {
-            dt->value.u16 = (uint16_t)u32;
-        }
-        DATA_SPIN_UNLOCK();
         break;
     case CPLUS_DATA_TYPE_UINT32:
-        DATA_SPIN_LOCK();
-        if (1 != sscanf(str_bufs, "%u", &u32))
         {
-            errno = EINVAL;
-            res = CPLUS_FAIL;
+            DATA_SPIN_LOCK();
+            if (1 != sscanf(str_bufs, "%u", &(u32)))
+            {
+                errno = EINVAL;
+                res = CPLUS_FAIL;
+            }
+            else
+            {
+                dt->value.u32 = u32;
+            }
+            DATA_SPIN_UNLOCK();
         }
-        else
-        {
-            dt->value.u32 = u32;
-        }
-        DATA_SPIN_UNLOCK();
         break;
     case CPLUS_DATA_TYPE_UINT64:
-        DATA_SPIN_LOCK();
-        if (1 != sscanf(str_bufs, REG_LU, &u64))
         {
-            errno = EINVAL;
-            res = CPLUS_FAIL;
+            DATA_SPIN_LOCK();
+            if (1 != sscanf(str_bufs, REG_LU, &(u64)))
+            {
+                errno = EINVAL;
+                res = CPLUS_FAIL;
+            }
+            else
+            {
+                dt->value.u64 = u64;
+            }
+            DATA_SPIN_UNLOCK();
         }
-        else
-        {
-            dt->value.u64 = u64;
-        }
-        DATA_SPIN_UNLOCK();
         break;
     case CPLUS_DATA_TYPE_FLOAT:
-        DATA_SPIN_LOCK();
-        if (1 != sscanf(str_bufs, "%f", &dt->value.f))
         {
-            errno = EINVAL;
-            res = CPLUS_FAIL;
+            DATA_SPIN_LOCK();
+            if (1 != sscanf(str_bufs, "%f", &(dt->value.f)))
+            {
+                errno = EINVAL;
+                res = CPLUS_FAIL;
+            }
+            DATA_SPIN_UNLOCK();
         }
-        DATA_SPIN_UNLOCK();
         break;
     case CPLUS_DATA_TYPE_DOUBLE:
-        DATA_SPIN_LOCK();
-        if (1 != sscanf(str_bufs, "%lf", &dt->value.db))
         {
-            errno = EINVAL;
-            res = CPLUS_FAIL;
+            DATA_SPIN_LOCK();
+            if (1 != sscanf(str_bufs, "%lf", &(dt->value.db)))
+            {
+                errno = EINVAL;
+                res = CPLUS_FAIL;
+            }
+            DATA_SPIN_UNLOCK();
         }
-        DATA_SPIN_UNLOCK();
         break;
     case CPLUS_DATA_TYPE_POINTER:
-        DATA_SPIN_LOCK();
-        if (1 != sscanf(str_bufs, "%p", &dt->value.p))
         {
-            errno = EINVAL;
-            res = CPLUS_FAIL;
+            DATA_SPIN_LOCK();
+            if (1 != sscanf(str_bufs, "%p", &(dt->value.p)))
+            {
+                errno = EINVAL;
+                res = CPLUS_FAIL;
+            }
+            DATA_SPIN_UNLOCK();
         }
-        DATA_SPIN_UNLOCK();
         break;
     case CPLUS_DATA_TYPE_STRING:
-       res = cplus_data_set_string(dt, str_len, str_bufs);
+        {
+            res = cplus_data_set_string(dt, str_len, str_bufs);
+        }
        break;
     case CPLUS_DATA_TYPE_BYTE_ARRAY:
-        cplus_data_set_byte_array(dt, str_len,  (uint8_t *)(str_bufs));
+        {
+            cplus_data_set_byte_array(dt, str_len,  (uint8_t *)(str_bufs));
+        }
         break;
     }
     dt->is_valid = true;
@@ -3419,7 +4292,7 @@ int32_t cplus_data_set_as_string(
 int32_t cplus_data_set_as_byte_array(cplus_data obj, uint32_t array_len, uint8_t * array_bufs)
 {
     int32_t res = CPLUS_FAIL;
-    struct data * dt = (struct data *)obj;
+    struct data * dt = (struct data *)(obj);
     CHECK_OBJECT_TYPE(obj);
     CHECK_IF_NOT(array_bufs, CPLUS_FAIL);
 
@@ -3427,161 +4300,191 @@ int32_t cplus_data_set_as_byte_array(cplus_data obj, uint32_t array_len, uint8_t
     {
     default:
     case CPLUS_DATA_TYPE_NULL:
-        errno = EINVAL;
+        {
+            errno = EINVAL;
+        }
         return CPLUS_FAIL;
     case CPLUS_DATA_TYPE_BOOL:
-        DATA_SPIN_LOCK();
-        if (array_len < sizeof(bool))
         {
-            errno = ENOMEM;
+            DATA_SPIN_LOCK();
+            if (array_len < sizeof(bool))
+            {
+                errno = ENOMEM;
+                DATA_SPIN_UNLOCK();
+                return CPLUS_FAIL;
+            }
+            cplus_mem_cpy(&(dt->value.b), array_bufs, sizeof(dt->value.b));
             DATA_SPIN_UNLOCK();
-            return CPLUS_FAIL;
         }
-        cplus_mem_cpy(&(dt->value.b), array_bufs, sizeof(dt->value.b));
-        DATA_SPIN_UNLOCK();
         break;
     case CPLUS_DATA_TYPE_INT8:
-        DATA_SPIN_LOCK();
-        if (array_len < sizeof(int8_t))
         {
-            errno = ENOMEM;
+            DATA_SPIN_LOCK();
+            if (array_len < sizeof(int8_t))
+            {
+                errno = ENOMEM;
+                DATA_SPIN_UNLOCK();
+                return CPLUS_FAIL;
+            }
+            cplus_mem_cpy(&(dt->value.i8), array_bufs, sizeof(dt->value.i8));
             DATA_SPIN_UNLOCK();
-            return CPLUS_FAIL;
         }
-        cplus_mem_cpy(&(dt->value.i8), array_bufs, sizeof(dt->value.i8));
-        DATA_SPIN_UNLOCK();
         break;
     case CPLUS_DATA_TYPE_INT16:
-        DATA_SPIN_LOCK();
-        if (array_len < sizeof(int16_t))
         {
-            errno = ENOMEM;
+            DATA_SPIN_LOCK();
+            if (array_len < sizeof(int16_t))
+            {
+                errno = ENOMEM;
+                DATA_SPIN_UNLOCK();
+                return CPLUS_FAIL;
+            }
+            cplus_mem_cpy(&(dt->value.i16), array_bufs, sizeof(dt->value.i16));
             DATA_SPIN_UNLOCK();
-            return CPLUS_FAIL;
         }
-        cplus_mem_cpy(&(dt->value.i16), array_bufs, sizeof(dt->value.i16));
-        DATA_SPIN_UNLOCK();
         break;
     case CPLUS_DATA_TYPE_INT32:
-        DATA_SPIN_LOCK();
-        if (array_len < sizeof(int32_t))
         {
-            errno = ENOMEM;
+            DATA_SPIN_LOCK();
+            if (array_len < sizeof(int32_t))
+            {
+                errno = ENOMEM;
+                DATA_SPIN_UNLOCK();
+                return CPLUS_FAIL;
+            }
+            cplus_mem_cpy(&(dt->value.i32), array_bufs, sizeof(dt->value.i32));
             DATA_SPIN_UNLOCK();
-            return CPLUS_FAIL;
         }
-        cplus_mem_cpy(&(dt->value.i32), array_bufs, sizeof(dt->value.i32));
-        DATA_SPIN_UNLOCK();
         break;
     case CPLUS_DATA_TYPE_INT64:
-        DATA_SPIN_LOCK();
-        if (array_len < sizeof(int64_t))
         {
-            errno = ENOMEM;
+            DATA_SPIN_LOCK();
+            if (array_len < sizeof(int64_t))
+            {
+                errno = ENOMEM;
+                DATA_SPIN_UNLOCK();
+                return CPLUS_FAIL;
+            }
+            cplus_mem_cpy(&(dt->value.i64), array_bufs, sizeof(dt->value.i64));
             DATA_SPIN_UNLOCK();
-            return CPLUS_FAIL;
         }
-        cplus_mem_cpy(&(dt->value.i64), array_bufs, sizeof(dt->value.i64));
-        DATA_SPIN_UNLOCK();
         break;
     case CPLUS_DATA_TYPE_UINT8:
-        DATA_SPIN_LOCK();
-        if (array_len < sizeof(uint8_t))
         {
-            errno = ENOMEM;
+            DATA_SPIN_LOCK();
+            if (array_len < sizeof(uint8_t))
+            {
+                errno = ENOMEM;
+                DATA_SPIN_UNLOCK();
+                return CPLUS_FAIL;
+            }
+            cplus_mem_cpy(&(dt->value.u8), array_bufs, sizeof(dt->value.u8));
             DATA_SPIN_UNLOCK();
-            return CPLUS_FAIL;
         }
-        cplus_mem_cpy(&(dt->value.u8), array_bufs, sizeof(dt->value.u8));
-        DATA_SPIN_UNLOCK();
         break;
     case CPLUS_DATA_TYPE_UINT16:
-        DATA_SPIN_LOCK();
-        if (array_len < sizeof(uint16_t))
         {
-            errno = ENOMEM;
+            DATA_SPIN_LOCK();
+            if (array_len < sizeof(uint16_t))
+            {
+                errno = ENOMEM;
+                DATA_SPIN_UNLOCK();
+                return CPLUS_FAIL;
+            }
+            cplus_mem_cpy(&(dt->value.u16), array_bufs, sizeof(dt->value.u16));
             DATA_SPIN_UNLOCK();
-            return CPLUS_FAIL;
         }
-        cplus_mem_cpy(&(dt->value.u16), array_bufs, sizeof(dt->value.u16));
-        DATA_SPIN_UNLOCK();
         break;
     case CPLUS_DATA_TYPE_UINT32:
-        DATA_SPIN_LOCK();
-        if (array_len < sizeof(uint32_t))
         {
-            errno = ENOMEM;
+            DATA_SPIN_LOCK();
+            if (array_len < sizeof(uint32_t))
+            {
+                errno = ENOMEM;
+                DATA_SPIN_UNLOCK();
+                return CPLUS_FAIL;
+            }
+            cplus_mem_cpy(&(dt->value.u32), array_bufs, sizeof(dt->value.u32));
             DATA_SPIN_UNLOCK();
-            return CPLUS_FAIL;
         }
-        cplus_mem_cpy(&(dt->value.u32), array_bufs, sizeof(dt->value.u32));
-        DATA_SPIN_UNLOCK();
         break;
     case CPLUS_DATA_TYPE_UINT64:
-        DATA_SPIN_LOCK();
-        if (array_len < sizeof(uint64_t))
         {
-            errno = ENOMEM;
+            DATA_SPIN_LOCK();
+            if (array_len < sizeof(uint64_t))
+            {
+                errno = ENOMEM;
+                DATA_SPIN_UNLOCK();
+                return CPLUS_FAIL;
+            }
+            cplus_mem_cpy(&(dt->value.u64), array_bufs, sizeof(dt->value.u64));
             DATA_SPIN_UNLOCK();
-            return CPLUS_FAIL;
         }
-        cplus_mem_cpy(&(dt->value.u64), array_bufs, sizeof(dt->value.u64));
-        DATA_SPIN_UNLOCK();
         break;
     case CPLUS_DATA_TYPE_FLOAT:
-        DATA_SPIN_LOCK();
-        if (array_len < sizeof(float))
         {
-            errno = ENOMEM;
+            DATA_SPIN_LOCK();
+            if (array_len < sizeof(float))
+            {
+                errno = ENOMEM;
+                DATA_SPIN_UNLOCK();
+                return CPLUS_FAIL;
+            }
+            cplus_mem_cpy(&(dt->value.f), array_bufs, sizeof(dt->value.f));
             DATA_SPIN_UNLOCK();
-            return CPLUS_FAIL;
         }
-        cplus_mem_cpy(&(dt->value.f), array_bufs, sizeof(dt->value.f));
-        DATA_SPIN_UNLOCK();
         break;
     case CPLUS_DATA_TYPE_DOUBLE:
-        DATA_SPIN_LOCK();
-        if (array_len < sizeof(double))
         {
-            errno = ENOMEM;
+            DATA_SPIN_LOCK();
+            if (array_len < sizeof(double))
+            {
+                errno = ENOMEM;
+                DATA_SPIN_UNLOCK();
+                return CPLUS_FAIL;
+            }
+            cplus_mem_cpy(&(dt->value.db), array_bufs, sizeof(dt->value.db));
             DATA_SPIN_UNLOCK();
-            return CPLUS_FAIL;
         }
-        cplus_mem_cpy(&(dt->value.db), array_bufs, sizeof(dt->value.db));
-        DATA_SPIN_UNLOCK();
         break;
     case CPLUS_DATA_TYPE_POINTER:
-        DATA_SPIN_LOCK();
-        if (array_len < sizeof(intptr_t))
         {
-            errno = ENOMEM;
+            DATA_SPIN_LOCK();
+            if (array_len < sizeof(intptr_t))
+            {
+                errno = ENOMEM;
+                DATA_SPIN_UNLOCK();
+                return CPLUS_FAIL;
+            }
+            cplus_mem_cpy(&(dt->value.p), array_bufs, sizeof(dt->value.p));
             DATA_SPIN_UNLOCK();
-            return CPLUS_FAIL;
         }
-        cplus_mem_cpy(&(dt->value.p), array_bufs, sizeof(dt->value.p));
-        DATA_SPIN_UNLOCK();
         break;
     case CPLUS_DATA_TYPE_STRING:
-        DATA_SPIN_LOCK();
-        if (array_len < (dt->value.str.len + 1))
         {
-            errno = ENOMEM;
+            DATA_SPIN_LOCK();
+            if (array_len < (dt->value.str.len + 1))
+            {
+                errno = ENOMEM;
+                DATA_SPIN_UNLOCK();
+                return CPLUS_FAIL;
+            }
+            cplus_mem_cpy(dt->value.str.bufs, array_bufs, dt->value.str.len);
             DATA_SPIN_UNLOCK();
-            return CPLUS_FAIL;
         }
-        cplus_mem_cpy(dt->value.str.bufs, array_bufs, dt->value.str.len);
-        DATA_SPIN_UNLOCK();
-       break;
+        break;
     case CPLUS_DATA_TYPE_BYTE_ARRAY:
-        DATA_SPIN_LOCK();
-        if (array_len < dt->value.byte_array.len)
         {
-            errno = ENOMEM;
+            DATA_SPIN_LOCK();
+            if (array_len < dt->value.byte_array.len)
+            {
+                errno = ENOMEM;
+                DATA_SPIN_UNLOCK();
+                return CPLUS_FAIL;
+            }
+            cplus_mem_cpy(dt->value.byte_array.bufs, array_bufs, dt->value.byte_array.len);
             DATA_SPIN_UNLOCK();
-            return CPLUS_FAIL;
         }
-        cplus_mem_cpy(dt->value.byte_array.bufs, array_bufs, dt->value.byte_array.len);
-        DATA_SPIN_UNLOCK();
         break;
     }
     dt->is_valid = true;
@@ -3590,11 +4493,11 @@ int32_t cplus_data_set_as_byte_array(cplus_data obj, uint32_t array_len, uint8_t
 
 bool cplus_data_is_valid(cplus_data obj)
 {
-    struct data * dt = (struct data *)obj;
+    struct data * dt = (struct data *)(obj);
 
     if (NULL == dt
-        or (dt->data_type >= CPLUS_DATA_TYPE_UNKNOWN or dt->data_type <= CPLUS_DATA_TYPE_NULL)
-        or false == dt->is_valid)
+        OR (dt->data_type >= CPLUS_DATA_TYPE_UNKNOWN OR dt->data_type <= CPLUS_DATA_TYPE_NULL)
+        OR false == dt->is_valid)
     {
         return false;
     }
@@ -3604,27 +4507,27 @@ bool cplus_data_is_valid(cplus_data obj)
 
 void cplus_data_reverse16(uint16_t * value)
 {
-    *value = (*value << 8) | (*value >> 8);
+    (* value) = ((* value) << 8) | ((* value) >> 8);
 }
 
 void cplus_data_reverse32(uint32_t * value)
 {
-    *value = (*value << 24)
-        | ((*value << 8) & 0x00FF0000)
-        | ((*value >> 8) & 0x0000FF00)
-        | (*value >> 24);
+    (* value) = ((* value) << 24)
+        | (((* value) << 8) & 0x00FF0000)
+        | (((* value) >> 8) & 0x0000FF00)
+        | ((* value) >> 24);
 }
 
 void cplus_data_reverse64(uint64_t * value)
 {
-    *value = (*value << 56)
-        | ((*value << 40) & 0x00FF000000000000)
-        | ((*value << 24) & 0x0000FF0000000000)
-        | ((*value << 8)  & 0x000000FF00000000)
-        | ((*value >> 8)  & 0x00000000FF000000)
-        | ((*value >> 24) & 0x0000000000FF0000)
-        | ((*value >> 40) & 0x000000000000FF00)
-        | (*value >> 56);
+    (* value) = ((* value) << 56)
+        | (((* value) << 40) & 0x00FF000000000000)
+        | (((* value) << 24) & 0x0000FF0000000000)
+        | (((* value) << 8)  & 0x000000FF00000000)
+        | (((* value) >> 8)  & 0x00000000FF000000)
+        | (((* value) >> 24) & 0x0000000000FF0000)
+        | (((* value) >> 40) & 0x000000000000FF00)
+        | ((* value) >> 56);
 }
 
 uint16_t cplus_data_swap16(uint16_t value)
@@ -3660,9 +4563,9 @@ CPLUS_UNIT_TEST(cplus_data_new, CPLUS_DATA_TYPE_BOOL)
     bool result;
     cplus_data data = NULL;
     UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_bool(true)));
-    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_set_key(data, strlen("test_bool"), "test_bool"));
+    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_set_key(data, strlen("test_bool"), (char *)("test_bool")));
     UNITTEST_EXPECT_EQ(0, strcmp("test_bool", cplus_data_get_key(data)));
-    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_set_key(data, strlen("test_bool_bool_bool_bool"), "test_bool_bool_bool_bool"));
+    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_set_key(data, strlen("test_bool_bool_bool_bool"), (char *)("test_bool_bool_bool_bool")));
     UNITTEST_EXPECT_EQ(0, strcmp("test_bool_bool_bool_bool", cplus_data_get_key(data)));
     UNITTEST_EXPECT_EQ(sizeof(bool), cplus_data_get_data_size(data));
     UNITTEST_EXPECT_EQ(CPLUS_DATA_TYPE_BOOL, cplus_data_get_type(data));
@@ -3679,7 +4582,7 @@ CPLUS_UNIT_TEST(cplus_data_new, CPLUS_DATA_TYPE_INT8)
     int8_t result;
     cplus_data data = NULL;
     UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_int8(0xab)));
-    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_set_key(data, strlen("test_int8"), "test_int8"));
+    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_set_key(data, strlen("test_int8"), (char *)("test_int8")));
     UNITTEST_EXPECT_EQ(0, strcmp("test_int8", cplus_data_get_key(data)));
     UNITTEST_EXPECT_EQ(sizeof(int8_t), cplus_data_get_data_size(data));
     UNITTEST_EXPECT_EQ(CPLUS_DATA_TYPE_INT8, cplus_data_get_type(data));
@@ -3696,7 +4599,7 @@ CPLUS_UNIT_TEST(cplus_data_new, CPLUS_DATA_TYPE_INT16)
     int16_t result;
     cplus_data data = NULL;
     UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_int16(0xabcd)));
-    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_set_key(data, strlen("test_int16"), "test_int16"));
+    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_set_key(data, strlen("test_int16"), (char *)("test_int16")));
     UNITTEST_EXPECT_EQ(0, strcmp("test_int16", cplus_data_get_key(data)));
     UNITTEST_EXPECT_EQ(sizeof(int16_t), cplus_data_get_data_size(data));
     UNITTEST_EXPECT_EQ(CPLUS_DATA_TYPE_INT16, cplus_data_get_type(data));
@@ -3713,7 +4616,7 @@ CPLUS_UNIT_TEST(cplus_data_new, CPLUS_DATA_TYPE_INT32)
     int32_t result;
     cplus_data data = NULL;
     UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_int32(123456)));
-    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_set_key(data, strlen("test_int32"), "test_int32"));
+    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_set_key(data, strlen("test_int32"), (char *)("test_int32")));
     UNITTEST_EXPECT_EQ(0, strcmp("test_int32", cplus_data_get_key(data)));
     UNITTEST_EXPECT_EQ(sizeof(int32_t), cplus_data_get_data_size(data));
     UNITTEST_EXPECT_EQ(CPLUS_DATA_TYPE_INT32, cplus_data_get_type(data));
@@ -3730,7 +4633,7 @@ CPLUS_UNIT_TEST(cplus_data_new, CPLUS_DATA_TYPE_INT64)
     int64_t result;
     cplus_data data = NULL;
     UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_int64(0x0123abcddcba3210)));
-    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_set_key(data, strlen("test_int64"), "test_int64"));
+    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_set_key(data, strlen("test_int64"), (char *)("test_int64")));
     UNITTEST_EXPECT_EQ(0, strcmp("test_int64", cplus_data_get_key(data)));
     UNITTEST_EXPECT_EQ(sizeof(int64_t), cplus_data_get_data_size(data));
     UNITTEST_EXPECT_EQ(CPLUS_DATA_TYPE_INT64, cplus_data_get_type(data));
@@ -3747,7 +4650,7 @@ CPLUS_UNIT_TEST(cplus_data_new, CPLUS_DATA_TYPE_UINT8)
     uint8_t result;
     cplus_data data = NULL;
     UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_uint8(0xab)));
-    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_set_key(data, strlen("test_uint8"), "test_uint8"));
+    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_set_key(data, strlen("test_uint8"), (char *)("test_uint8")));
     UNITTEST_EXPECT_EQ(0, strcmp("test_uint8", cplus_data_get_key(data)));
     UNITTEST_EXPECT_EQ(sizeof(uint8_t), cplus_data_get_data_size(data));
     UNITTEST_EXPECT_EQ(CPLUS_DATA_TYPE_UINT8, cplus_data_get_type(data));
@@ -3764,7 +4667,7 @@ CPLUS_UNIT_TEST(cplus_data_new, CPLUS_DATA_TYPE_UINT16)
     uint16_t result;
     cplus_data data = NULL;
     UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_uint16(0xabcd)));
-    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_set_key(data, strlen("test_uint16"), "test_uint16"));
+    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_set_key(data, strlen("test_uint16"), (char *)("test_uint16")));
     UNITTEST_EXPECT_EQ(0, strcmp("test_uint16", cplus_data_get_key(data)));
     UNITTEST_EXPECT_EQ(sizeof(uint16_t), cplus_data_get_data_size(data));
     UNITTEST_EXPECT_EQ(CPLUS_DATA_TYPE_UINT16, cplus_data_get_type(data));
@@ -3781,7 +4684,7 @@ CPLUS_UNIT_TEST(cplus_data_new, CPLUS_DATA_TYPE_UINT32)
     uint32_t result;
     cplus_data data = NULL;
     UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_uint32(123456)));
-    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_set_key(data, strlen("test_uint32"), "test_uint32"));
+    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_set_key(data, strlen("test_uint32"), (char *)("test_uint32")));
     UNITTEST_EXPECT_EQ(0, strcmp("test_uint32", cplus_data_get_key(data)));
     UNITTEST_EXPECT_EQ(sizeof(uint32_t), cplus_data_get_data_size(data));
     UNITTEST_EXPECT_EQ(CPLUS_DATA_TYPE_UINT32, cplus_data_get_type(data));
@@ -3798,7 +4701,7 @@ CPLUS_UNIT_TEST(cplus_data_new, CPLUS_DATA_TYPE_UINT64)
     uint64_t result;
     cplus_data data = NULL;
     UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_uint64(0x0123abcddcba3210)));
-    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_set_key(data, strlen("test_uint64"), "test_uint64"));
+    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_set_key(data, strlen("test_uint64"), (char *)("test_uint64")));
     UNITTEST_EXPECT_EQ(0, strcmp("test_uint64", cplus_data_get_key(data)));
     UNITTEST_EXPECT_EQ(sizeof(uint64_t), cplus_data_get_data_size(data));
     UNITTEST_EXPECT_EQ(CPLUS_DATA_TYPE_UINT64, cplus_data_get_type(data));
@@ -3815,7 +4718,7 @@ CPLUS_UNIT_TEST(cplus_data_new, CPLUS_DATA_TYPE_FLOAT)
     float result;
     cplus_data data = NULL;
     UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_float(3.1415926535)));
-    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_set_key(data, strlen("test_float"), "test_float"));
+    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_set_key(data, strlen("test_float"), (char *)("test_float")));
     UNITTEST_EXPECT_EQ(0, strcmp("test_float", cplus_data_get_key(data)));
     UNITTEST_EXPECT_EQ(sizeof(float), cplus_data_get_data_size(data));
     UNITTEST_EXPECT_EQ(CPLUS_DATA_TYPE_FLOAT, cplus_data_get_type(data));
@@ -3834,7 +4737,7 @@ CPLUS_UNIT_TEST(cplus_data_new, CPLUS_DATA_TYPE_DOUBLE)
     double result;
     cplus_data data = NULL;
     UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_double(3.1415926535)));
-    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_set_key(data, strlen("test_double"), "test_double"));
+    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_set_key(data, strlen("test_double"), (char *)("test_double")));
     UNITTEST_EXPECT_EQ(0, strcmp("test_double", cplus_data_get_key(data)));
     UNITTEST_EXPECT_EQ(sizeof(double), cplus_data_get_data_size(data));
     UNITTEST_EXPECT_EQ(CPLUS_DATA_TYPE_DOUBLE, cplus_data_get_type(data));
@@ -3854,7 +4757,7 @@ CPLUS_UNIT_TEST(cplus_data_new, CPLUS_DATA_TYPE_POINTER)
     void * result;
     cplus_data data = NULL;
     UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_pointer(&v1)));
-    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_set_key(data, strlen("test_pointer"), "test_pointer"));
+    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_set_key(data, strlen("test_pointer"), (char *)("test_pointer")));
     UNITTEST_EXPECT_EQ(0, strcmp("test_pointer", cplus_data_get_key(data)));
     UNITTEST_EXPECT_EQ(sizeof(intptr_t), cplus_data_get_data_size(data));
     UNITTEST_EXPECT_EQ(CPLUS_DATA_TYPE_POINTER, cplus_data_get_type(data));
@@ -3876,14 +4779,14 @@ CPLUS_UNIT_TEST(cplus_data_new, CPLUS_DATA_TYPE_STRING)
     uint32_t len = sizeof(bufs);
 
     cplus_data data = NULL;
-    UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_string(strlen("Hello World"), "Hello World")));
-    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_set_key(data, strlen("test_string"), "test_string"));
+    UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_string(strlen("Hello World"), (char *)("Hello World"))));
+    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_set_key(data, strlen("test_string"), (char *)("test_string")));
     UNITTEST_EXPECT_EQ(0, strcmp("test_string", cplus_data_get_key(data)));
     UNITTEST_EXPECT_EQ(strlen("Hello World"), cplus_data_get_data_size(data));
     UNITTEST_EXPECT_EQ(CPLUS_DATA_TYPE_STRING, cplus_data_get_type(data));
     UNITTEST_EXPECT_EQ(strlen("Hello World"), cplus_data_get_value(data, &len, bufs));
     UNITTEST_EXPECT_EQ(0, strcmp("Hello World", bufs));
-    UNITTEST_EXPECT_EQ(0, cplus_data_set_string(data, strlen("AaBbCcDd"), "AaBbCcDd"));
+    UNITTEST_EXPECT_EQ(0, cplus_data_set_string(data, strlen("AaBbCcDd"), (char *)("AaBbCcDd")));
     UNITTEST_EXPECT_EQ(strlen("AaBbCcDd"), cplus_data_get_data_size(data));
     UNITTEST_EXPECT_EQ(strlen("AaBbCcDd"), strlen(cplus_data_get_string(data)));
     UNITTEST_EXPECT_EQ(0, strcmp("AaBbCcDd", cplus_data_get_string(data)));
@@ -3899,7 +4802,7 @@ CPLUS_UNIT_TEST(cplus_data_new, CPLUS_DATA_TYPE_BYTE_ARRAY)
     uint32_t get_len = 32;
     cplus_data data = NULL;
 
-    for (int8_t i = 0; i < sizeof(bufs); i ++)
+    for (uint32_t i = 0; i < sizeof(bufs); i ++)
     {
         bufs[i] = 0xAB;
     }
@@ -3918,7 +4821,7 @@ CPLUS_UNIT_TEST(cplus_data_new, CPLUS_DATA_TYPE_BYTE_ARRAY)
     UNITTEST_EXPECT_EQ(0, cplus_data_set_byte_array(data, 1, test_value));
     UNITTEST_EXPECT_EQ(1, cplus_data_get_data_size(data));
     UNITTEST_EXPECT_EQ(0, memcmp(test_value, cplus_data_get_byte_array(data), 1));
-    for (int8_t i = 0; i < sizeof(test_value); i ++)
+    for (uint32_t i = 0; i < sizeof(test_value); i ++)
     {
         test_value[i] = 0xBC;
     }
@@ -4610,7 +5513,7 @@ CPLUS_UNIT_TEST(cplus_data_set_as, CPLUS_DATA_TYPE_STRING)
     cplus_data data = NULL;
     char str[64]; uint32_t len = sizeof(str);
     /* char cmp[64]; uint32_t cmp_len = 0, u32 = 5566; */
-    UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_string(strlen("123"), "123")));
+    UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_string(strlen("123"), (char *)("123"))));
     UNITTEST_EXPECT_EQ(strlen("123"), cplus_data_get_data_size(data));
     UNITTEST_EXPECT_EQ(CPLUS_DATA_TYPE_STRING, cplus_data_get_type(data));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_set_as_bool(data, true));
@@ -4655,7 +5558,7 @@ CPLUS_UNIT_TEST(cplus_data_set_as, CPLUS_DATA_TYPE_STRING)
     UNITTEST_EXPECT_EQ(0, strcmp(cmp, str));
     */
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_set_as_string(data,
-    strlen("012345678901234567890123456789012345678901234567890123456789123"), "012345678901234567890123456789012345678901234567890123456789123"));
+    strlen("012345678901234567890123456789012345678901234567890123456789123"), (char *)("012345678901234567890123456789012345678901234567890123456789123")));
     UNITTEST_EXPECT_EQ(strlen("012345678901234567890123456789012345678901234567890123456789123"), cplus_data_get_value(data, &len, str));
     UNITTEST_EXPECT_EQ(0, strcmp("012345678901234567890123456789012345678901234567890123456789123", str));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_delete(data));
@@ -4702,7 +5605,7 @@ CPLUS_UNIT_TEST(cplus_data_is_valid, functionity)
     UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_double(3.1415926535)));
     UNITTEST_EXPECT_EQ(true, cplus_data_is_valid(data));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_delete(data));
-    UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_string(strlen("Hello World"), "Hello World")));
+    UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_string(strlen("Hello World"), (char *)("Hello World"))));
     UNITTEST_EXPECT_EQ(true, cplus_data_is_valid(data));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_delete(data));
     UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_ex(
@@ -4782,7 +5685,7 @@ CPLUS_UNIT_TEST(cplus_data_is_valid, functionity)
     UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_ex(
         CPLUS_DATA_TYPE_STRING, NULL, NULL, 0, NULL)));
     UNITTEST_EXPECT_EQ(false, cplus_data_is_valid(data));
-    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_set_string(data, strlen("Hello World"), "Hello World"));
+    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_set_string(data, strlen("Hello World"), (char *)("Hello World")));
     UNITTEST_EXPECT_EQ(true, cplus_data_is_valid(data));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_delete(data));
     UNITTEST_EXPECT_EQ(0, cplus_mgr_report());
@@ -4838,44 +5741,44 @@ CPLUS_UNIT_TEST(cplus_data_reverse, functionity)
 CPLUS_UNIT_TEST(cplus_data_new_ex, all_type)
 {
     cplus_data data = NULL;
-    UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_bool_ex(true, strlen("test_bool"), "test_bool")));
+    UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_bool_ex(true, strlen("test_bool"), (char *)("test_bool"))));
     UNITTEST_EXPECT_EQ(0, strcmp("test_bool", cplus_data_get_key(data)));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_delete(data));
-    UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_int8_ex(0xab, strlen("test_int8"), "test_int8")));
+    UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_int8_ex(0xab, strlen("test_int8"), (char *)("test_int8"))));
     UNITTEST_EXPECT_EQ(0, strcmp("test_int8", cplus_data_get_key(data)));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_delete(data));
-    UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_int16_ex(0xabcd, strlen("test_int16"), "test_int16")));
+    UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_int16_ex(0xabcd, strlen("test_int16"), (char *)("test_int16"))));
     UNITTEST_EXPECT_EQ(0, strcmp("test_int16", cplus_data_get_key(data)));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_delete(data));
-    UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_int32_ex(123456, strlen("test_int32"), "test_int32")));
+    UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_int32_ex(123456, strlen("test_int32"), (char *)("test_int32"))));
     UNITTEST_EXPECT_EQ(0, strcmp("test_int32", cplus_data_get_key(data)));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_delete(data));
-    UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_int64_ex(0x0123abcddcba3210, strlen("test_int64"), "test_int64")));
+    UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_int64_ex(0x0123abcddcba3210, strlen("test_int64"), (char *)("test_int64"))));
     UNITTEST_EXPECT_EQ(0, strcmp("test_int64", cplus_data_get_key(data)));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_delete(data));
-    UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_uint8_ex(0xab, strlen("test_uint8"), "test_uint8")));
+    UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_uint8_ex(0xab, strlen("test_uint8"), (char *)("test_uint8"))));
     UNITTEST_EXPECT_EQ(0, strcmp("test_uint8", cplus_data_get_key(data)));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_delete(data));
-    UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_uint16_ex(0xabcd, strlen("test_uint16"), "test_uint16")));
+    UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_uint16_ex(0xabcd, strlen("test_uint16"), (char *)("test_uint16"))));
     UNITTEST_EXPECT_EQ(0, strcmp("test_uint16", cplus_data_get_key(data)));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_delete(data));
-    UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_uint32_ex(123456, strlen("test_uint32"), "test_uint32")));
+    UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_uint32_ex(123456, strlen("test_uint32"), (char *)("test_uint32"))));
     UNITTEST_EXPECT_EQ(0, strcmp("test_uint32", cplus_data_get_key(data)));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_delete(data));
-    UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_uint64_ex(0x0123abcddcba3210, strlen("test_uint64"), "test_uint64")));
+    UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_uint64_ex(0x0123abcddcba3210, strlen("test_uint64"), (char *)("test_uint64"))));
     UNITTEST_EXPECT_EQ(0, strcmp("test_uint64", cplus_data_get_key(data)));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_delete(data));
-    UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_float_ex(3.1415926535, sizeof("test_float"), "test_float")));
+    UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_float_ex(3.1415926535, sizeof("test_float"), (char *)("test_float"))));
     UNITTEST_EXPECT_EQ(0, strcmp("test_float", cplus_data_get_key(data)));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_delete(data));
-    UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_double_ex(3.1415926535,sizeof("test_double"), "test_double")));
+    UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_double_ex(3.1415926535,sizeof("test_double"), (char *)("test_double"))));
     UNITTEST_EXPECT_EQ(0, strcmp("test_double", cplus_data_get_key(data)));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_delete(data));
     int32_t v1 = 123456;
-    UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_pointer_ex(&v1, sizeof("test_pointer"), "test_pointer")));
+    UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_pointer_ex(&v1, sizeof("test_pointer"), (char *)("test_pointer"))));
     UNITTEST_EXPECT_EQ(0, strcmp("test_pointer", cplus_data_get_key(data)));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_delete(data));
-    UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_string_ex(strlen("Hello World"), "Hello World", strlen("test_string"), "test_string")));
+    UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_string_ex(strlen("Hello World"), (char *)("Hello World"), strlen("test_string"), (char *)("test_string"))));
     UNITTEST_EXPECT_EQ(0, strcmp("test_string", cplus_data_get_key(data)));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_delete(data));
     UNITTEST_EXPECT_EQ(0, cplus_mgr_report());
@@ -4884,44 +5787,44 @@ CPLUS_UNIT_TEST(cplus_data_new_ex, all_type)
 CPLUS_UNIT_TEST(cplus_data_new_ex, thread_safe)
 {
     cplus_data data = NULL;
-    UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_bool_ex(true, strlen("test_bool"), "test_bool")));
+    UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_bool_ex(true, strlen("test_bool"), (char *)("test_bool"))));
     UNITTEST_EXPECT_EQ(0, strcmp("test_bool", cplus_data_get_key(data)));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_delete(data));
-    UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_int8_ex(0xab, strlen("test_int8"), "test_int8")));
+    UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_int8_ex(0xab, strlen("test_int8"), (char *)("test_int8"))));
     UNITTEST_EXPECT_EQ(0, strcmp("test_int8", cplus_data_get_key(data)));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_delete(data));
-    UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_int16_ex(0xabcd, strlen("test_int16"), "test_int16")));
+    UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_int16_ex(0xabcd, strlen("test_int16"), (char *)("test_int16"))));
     UNITTEST_EXPECT_EQ(0, strcmp("test_int16", cplus_data_get_key(data)));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_delete(data));
-    UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_int32_ex(123456, strlen("test_int32"), "test_int32")));
+    UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_int32_ex(123456, strlen("test_int32"), (char *)("test_int32"))));
     UNITTEST_EXPECT_EQ(0, strcmp("test_int32", cplus_data_get_key(data)));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_delete(data));
-    UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_int64_ex(0x0123abcddcba3210, strlen("test_int64"), "test_int64")));
+    UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_int64_ex(0x0123abcddcba3210, strlen("test_int64"), (char *)("test_int64"))));
     UNITTEST_EXPECT_EQ(0, strcmp("test_int64", cplus_data_get_key(data)));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_delete(data));
-    UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_uint8_ex(0xab, strlen("test_uint8"), "test_uint8")));
+    UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_uint8_ex(0xab, strlen("test_uint8"), (char *)("test_uint8"))));
     UNITTEST_EXPECT_EQ(0, strcmp("test_uint8", cplus_data_get_key(data)));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_delete(data));
-    UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_uint16_ex(0xabcd, strlen("test_uint16"), "test_uint16")));
+    UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_uint16_ex(0xabcd, strlen("test_uint16"), (char *)("test_uint16"))));
     UNITTEST_EXPECT_EQ(0, strcmp("test_uint16", cplus_data_get_key(data)));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_delete(data));
-    UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_uint32_ex(123456, strlen("test_uint32"), "test_uint32")));
+    UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_uint32_ex(123456, strlen("test_uint32"), (char *)("test_uint32"))));
     UNITTEST_EXPECT_EQ(0, strcmp("test_uint32", cplus_data_get_key(data)));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_delete(data));
-    UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_uint64_ex(0x0123abcddcba3210, strlen("test_uint64"), "test_uint64")));
+    UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_uint64_ex(0x0123abcddcba3210, strlen("test_uint64"), (char *)("test_uint64"))));
     UNITTEST_EXPECT_EQ(0, strcmp("test_uint64", cplus_data_get_key(data)));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_delete(data));
-    UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_float_ex(3.1415926535, sizeof("test_float"), "test_float")));
+    UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_float_ex(3.1415926535, sizeof("test_float"), (char *)("test_float"))));
     UNITTEST_EXPECT_EQ(0, strcmp("test_float", cplus_data_get_key(data)));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_delete(data));
-    UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_double_ex(3.1415926535,sizeof("test_double"), "test_double")));
+    UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_double_ex(3.1415926535, sizeof("test_double"), (char *)("test_double"))));
     UNITTEST_EXPECT_EQ(0, strcmp("test_double", cplus_data_get_key(data)));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_delete(data));
     int32_t v1 = 123456;
-    UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_pointer_ex(&v1, sizeof("test_pointer"), "test_pointer")));
+    UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_pointer_ex(&v1, sizeof("test_pointer"), (char *)("test_pointer"))));
     UNITTEST_EXPECT_EQ(0, strcmp("test_pointer", cplus_data_get_key(data)));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_delete(data));
-    UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_string_ex(strlen("Hello World"), "Hello World", strlen("test_string"), "test_string")));
+    UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_string_ex(strlen("Hello World"), (char *)("Hello World"), strlen("test_string"), (char *)("test_string"))));
     UNITTEST_EXPECT_EQ(0, strcmp("test_string", cplus_data_get_key(data)));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_delete(data));
     UNITTEST_EXPECT_EQ(0, cplus_mgr_report());
@@ -4932,9 +5835,9 @@ CPLUS_UNIT_TEST(cplus_data_new, CPLUS_DATA_TYPE_BOOL_THREAD_SAFE)
     bool result;
     cplus_data data = NULL;
     UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_bool_ex(true, 0, NULL)));
-    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_set_key(data, strlen("test_bool"), "test_bool"));
+    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_set_key(data, strlen("test_bool"), (char *)("test_bool")));
     UNITTEST_EXPECT_EQ(0, strcmp("test_bool", cplus_data_get_key(data)));
-    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_set_key(data, strlen("test_bool_bool_bool_bool"), "test_bool_bool_bool_bool"));
+    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_set_key(data, strlen("test_bool_bool_bool_bool"), (char *)("test_bool_bool_bool_bool")));
     UNITTEST_EXPECT_EQ(0, strcmp("test_bool_bool_bool_bool", cplus_data_get_key(data)));
     UNITTEST_EXPECT_EQ(sizeof(bool), cplus_data_get_data_size(data));
     UNITTEST_EXPECT_EQ(CPLUS_DATA_TYPE_BOOL, cplus_data_get_type(data));
@@ -4951,7 +5854,7 @@ CPLUS_UNIT_TEST(cplus_data_new, CPLUS_DATA_TYPE_INT8_THREAD_SAFE)
     int8_t result;
     cplus_data data = NULL;
     UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_int8_ex(0xab, 0, NULL)));
-    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_set_key(data, strlen("test_int8"), "test_int8"));
+    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_set_key(data, strlen("test_int8"), (char *)("test_int8")));
     UNITTEST_EXPECT_EQ(0, strcmp("test_int8", cplus_data_get_key(data)));
     UNITTEST_EXPECT_EQ(sizeof(int8_t), cplus_data_get_data_size(data));
     UNITTEST_EXPECT_EQ(CPLUS_DATA_TYPE_INT8, cplus_data_get_type(data));
@@ -4968,7 +5871,7 @@ CPLUS_UNIT_TEST(cplus_data_new, CPLUS_DATA_TYPE_INT16_THREAD_SAFE)
     int16_t result;
     cplus_data data = NULL;
     UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_int16_ex(0xabcd, 0, NULL)));
-    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_set_key(data, strlen("test_int16"), "test_int16"));
+    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_set_key(data, strlen("test_int16"), (char *)("test_int16")));
     UNITTEST_EXPECT_EQ(0, strcmp("test_int16", cplus_data_get_key(data)));
     UNITTEST_EXPECT_EQ(sizeof(int16_t), cplus_data_get_data_size(data));
     UNITTEST_EXPECT_EQ(CPLUS_DATA_TYPE_INT16, cplus_data_get_type(data));
@@ -4985,7 +5888,7 @@ CPLUS_UNIT_TEST(cplus_data_new, CPLUS_DATA_TYPE_INT32_THREAD_SAFE)
     int32_t result;
     cplus_data data = NULL;
     UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_int32_ex(123456, 0, NULL)));
-    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_set_key(data, strlen("test_int32"), "test_int32"));
+    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_set_key(data, strlen("test_int32"), (char *)("test_int32")));
     UNITTEST_EXPECT_EQ(0, strcmp("test_int32", cplus_data_get_key(data)));
     UNITTEST_EXPECT_EQ(sizeof(int32_t), cplus_data_get_data_size(data));
     UNITTEST_EXPECT_EQ(CPLUS_DATA_TYPE_INT32, cplus_data_get_type(data));
@@ -5002,7 +5905,7 @@ CPLUS_UNIT_TEST(cplus_data_new, CPLUS_DATA_TYPE_INT64_THREAD_SAFE)
     int64_t result;
     cplus_data data = NULL;
     UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_int64_ex(0x0123abcddcba3210, 0, NULL)));
-    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_set_key(data, strlen("test_int64"), "test_int64"));
+    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_set_key(data, strlen("test_int64"), (char *)("test_int64")));
     UNITTEST_EXPECT_EQ(0, strcmp("test_int64", cplus_data_get_key(data)));
     UNITTEST_EXPECT_EQ(sizeof(int64_t), cplus_data_get_data_size(data));
     UNITTEST_EXPECT_EQ(CPLUS_DATA_TYPE_INT64, cplus_data_get_type(data));
@@ -5019,7 +5922,7 @@ CPLUS_UNIT_TEST(cplus_data_new, CPLUS_DATA_TYPE_UINT8_THREAD_SAFE)
     uint8_t result;
     cplus_data data = NULL;
     UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_uint8_ex(0xab, 0, NULL)));
-    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_set_key(data, strlen("test_uint8"), "test_uint8"));
+    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_set_key(data, strlen("test_uint8"), (char *)("test_uint8")));
     UNITTEST_EXPECT_EQ(0, strcmp("test_uint8", cplus_data_get_key(data)));
     UNITTEST_EXPECT_EQ(sizeof(uint8_t), cplus_data_get_data_size(data));
     UNITTEST_EXPECT_EQ(CPLUS_DATA_TYPE_UINT8, cplus_data_get_type(data));
@@ -5036,7 +5939,7 @@ CPLUS_UNIT_TEST(cplus_data_new, CPLUS_DATA_TYPE_UINT16_THREAD_SAFE)
     uint16_t result;
     cplus_data data = NULL;
     UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_uint16_ex(0xabcd, 0, NULL)));
-    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_set_key(data, strlen("test_uint16"), "test_uint16"));
+    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_set_key(data, strlen("test_uint16"), (char *)("test_uint16")));
     UNITTEST_EXPECT_EQ(0, strcmp("test_uint16", cplus_data_get_key(data)));
     UNITTEST_EXPECT_EQ(sizeof(uint16_t), cplus_data_get_data_size(data));
     UNITTEST_EXPECT_EQ(CPLUS_DATA_TYPE_UINT16, cplus_data_get_type(data));
@@ -5053,7 +5956,7 @@ CPLUS_UNIT_TEST(cplus_data_new, CPLUS_DATA_TYPE_UINT32_THREAD_SAFE)
     uint32_t result;
     cplus_data data = NULL;
     UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_uint32_ex(123456, 0, NULL)));
-    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_set_key(data, strlen("test_uint32"), "test_uint32"));
+    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_set_key(data, strlen("test_uint32"), (char *)("test_uint32")));
     UNITTEST_EXPECT_EQ(0, strcmp("test_uint32", cplus_data_get_key(data)));
     UNITTEST_EXPECT_EQ(sizeof(uint32_t), cplus_data_get_data_size(data));
     UNITTEST_EXPECT_EQ(CPLUS_DATA_TYPE_UINT32, cplus_data_get_type(data));
@@ -5070,7 +5973,7 @@ CPLUS_UNIT_TEST(cplus_data_new, CPLUS_DATA_TYPE_UINT64_THREAD_SAFE)
     uint64_t result;
     cplus_data data = NULL;
     UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_uint64_ex(0x0123abcddcba3210, 0, NULL)));
-    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_set_key(data, strlen("test_uint64"), "test_uint64"));
+    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_set_key(data, strlen("test_uint64"), (char *)("test_uint64")));
     UNITTEST_EXPECT_EQ(0, strcmp("test_uint64", cplus_data_get_key(data)));
     UNITTEST_EXPECT_EQ(sizeof(uint64_t), cplus_data_get_data_size(data));
     UNITTEST_EXPECT_EQ(CPLUS_DATA_TYPE_UINT64, cplus_data_get_type(data));
@@ -5087,7 +5990,7 @@ CPLUS_UNIT_TEST(cplus_data_new, CPLUS_DATA_TYPE_FLOAT_THREAD_SAFE)
     float result;
     cplus_data data = NULL;
     UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_float_ex(3.1415926535, 0, NULL)));
-    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_set_key(data, strlen("test_float"), "test_float"));
+    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_set_key(data, strlen("test_float"), (char *)("test_float")));
     UNITTEST_EXPECT_EQ(0, strcmp("test_float", cplus_data_get_key(data)));
     UNITTEST_EXPECT_EQ(sizeof(float), cplus_data_get_data_size(data));
     UNITTEST_EXPECT_EQ(CPLUS_DATA_TYPE_FLOAT, cplus_data_get_type(data));
@@ -5106,7 +6009,7 @@ CPLUS_UNIT_TEST(cplus_data_new, CPLUS_DATA_TYPE_DOUBLE_THREAD_SAFE)
     double result;
     cplus_data data = NULL;
     UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_double_ex(3.1415926535, 0, NULL)));
-    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_set_key(data, strlen("test_double"), "test_double"));
+    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_set_key(data, strlen("test_double"), (char *)("test_double")));
     UNITTEST_EXPECT_EQ(0, strcmp("test_double", cplus_data_get_key(data)));
     UNITTEST_EXPECT_EQ(sizeof(double), cplus_data_get_data_size(data));
     UNITTEST_EXPECT_EQ(CPLUS_DATA_TYPE_DOUBLE, cplus_data_get_type(data));
@@ -5126,7 +6029,7 @@ CPLUS_UNIT_TEST(cplus_data_new, CPLUS_DATA_TYPE_POINTER_THREAD_SAFE)
     void * result;
     cplus_data data = NULL;
     UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_pointer_ex(&v1, 0, NULL)));
-    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_set_key(data, strlen("test_pointer"), "test_pointer"));
+    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_set_key(data, strlen("test_pointer"), (char *)("test_pointer")));
     UNITTEST_EXPECT_EQ(0, strcmp("test_pointer", cplus_data_get_key(data)));
     UNITTEST_EXPECT_EQ(sizeof(intptr_t), cplus_data_get_data_size(data));
     UNITTEST_EXPECT_EQ(CPLUS_DATA_TYPE_POINTER, cplus_data_get_type(data));
@@ -5145,14 +6048,14 @@ CPLUS_UNIT_TEST(cplus_data_new, CPLUS_DATA_TYPE_STRING_THREAD_SAFE)
     uint32_t len = sizeof(bufs);
 
     cplus_data data = NULL;
-    UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_string_ex(strlen("Hello World"), "Hello World", 0, NULL)));
-    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_set_key(data, strlen("test_string"), "test_string"));
+    UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_string_ex(strlen("Hello World"), (char *)("Hello World"), 0, NULL)));
+    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_set_key(data, strlen("test_string"), (char *)("test_string")));
     UNITTEST_EXPECT_EQ(0, strcmp("test_string", cplus_data_get_key(data)));
     UNITTEST_EXPECT_EQ(strlen("Hello World"), cplus_data_get_data_size(data));
     UNITTEST_EXPECT_EQ(CPLUS_DATA_TYPE_STRING, cplus_data_get_type(data));
     UNITTEST_EXPECT_EQ(strlen("Hello World"), cplus_data_get_value(data, &len, bufs));
     UNITTEST_EXPECT_EQ(0, strcmp("Hello World", bufs));
-    UNITTEST_EXPECT_EQ(0, cplus_data_set_string(data, strlen("AaBbCcDd"), "AaBbCcDd"));
+    UNITTEST_EXPECT_EQ(0, cplus_data_set_string(data, strlen("AaBbCcDd"), (char *)("AaBbCcDd")));
     UNITTEST_EXPECT_EQ(strlen("AaBbCcDd"), cplus_data_get_data_size(data));
     UNITTEST_EXPECT_EQ(strlen("AaBbCcDd"), strlen(cplus_data_get_string(data)));
     UNITTEST_EXPECT_EQ(0, strcmp("AaBbCcDd", cplus_data_get_string(data)));
@@ -5287,8 +6190,8 @@ CPLUS_UNIT_TEST(cplus_data_clone_value, functionity)
     UNITTEST_EXPECT_EQ(true, fabs(2.7182818284 - cplus_data_get_double(data2)) < 0.0000001f);
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_delete(data1));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_delete(data2));
-    UNITTEST_EXPECT_EQ(true, NULL != (data1 = cplus_data_new_string(strlen("Hello World"), "Hello World")));
-    UNITTEST_EXPECT_EQ(true, NULL != (data2 = cplus_data_new_string(strlen("AaBbCcDd 01234567"), "AaBbCcDd 01234567")));
+    UNITTEST_EXPECT_EQ(true, NULL != (data1 = cplus_data_new_string(strlen("Hello World"), (char *)("Hello World"))));
+    UNITTEST_EXPECT_EQ(true, NULL != (data2 = cplus_data_new_string(strlen("AaBbCcDd 01234567"), (char *)("AaBbCcDd 01234567"))));
     UNITTEST_EXPECT_EQ(0, strcmp("Hello World", cplus_data_get_string(data1)));
     UNITTEST_EXPECT_EQ(0, strcmp("AaBbCcDd 01234567", cplus_data_get_string(data2)));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_clone_value(data1, data2));
@@ -5298,6 +6201,7 @@ CPLUS_UNIT_TEST(cplus_data_clone_value, functionity)
     UNITTEST_EXPECT_EQ(0, cplus_mgr_report());
 }
 
+#ifndef __cplusplus
 CPLUS_UNIT_TEST(CPLUS_DATA_TYPE_CONV, functionity)
 {
     bool b; float f; double db; char str[64];
@@ -5319,6 +6223,7 @@ CPLUS_UNIT_TEST(CPLUS_DATA_TYPE_CONV, functionity)
     UNITTEST_EXPECT_EQ(CPLUS_DATA_TYPE_POINTER, CPLUS_DATA_TYPE_CONV(p));
     UNITTEST_EXPECT_EQ(CPLUS_DATA_TYPE_STRING, CPLUS_DATA_TYPE_CONV(str));
 }
+#endif
 
 void unittest_data(void)
 {
@@ -5365,7 +6270,9 @@ void unittest_data(void)
     UNITTEST_ADD_TESTCASE(cplus_data_set_action_mode, functionity);
     UNITTEST_ADD_TESTCASE(cplus_data_create_group_node, functionity);
     UNITTEST_ADD_TESTCASE(cplus_data_clone_value, functionity);
+#ifndef __cplusplus
     UNITTEST_ADD_TESTCASE(CPLUS_DATA_TYPE_CONV, functionity);
+#endif
     UNITTEST_ADD_TESTCASE(cplus_data_new, CPLUS_DATA_TYPE_BYTE_ARRAY);
 }
 #endif // __CPLUS_UNITTEST__

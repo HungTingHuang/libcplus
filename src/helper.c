@@ -16,7 +16,7 @@ struct test1
     int32_t C;
     int32_t D;
     int32_t E;
-} t1 = { .A = 0x0123, .B = 0x4567, .C = 0x89ab, .D = 0xcdef, .E = 0xef01 };
+} t1 = { .A = 0x0123, .B = 0x1234, .C = 0x2345, .D = 0x3456, .E = 0x4567 };
 
 struct test2
 {
@@ -34,7 +34,7 @@ struct test3
     int16_t C;
     int16_t D;
     int16_t E;
-} t3 = { .A = 0x0123, .B = 0x2345, .C = 0x4567, .D = 0x6789, .E = 0x89ab };
+} t3 = { .A = 0x0123, .B = 0x1234, .C = 0x2345, .D = 0x3456, .E = 0x4567 };
 
 struct test4
 {
@@ -43,7 +43,7 @@ struct test4
     int64_t C;
     int64_t D;
     int64_t E;
-} t4 = { .A = 0x01234567, .B = 0x89abcdef, .C = 0xffff0000, .D = 0x0000ffff, .E = 0x0f0f0f0f };
+} t4 = { .A = 0x01234567, .B = 0x12345678, .C = 0x23456789, .D = 0x3456789A, .E = 0x456789AB };
 
 struct test5
 {
@@ -52,7 +52,7 @@ struct test5
     int16_t C;
     int8_t D;
     int64_t E;
-} t5 = { .A = 0x0123, .B = 0x89, .C = 0xf0f0, .D = 0xf0, .E = 0x43211234 };
+} t5 = { .A = 0x0123, .B = 0x12, .C = 0x2345, .D = 0x67, .E = 0x01234567 };
 
 struct test6
 {
@@ -61,7 +61,7 @@ struct test6
     int8_t C;
     int64_t D;
     int32_t E;
-} t6 = { .A = 0x13, .B = 0x2478, .C = 0xbd, .D = 0xabcddcba, .E = 0xaacceeff };
+} t6 = { .A = 0x13, .B = 0x2478, .C = 0x56, .D = 0x45670123, .E = 0x01234567 };
 
 CPLUS_UNIT_TEST(CPLUS_OFFSETOF, functionity)
 {

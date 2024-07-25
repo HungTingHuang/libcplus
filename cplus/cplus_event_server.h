@@ -2,6 +2,9 @@
 #define __CPLUS_EVENT_SERVER_H__
 #include "cplus_typedef.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 typedef int32_t (* CPLUS_EVENT_SERVER_CB_ON_ERROR)(int32_t fd, int32_t error_no, void * cb_param);
 typedef int32_t (* CPLUS_EVENT_SERVER_CB_ON_TIMEOUT)(int32_t fd, void * cb_param);
 typedef int32_t (* CPLUS_EVENT_SERVER_CB_ON_READ)(int32_t fd, int32_t value, void * cb_param);
@@ -53,5 +56,7 @@ int32_t cplus_event_server_get_efd(cplus_event_server obj);
 
 int32_t cplus_event_client_add_count(cplus_event_client obj, uint64_t count);
 
-
+#ifdef __cplusplus
+}
+#endif
 #endif // __CPLUS_EVENT_SERVER_H__

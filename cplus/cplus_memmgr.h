@@ -36,8 +36,8 @@ void * cplus_mem_cpy(void * dest, void * src, uint32_t count);
 void * cplus_mem_cpy_ex(void * dest, uint32_t destsz, void * src, uint32_t count);
 void * cplus_mem_set(void * dest, uint8_t value, uint32_t count);
 int32_t cplus_str_printf(void * str, uint32_t size, const char * format, ...);
+
 #ifdef __cplusplus
 }
 #endif
-
 #endif // __CPLUS_MEMMGR_H__

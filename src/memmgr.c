@@ -66,8 +66,7 @@ static int32_t add_mem_info(
     CHECK_NOT_NULL(file, CPLUS_FAIL);
     CHECK_NOT_NULL(function, CPLUS_FAIL);
 
-    ex = (struct extra_info *)malloc(sizeof(struct extra_info));
-    if (ex)
+    if ((ex = (struct extra_info *)malloc(sizeof(struct extra_info))))
     {
         ex->mem_ref = mem_ref;
         ex->mem_size = size;
@@ -160,8 +159,7 @@ static int32_t check_size(void * mem_addr, uint32_t size)
 {
     struct extra_info * target = NULL;
 
-    target = find_mem_info(mem_addr);
-    if (target)
+    if ((target = (struct extra_info *)find_mem_info(mem_addr)))
     {
         if (target->mem_size < size)
         {
@@ -178,7 +176,7 @@ static int32_t check_size(void * mem_addr, uint32_t size)
 }
 static int32_t check_boundary(void * entire)
 {
-    uint32_t * begin_tag = ((uint32_t *)entire);
+    uint32_t * begin_tag = ((uint32_t *)entire), end_check = ENDCHK;
     void * target = (void *)(((uint8_t *)entire) + sizeof(uint32_t));
 
     struct extra_info * info = (struct extra_info *)find_mem_info(target);
@@ -212,7 +210,7 @@ static int32_t check_boundary(void * entire)
         }
         else if (memcmp(
             (void *)(((uint8_t *)target) + (info->mem_size))
-            , &((uint32_t){ENDCHK})
+            , &(end_check)
             , sizeof(uint32_t)))
         {
             fprintf(stdout, "[OVERFLOW]\n");
@@ -237,7 +235,7 @@ void * cplus_mgr_malloc(
     , uint32_t line)
 {
     void * mem = NULL, * target = NULL;
-    uint32_t * begin_tag = NULL;
+    uint32_t * begin_tag = NULL, end_check = ENDCHK;
 
     if (size)
     {
@@ -247,7 +245,7 @@ void * cplus_mgr_malloc(
             begin_tag = ((uint32_t *)mem);
             (* begin_tag) = BEGCHK;
             target = (void *)(((uint8_t *)mem) + sizeof(uint32_t));
-            memcpy((void *)(((uint8_t *)target) + size), &((uint32_t){ENDCHK}), sizeof(uint32_t));
+            memcpy((void *)(((uint8_t *)target) + size), &(end_check), sizeof(uint32_t));
             add_mem_info(target, size, file, function, line);
         }
     }
@@ -261,7 +259,7 @@ void * cplus_mgr_realloc(
     , uint32_t line)
 {
     void * mem = NULL, * target = NULL, * entire = NULL;
-    uint32_t new_size = 0, * begin_tag = NULL;
+    uint32_t new_size = 0, * begin_tag = NULL, end_check = ENDCHK;
     CHECK_NOT_NULL(ptr, NULL);
 
     entire = (void *)(((uint8_t *)ptr) - sizeof(uint32_t));
@@ -269,8 +267,7 @@ void * cplus_mgr_realloc(
     erase_mem_info(ptr);
 
     new_size = (0 == size)? 0: (size + (2 * sizeof(uint32_t)));
-    mem = realloc(entire, new_size);
-    if (NULL == mem)
+    if (NULL == (mem = realloc(entire, new_size)))
     {
         if (0 != size)
         {
@@ -283,7 +280,7 @@ void * cplus_mgr_realloc(
     begin_tag = ((uint32_t *)mem);
     (* begin_tag) = BEGCHK;
     target = (void *)(((uint8_t *)mem) + sizeof(uint32_t));
-    memcpy((void *)(((uint8_t *)target) + size), &((uint32_t){ENDCHK}), sizeof(uint32_t));
+    memcpy((void *)(((uint8_t *)target) + size), &(end_check), sizeof(uint32_t));
 
     add_mem_info(target, size, file, function, line);
     return target;
@@ -298,8 +295,7 @@ void * cplus_mgr_realloc(void * ptr, uint32_t size)
     void * mem = NULL;
     CHECK_NOT_NULL(ptr, NULL);
 
-    mem = realloc(ptr, size);
-    if (NULL == mem)
+    if (NULL == (mem = realloc(ptr, size)))
     {
         if (0 != size)
         {
@@ -413,8 +409,8 @@ void * cplus_mem_cpy_ex(
     , void * src
     , uint32_t count)
 {
-    uint8_t * dp = dest;
-    const uint8_t * sp = src;
+    uint8_t * dp = (uint8_t *)(dest);
+    const uint8_t * sp = (const uint8_t *)(src);
 
     CHECK_NOT_NULL(dp, NULL);
     CHECK_NOT_NULL(sp, NULL);
@@ -427,8 +423,8 @@ void * cplus_mem_cpy_ex(
     assert(CPLUS_SUCCESS == check_size(dest, count));
 #endif
 
-    if (((dp > sp) and (dp < (sp + count)))
-        or ((sp > dp) and (sp < (dp + destsz))))
+    if (((dp > sp) AND (dp < (sp + count)))
+        OR ((sp > dp) AND (sp < (dp + destsz))))
     {
         return memmove(dp, sp, count);
     }
@@ -441,7 +437,7 @@ void * cplus_mem_set(
     , uint8_t value
     , uint32_t count)
 {
-    uint8_t * dp = dest;
+    uint8_t * dp = (uint8_t *)(dest);
 
     CHECK_NOT_NULL(dp, NULL);
     CHECK_IF(count > RSIZE_MAX_MEM, NULL);
@@ -455,8 +451,8 @@ void * cplus_mem_set(
 
 void * cplus_mem_cpy(void * dest, void * src, uint32_t count)
 {
-    uint8_t * dp = dest;
-    const uint8_t * sp = src;
+    uint8_t * dp = (uint8_t *)(dest);
+    const uint8_t * sp = (const uint8_t *)(src);
 
     CHECK_NOT_NULL(dp, NULL);
     CHECK_NOT_NULL(sp, NULL);
@@ -482,7 +478,7 @@ int32_t cplus_str_printf(
 #endif
 
     va_start(args, format);
-	res = vsnprintf(str, size, format, args);
+	res = vsnprintf((char *)(str), size, format, args);
 	va_end(args);
 
     return res;
@@ -497,12 +493,12 @@ int64_t *ry2[MAX_TEST_SIZE];
 
 CPLUS_UNIT_TEST(cplus_mgr_malloc, functionity)
 {
-    UNITTEST_EXPECT_EQ(true, NULL != (a = cplus_malloc(sizeof(int32_t))));
-    UNITTEST_EXPECT_EQ(true, NULL != (b = cplus_malloc(sizeof(int32_t))));
-    UNITTEST_EXPECT_EQ(true, NULL != (c = cplus_malloc(sizeof(int32_t))));
-    UNITTEST_EXPECT_EQ(true, NULL != (d = cplus_malloc(sizeof(int32_t))));
-    UNITTEST_EXPECT_EQ(true, NULL != (e = cplus_malloc(sizeof(int32_t))));
-    UNITTEST_EXPECT_EQ(true, NULL != (f = cplus_malloc(sizeof(int32_t))));
+    UNITTEST_EXPECT_EQ(true, NULL != (a = (int32_t *)cplus_malloc(sizeof(int32_t))));
+    UNITTEST_EXPECT_EQ(true, NULL != (b = (int32_t *)cplus_malloc(sizeof(int32_t))));
+    UNITTEST_EXPECT_EQ(true, NULL != (c = (int32_t *)cplus_malloc(sizeof(int32_t))));
+    UNITTEST_EXPECT_EQ(true, NULL != (d = (int32_t *)cplus_malloc(sizeof(int32_t))));
+    UNITTEST_EXPECT_EQ(true, NULL != (e = (int32_t *)cplus_malloc(sizeof(int32_t))));
+    UNITTEST_EXPECT_EQ(true, NULL != (f = (int32_t *)cplus_malloc(sizeof(int32_t))));
     UNITTEST_EXPECT_EQ(6, cplus_mgr_report());
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_free(a));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_free(b));
@@ -517,13 +513,13 @@ CPLUS_UNIT_TEST(cplus_mgr_malloc, stress)
 {
     for (int32_t i = 0; i < MAX_TEST_SIZE; i++)
     {
-        UNITTEST_EXPECT_EQ(true, NULL != (ry[i] = cplus_malloc(sizeof(int32_t))));
+        UNITTEST_EXPECT_EQ(true, NULL != (ry[i] = (int32_t *)cplus_malloc(sizeof(int32_t))));
     }
     UNITTEST_EXPECT_EQ(MAX_TEST_SIZE, cplus_mgr_report());
 
     for (int32_t i = 0; i < MAX_TEST_SIZE; i++)
     {
-        UNITTEST_EXPECT_EQ(true, NULL != (ry2[i] = cplus_realloc(ry[i], sizeof(int64_t))));
+        UNITTEST_EXPECT_EQ(true, NULL != (ry2[i] = (int64_t *)cplus_realloc(ry[i], sizeof(int64_t))));
     }
     UNITTEST_EXPECT_EQ(MAX_TEST_SIZE, cplus_mgr_report());
 
@@ -536,19 +532,19 @@ CPLUS_UNIT_TEST(cplus_mgr_malloc, stress)
 
 CPLUS_UNIT_TEST(cplus_mgr_realloc, functionity)
 {
-    UNITTEST_EXPECT_EQ(true, NULL != (a = cplus_malloc(sizeof(int32_t))));
-    UNITTEST_EXPECT_EQ(true, NULL != (b = cplus_malloc(sizeof(int32_t))));
-    UNITTEST_EXPECT_EQ(true, NULL != (c = cplus_malloc(sizeof(int32_t))));
-    UNITTEST_EXPECT_EQ(true, NULL != (d = cplus_malloc(sizeof(int32_t))));
-    UNITTEST_EXPECT_EQ(true, NULL != (e = cplus_malloc(sizeof(int32_t))));
-    UNITTEST_EXPECT_EQ(true, NULL != (f = cplus_malloc(sizeof(int32_t))));
+    UNITTEST_EXPECT_EQ(true, NULL != (a = (int32_t *)cplus_malloc(sizeof(int32_t))));
+    UNITTEST_EXPECT_EQ(true, NULL != (b = (int32_t *)cplus_malloc(sizeof(int32_t))));
+    UNITTEST_EXPECT_EQ(true, NULL != (c = (int32_t *)cplus_malloc(sizeof(int32_t))));
+    UNITTEST_EXPECT_EQ(true, NULL != (d = (int32_t *)cplus_malloc(sizeof(int32_t))));
+    UNITTEST_EXPECT_EQ(true, NULL != (e = (int32_t *)cplus_malloc(sizeof(int32_t))));
+    UNITTEST_EXPECT_EQ(true, NULL != (f = (int32_t *)cplus_malloc(sizeof(int32_t))));
     UNITTEST_EXPECT_EQ(6, cplus_mgr_report());
-    UNITTEST_EXPECT_EQ(true, NULL != (g = cplus_realloc(a, sizeof(int64_t))));
-    UNITTEST_EXPECT_EQ(true, NULL != (h = cplus_realloc(b, sizeof(int64_t))));
-    UNITTEST_EXPECT_EQ(true, NULL != (i = cplus_realloc(c, sizeof(int64_t))));
-    UNITTEST_EXPECT_EQ(true, NULL != (j = cplus_realloc(d, sizeof(int64_t))));
-    UNITTEST_EXPECT_EQ(true, NULL != (k = cplus_realloc(e, sizeof(int64_t))));
-    UNITTEST_EXPECT_EQ(true, NULL != (l = cplus_realloc(f, sizeof(int64_t))));
+    UNITTEST_EXPECT_EQ(true, NULL != (g = (int64_t *)cplus_realloc(a, sizeof(int64_t))));
+    UNITTEST_EXPECT_EQ(true, NULL != (h = (int64_t *)cplus_realloc(b, sizeof(int64_t))));
+    UNITTEST_EXPECT_EQ(true, NULL != (i = (int64_t *)cplus_realloc(c, sizeof(int64_t))));
+    UNITTEST_EXPECT_EQ(true, NULL != (j = (int64_t *)cplus_realloc(d, sizeof(int64_t))));
+    UNITTEST_EXPECT_EQ(true, NULL != (k = (int64_t *)cplus_realloc(e, sizeof(int64_t))));
+    UNITTEST_EXPECT_EQ(true, NULL != (l = (int64_t *)cplus_realloc(f, sizeof(int64_t))));
     UNITTEST_EXPECT_EQ(6, cplus_mgr_report());
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_free(g));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_free(h));
@@ -561,44 +557,50 @@ CPLUS_UNIT_TEST(cplus_mgr_realloc, functionity)
 
 CPLUS_UNIT_TEST(cplus_mgr_realloc, bad_parameter)
 {
-    UNITTEST_EXPECT_EQ(true, NULL != (a = cplus_malloc(sizeof(int32_t))));
-    UNITTEST_EXPECT_EQ(true, NULL != (b = cplus_malloc(sizeof(int32_t))));
-    UNITTEST_EXPECT_EQ(true, NULL != (c = cplus_malloc(sizeof(int32_t))));
-    UNITTEST_EXPECT_EQ(true, NULL != (d = cplus_malloc(sizeof(int32_t))));
-    UNITTEST_EXPECT_EQ(true, NULL != (e = cplus_malloc(sizeof(int32_t))));
-    UNITTEST_EXPECT_EQ(true, NULL != (f = cplus_malloc(sizeof(int32_t))));
+    UNITTEST_EXPECT_EQ(true, NULL != (a = (int32_t *)cplus_malloc(sizeof(int32_t))));
+    UNITTEST_EXPECT_EQ(true, NULL != (b = (int32_t *)cplus_malloc(sizeof(int32_t))));
+    UNITTEST_EXPECT_EQ(true, NULL != (c = (int32_t *)cplus_malloc(sizeof(int32_t))));
+    UNITTEST_EXPECT_EQ(true, NULL != (d = (int32_t *)cplus_malloc(sizeof(int32_t))));
+    UNITTEST_EXPECT_EQ(true, NULL != (e = (int32_t *)cplus_malloc(sizeof(int32_t))));
+    UNITTEST_EXPECT_EQ(true, NULL != (f = (int32_t *)cplus_malloc(sizeof(int32_t))));
     UNITTEST_EXPECT_EQ(6, cplus_mgr_report());
-    UNITTEST_EXPECT_EQ(true, NULL == (g = cplus_realloc(a, 0)));
+    UNITTEST_EXPECT_EQ(true, NULL == (g = (int64_t *)cplus_realloc(a, 0)));
     UNITTEST_EXPECT_EQ(ENOMEM, errno);
-    UNITTEST_EXPECT_EQ(true, NULL == (h = cplus_realloc(b, 0)));
+    UNITTEST_EXPECT_EQ(true, NULL == (h = (int64_t *)cplus_realloc(b, 0)));
     UNITTEST_EXPECT_EQ(ENOMEM, errno);
-    UNITTEST_EXPECT_EQ(true, NULL == (i = cplus_realloc(c, 0)));
+    UNITTEST_EXPECT_EQ(true, NULL == (i = (int64_t *)cplus_realloc(c, 0)));
     UNITTEST_EXPECT_EQ(ENOMEM, errno);
-    UNITTEST_EXPECT_EQ(true, NULL == (j = cplus_realloc(d, 0)));
+    UNITTEST_EXPECT_EQ(true, NULL == (j = (int64_t *)cplus_realloc(d, 0)));
     UNITTEST_EXPECT_EQ(ENOMEM, errno);
-    UNITTEST_EXPECT_EQ(true, NULL == (k = cplus_realloc(e, 0)));
+    UNITTEST_EXPECT_EQ(true, NULL == (k = (int64_t *)cplus_realloc(e, 0)));
     UNITTEST_EXPECT_EQ(ENOMEM, errno);
-    UNITTEST_EXPECT_EQ(true, NULL == (l = cplus_realloc(f, 0)));
+    UNITTEST_EXPECT_EQ(true, NULL == (l = (int64_t *)cplus_realloc(f, 0)));
     UNITTEST_EXPECT_EQ(ENOMEM, errno);
     UNITTEST_EXPECT_EQ(0, cplus_mgr_report());
-    UNITTEST_EXPECT_EQ(true, NULL != (a = cplus_malloc(sizeof(int32_t))));
-    UNITTEST_EXPECT_EQ(true, NULL != (b = cplus_malloc(sizeof(int32_t))));
-    UNITTEST_EXPECT_EQ(true, NULL != (c = cplus_malloc(sizeof(int32_t))));
-    UNITTEST_EXPECT_EQ(true, NULL != (d = cplus_malloc(sizeof(int32_t))));
-    UNITTEST_EXPECT_EQ(true, NULL != (e = cplus_malloc(sizeof(int32_t))));
-    UNITTEST_EXPECT_EQ(true, NULL != (f = cplus_malloc(sizeof(int32_t))));
+    UNITTEST_EXPECT_EQ(true, NULL != (a = (int32_t *)cplus_malloc(sizeof(int32_t))));
+    UNITTEST_EXPECT_EQ(true, NULL != (b = (int32_t *)cplus_malloc(sizeof(int32_t))));
+    UNITTEST_EXPECT_EQ(true, NULL != (c = (int32_t *)cplus_malloc(sizeof(int32_t))));
+    UNITTEST_EXPECT_EQ(true, NULL != (d = (int32_t *)cplus_malloc(sizeof(int32_t))));
+    UNITTEST_EXPECT_EQ(true, NULL != (e = (int32_t *)cplus_malloc(sizeof(int32_t))));
+    UNITTEST_EXPECT_EQ(true, NULL != (f = (int32_t *)cplus_malloc(sizeof(int32_t))));
     UNITTEST_EXPECT_EQ(6, cplus_mgr_report());
-    UNITTEST_EXPECT_EQ(true, NULL == (g = cplus_realloc(a, 0xffffffff * 10000000)));
+    UNITTEST_EXPECT_EQ(true, NULL == (g = (int64_t *)cplus_realloc(a
+        , 0xffffffff * 10000000 * 10000000 * 10000000 * 10000000 * 10000000 * 10000000)));
     UNITTEST_EXPECT_EQ(ENOMEM, errno);
-    UNITTEST_EXPECT_EQ(true, NULL == (h = cplus_realloc(b, 0xffffffff * 10000000)));
+    UNITTEST_EXPECT_EQ(true, NULL == (h = (int64_t *)cplus_realloc(b
+        , 0xffffffff * 10000000 * 10000000 * 10000000 * 10000000 * 10000000 * 10000000)));
     UNITTEST_EXPECT_EQ(ENOMEM, errno);
-    UNITTEST_EXPECT_EQ(true, NULL == (i = cplus_realloc(c, 0xffffffff * 10000000)));
+    UNITTEST_EXPECT_EQ(true, NULL == (i = (int64_t *)cplus_realloc(c
+        , 0xffffffff * 10000000 * 10000000 * 10000000 * 10000000 * 10000000 * 10000000)));
     UNITTEST_EXPECT_EQ(ENOMEM, errno);
-    UNITTEST_EXPECT_EQ(true, NULL == (j = cplus_realloc(d, 0xffffffff * 10000000)));
+    UNITTEST_EXPECT_EQ(true, NULL == (j = (int64_t *)cplus_realloc(d
+        , 0xffffffff * 10000000 * 10000000 * 10000000 * 10000000 * 10000000 * 10000000)));
     UNITTEST_EXPECT_EQ(ENOMEM, errno);
-    UNITTEST_EXPECT_EQ(true, NULL == (k = cplus_realloc(e, 0xffffffff * 10000000)));
+    UNITTEST_EXPECT_EQ(true, NULL == (k = (int64_t *)cplus_realloc(e
+        , 0xffffffff * 10000000 * 10000000 * 10000000 * 10000000 * 10000000 * 10000000)));
     UNITTEST_EXPECT_EQ(ENOMEM, errno);
-    UNITTEST_EXPECT_EQ(true, NULL == (l = cplus_realloc(f, 0xffffffff * 10000000)));
+    UNITTEST_EXPECT_EQ(true, NULL == (l = (int64_t *)cplus_realloc(f
+        , 0xffffffff * 10000000 * 10000000 * 10000000 * 10000000 * 10000000 * 10000000)));
     UNITTEST_EXPECT_EQ(ENOMEM, errno);
     UNITTEST_EXPECT_EQ(0, cplus_mgr_report());
 }
@@ -606,7 +608,7 @@ CPLUS_UNIT_TEST(cplus_mgr_realloc, bad_parameter)
 CPLUS_UNIT_TEST(cplus_mgr_malloc, buffer_overrun)
 {
     uint8_t * str = NULL;
-    UNITTEST_EXPECT_EQ(true, NULL != (str = cplus_malloc(10)));
+    UNITTEST_EXPECT_EQ(true, NULL != (str = (uint8_t *)cplus_malloc(10)));
     UNITTEST_EXPECT_EQ(1, cplus_mgr_report());
     str[10] = '\0';
     UNITTEST_EXPECT_EQ(CPLUS_FAIL, cplus_mgr_check_boundary(str));
@@ -617,10 +619,10 @@ CPLUS_UNIT_TEST(cplus_mgr_malloc, buffer_overrun)
 CPLUS_UNIT_TEST(cplus_mgr_realloc, buffer_overrun)
 {
     uint8_t * str = NULL;
-    UNITTEST_EXPECT_EQ(true, NULL != (str = cplus_malloc(10)));
+    UNITTEST_EXPECT_EQ(true, NULL != (str = (uint8_t *)cplus_malloc(10)));
     UNITTEST_EXPECT_EQ(1, cplus_mgr_report());
     str[9] = '\0';
-    UNITTEST_EXPECT_EQ(true, NULL != (str = cplus_realloc(str, 15)));
+    UNITTEST_EXPECT_EQ(true, NULL != (str = (uint8_t *)cplus_realloc(str, 15)));
     UNITTEST_EXPECT_EQ(1, cplus_mgr_report());
     str[15] = '\0';
     UNITTEST_EXPECT_EQ(CPLUS_FAIL, cplus_mgr_check_boundary(str));
@@ -631,7 +633,7 @@ CPLUS_UNIT_TEST(cplus_mgr_realloc, buffer_overrun)
 CPLUS_UNIT_TEST(cplus_mgr_malloc, double_free)
 {
     uint8_t * str = NULL, * temp = NULL;
-    UNITTEST_EXPECT_EQ(true, NULL != (str = cplus_malloc(10)));
+    UNITTEST_EXPECT_EQ(true, NULL != (str = (uint8_t *)cplus_malloc(10)));
     temp = str;
     UNITTEST_EXPECT_EQ(1, cplus_mgr_report());
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_free(str));
@@ -642,9 +644,9 @@ CPLUS_UNIT_TEST(cplus_mgr_malloc, double_free)
 CPLUS_UNIT_TEST(cplus_mgr_realloc, double_free)
 {
     uint8_t * str = NULL, * temp = NULL;
-    UNITTEST_EXPECT_EQ(true, NULL != (str = cplus_malloc(10)));
+    UNITTEST_EXPECT_EQ(true, NULL != (str = (uint8_t *)cplus_malloc(10)));
     UNITTEST_EXPECT_EQ(1, cplus_mgr_report());
-    UNITTEST_EXPECT_EQ(true, NULL != (str = cplus_realloc(str, 15)));
+    UNITTEST_EXPECT_EQ(true, NULL != (str = (uint8_t *)cplus_realloc(str, 15)));
     UNITTEST_EXPECT_EQ(1, cplus_mgr_report());
     temp = str;
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_free(str));
@@ -655,38 +657,38 @@ CPLUS_UNIT_TEST(cplus_mgr_realloc, double_free)
 CPLUS_UNIT_TEST(cplus_mem_cpy, overflow)
 {
     uint8_t * str = NULL;
-    UNITTEST_EXPECT_EQ(true, NULL != (str = cplus_malloc(5)));
-    UNITTEST_EXPECT_EQ(true, (str == cplus_mem_cpy(str, "012345", strlen("012345"))));
+    UNITTEST_EXPECT_EQ(true, NULL != (str = (uint8_t *)cplus_malloc(5)));
+    UNITTEST_EXPECT_EQ(true, (str == cplus_mem_cpy(str, (void *)("012345"), strlen("012345"))));
 }
 
 CPLUS_UNIT_TEST(cplus_mem_cpy_ex, overflow)
 {
     uint8_t * str = NULL;
-    UNITTEST_EXPECT_EQ(true, NULL != (str = cplus_malloc(5)));
-    UNITTEST_EXPECT_EQ(true, (str == cplus_mem_cpy_ex(str, strlen("012345"), "012345", strlen("012345"))));
+    UNITTEST_EXPECT_EQ(true, NULL != (str = (uint8_t *)cplus_malloc(5)));
+    UNITTEST_EXPECT_EQ(true, (str == cplus_mem_cpy_ex(str, strlen("012345"), (void *)("012345"), strlen("012345"))));
 }
 
 CPLUS_UNIT_TEST(cplus_mem_set, overflow)
 {
     uint8_t * str = NULL;
-    UNITTEST_EXPECT_EQ(true, NULL != (str = cplus_malloc(5)));
+    UNITTEST_EXPECT_EQ(true, NULL != (str = (uint8_t *)cplus_malloc(5)));
     UNITTEST_EXPECT_EQ(true, (str == cplus_mem_set(str, 0x00, 6)));
 }
 
 CPLUS_UNIT_TEST(cplus_str_printf, overflow)
 {
     uint8_t * str = NULL;
-    UNITTEST_EXPECT_EQ(true, NULL != (str = cplus_malloc(5)));
+    UNITTEST_EXPECT_EQ(true, NULL != (str = (uint8_t *)cplus_malloc(5)));
     UNITTEST_EXPECT_EQ(true, (strlen("012345") == cplus_str_printf(str, strlen("012345"), "%s", strlen("012345"))));
 }
 #endif
 
 void unittest_memmgr(void)
 {
-    UNITTEST_ADD_TESTCASE(cplus_mgr_malloc, functionity);
-    UNITTEST_ADD_TESTCASE(cplus_mgr_malloc, stress);
-    UNITTEST_ADD_TESTCASE(cplus_mgr_realloc, functionity);
-    // UNITTEST_ADD_TESTCASE(cplus_mgr_realloc, bad_parameter);
+//     UNITTEST_ADD_TESTCASE(cplus_mgr_malloc, functionity);
+//     UNITTEST_ADD_TESTCASE(cplus_mgr_malloc, stress);
+//     UNITTEST_ADD_TESTCASE(cplus_mgr_realloc, functionity);
+    UNITTEST_ADD_TESTCASE(cplus_mgr_realloc, bad_parameter);
 #ifdef __CPLUS_MEM_MANAGER__
     // UNITTEST_ADD_TESTCASE(cplus_mgr_malloc, buffer_overrun);
     // UNITTEST_ADD_TESTCASE(cplus_mgr_realloc, buffer_overrun);

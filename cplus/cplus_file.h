@@ -1,7 +1,9 @@
 #ifndef __CPLUS_FILE_H__
 #define __CPLUS_FILE_H__
 #include "cplus_typedef.h"
-#define _GNU_SOURCE
+#ifndef _GNU_SOURCE
+#   define _GNU_SOURCE
+#endif
 #include <fcntl.h>
 
 #ifdef __cplusplus

@@ -21,5 +21,4 @@ bool cplus_pevent_get_status(cplus_pevent obj);
 #ifdef __cplusplus
 }
 #endif
-
 #endif //__CPLUS_PEVENT_H__

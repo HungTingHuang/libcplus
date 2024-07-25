@@ -1,6 +1,5 @@
 #ifndef __CPLUS_SYS_H__
 #define __CPLUS_SYS_H__
-#include "stddef.h"
 #include "cplus_typedef.h"
 
 #ifdef __cplusplus
@@ -13,5 +12,4 @@ void cplus_sys_print_stack(void);
 #ifdef __cplusplus
 }
 #endif
-
 #endif // __CPLUS_SYS_H__

@@ -83,7 +83,7 @@ typedef struct ipc_conn
     cplus_socket sock;
     cplus_task conn_task;
     cplus_pevent evt_packet_received;
-    IPC_CONN_PACKET_T packet;
+    struct ipc_conn_packet packet;
     int32_t recv_count;
     uint8_t * recv_bufs;
     uint32_t recv_bufs_size;
@@ -120,11 +120,11 @@ typedef struct ipc_client
     bool is_async;
     cplus_socket server_socket;
     uint32_t seqn;
-    IPC_CONN ipc_conn;
+    struct ipc_conn * ipc_conn;
     CPLUS_IPC_CB_ON_CONNECTED on_connected;
 } *IPC_CLIENT, IPC_CLIENT_T;
 
-static int32_t ipc_conn_delete(IPC_CONN ipc_conn)
+static int32_t ipc_conn_delete(struct ipc_conn * ipc_conn)
 {
     if (ipc_conn)
     {
@@ -173,7 +173,7 @@ static int32_t ipc_conn_delete(IPC_CONN ipc_conn)
     return CPLUS_SUCCESS;
 }
 
-static int32_t ipc_client_delete(IPC_CLIENT ipc_clt)
+static int32_t ipc_client_delete(struct ipc_client * ipc_clt)
 {
     if (ipc_clt)
     {
@@ -187,8 +187,10 @@ static int32_t ipc_client_delete(IPC_CLIENT ipc_clt)
     return CPLUS_SUCCESS;
 }
 
-static int32_t ipc_server_delete(IPC_SERVER ipc_serv)
+static int32_t ipc_server_delete(struct ipc_server * ipc_serv)
 {
+    struct ipc_conn * conn = NULL;
+
     if (ipc_serv)
     {
         if (ipc_serv->accept_task)
@@ -198,8 +200,7 @@ static int32_t ipc_server_delete(IPC_SERVER ipc_serv)
 
         if (ipc_serv->ipc_conn_list)
         {
-            IPC_CONN conn = NULL;
-            while (NULL != (conn = cplus_llist_pop_back(ipc_serv->ipc_conn_list)))
+            while ((conn = (struct ipc_conn *)cplus_llist_pop_back(ipc_serv->ipc_conn_list)))
             {
                 ipc_conn_delete(conn);
                 cplus_mempool_free(ipc_serv->ipc_conn_pool, conn);
@@ -231,13 +232,13 @@ static int32_t ipc_server_delete(IPC_SERVER ipc_serv)
 int32_t cplus_ipc_server_delete(cplus_ipc_server obj)
 {
     CHECK_OBJECT_TYPE_EX(obj, OBJ_TYPE_SERVER);
-    return ipc_server_delete(obj);
+    return ipc_server_delete((struct ipc_server *)(obj));
 }
 
 int32_t cplus_ipc_client_delete(cplus_ipc_client obj)
 {
     CHECK_OBJECT_TYPE_EX(obj, OBJ_TYPE_CLIENT);
-    return ipc_client_delete(obj);
+    return ipc_client_delete((struct ipc_client *)(obj));
 }
 
 int32_t ipc_recv_packet(
@@ -292,13 +293,13 @@ int32_t ipc_recv_packet(
         packet->data_len = ntohl(packet->data_len);
 
         curr_tick = cplus_systime_get_tick();
-        if (0 < packet->data_len and NULL != output_bufs and 0 < output_bufs_len)
+        if (0 < packet->data_len AND NULL != output_bufs AND 0 < output_bufs_len)
         {
             recv_data = (void *)cplus_malloc(packet->data_len * sizeof(uint8_t));
             if (recv_data)
             {
                 recv_count = cplus_socket_recv(skt, recv_data, packet->data_len, timeout);
-                if (0 >= recv_count or packet->data_len != ((uint32_t)recv_count))
+                if (0 >= recv_count OR packet->data_len != ((uint32_t)recv_count))
                 {
                     break;
                 }
@@ -369,10 +370,10 @@ int32_t ipc_send_packet(cplus_socket skt, IPC_CONN_PACKET packet)
             break;
         }
 
-        if (0 < packet->data_len and NULL != packet->data)
+        if (0 < packet->data_len AND NULL != packet->data)
         {
             send_count = cplus_socket_send(skt, packet->data, packet->data_len);
-            if (0 > send_count or packet->data_len != ((uint32_t)send_count))
+            if (0 > send_count OR packet->data_len != ((uint32_t)send_count))
             {
                 break;
             }
@@ -389,12 +390,11 @@ int32_t ipc_send_packet(cplus_socket skt, IPC_CONN_PACKET packet)
     return res;
 }
 
-static int32_t packet_analyze_completed(IPC_CONN ipc_conn)
+static int32_t packet_analyze_completed(struct ipc_conn * ipc_conn)
 {
     int32_t res = CPLUS_SUCCESS;
     uint32_t dataout_size = ipc_conn->response_data_size;
-    IPC_CONN_PACKET completed_packet = &(ipc_conn->packet);
-    IPC_CONN_PACKET_T response_packet = {0};
+    struct ipc_conn_packet * completed_packet = &(ipc_conn->packet), response_packet = {0};
 
     switch(completed_packet->cmd)
     {
@@ -402,87 +402,91 @@ static int32_t packet_analyze_completed(IPC_CONN ipc_conn)
     case IPC_CMD_ACK:
         break;
     case IPC_CMD_HEARTBEAT:
-        response_packet.seqn = completed_packet->seqn;
-        response_packet.cmd = IPC_CMD_ACK;
-        response_packet.data_len = 0;
-        response_packet.data = NULL;
-        res = ipc_send_packet(ipc_conn->sock, &response_packet);
+        {
+            response_packet.seqn = completed_packet->seqn;
+            response_packet.cmd = IPC_CMD_ACK;
+            response_packet.data_len = 0;
+            response_packet.data = NULL;
+            res = ipc_send_packet(ipc_conn->sock, &response_packet);
+        }
         break;
     case IPC_CMD_ONEWAY:
     case IPC_CMD_REQUEST:
     case IPC_CMD_RESPONSE:
-        if (ipc_conn->on_received)
         {
-            if (NULL == ipc_conn->response_data)
+            if (ipc_conn->on_received)
             {
-                ipc_conn->response_data = (void *)cplus_malloc(ipc_conn->response_data_size);
                 if (NULL == ipc_conn->response_data)
                 {
-                    return CPLUS_FAIL;
+                    ipc_conn->response_data = (void *)cplus_malloc(ipc_conn->response_data_size);
+                    if (NULL == ipc_conn->response_data)
+                    {
+                        return CPLUS_FAIL;
+                    }
+                    cplus_mem_set(ipc_conn->response_data, 0x00, ipc_conn->response_data_size);
                 }
-                cplus_mem_set(ipc_conn->response_data, 0x00, ipc_conn->response_data_size);
-            }
 
-            res = ipc_conn->on_received(
-                ipc_conn->sock
-                , completed_packet->data_len
-                , completed_packet->data
-                , &dataout_size /* Pass current size of 'response_data'. */
-                , ipc_conn->response_data);
-
-            if (CPLUS_FAIL == res)
-            {
-                return CPLUS_FAIL;
-            }
-
-            /* The needed buffer size is larger than the size of existing buffer. */
-            if (dataout_size > ipc_conn->response_data_size)
-            {
-                /* Re-allocate new buffer size based on needed size. */
-                ipc_conn->response_data = (void *)cplus_realloc(
-                    ipc_conn->response_data
-                    , dataout_size);
-                if (NULL == ipc_conn->response_data)
-                {
-                    return CPLUS_FAIL;
-                }
-                cplus_mem_set(ipc_conn->response_data, 0x00, dataout_size);
-
-                /* Update and store existing size. */
-                ipc_conn->response_data_size = dataout_size;
-
-                /* Invoke on_received() callback function to get compleled data. */
                 res = ipc_conn->on_received(
                     ipc_conn->sock
                     , completed_packet->data_len
                     , completed_packet->data
-                    , &(ipc_conn->response_data_size)
+                    , &dataout_size /* Pass current size of 'response_data'. */
                     , ipc_conn->response_data);
 
                 if (CPLUS_FAIL == res)
                 {
                     return CPLUS_FAIL;
                 }
-            }
 
-            if (IPC_CMD_REQUEST == completed_packet->cmd)
-            {
-                if (0 != ipc_conn->response_data_size)
+                /* The needed buffer size is larger than the size of existing buffer. */
+                if (dataout_size > ipc_conn->response_data_size)
+                {
+                    /* Re-allocate new buffer size based on needed size. */
+                    ipc_conn->response_data = (void *)cplus_realloc(
+                        ipc_conn->response_data
+                        , dataout_size);
+                    if (NULL == ipc_conn->response_data)
+                    {
+                        return CPLUS_FAIL;
+                    }
+                    cplus_mem_set(ipc_conn->response_data, 0x00, dataout_size);
+
+                    /* Update and store existing size. */
+                    ipc_conn->response_data_size = dataout_size;
+
+                    /* Invoke on_received() callback function to get compleled data. */
+                    res = ipc_conn->on_received(
+                        ipc_conn->sock
+                        , completed_packet->data_len
+                        , completed_packet->data
+                        , &(ipc_conn->response_data_size)
+                        , ipc_conn->response_data);
+
+                    if (CPLUS_FAIL == res)
+                    {
+                        return CPLUS_FAIL;
+                    }
+                }
+
+                if (IPC_CMD_REQUEST == completed_packet->cmd)
+                {
+                    if (0 != ipc_conn->response_data_size)
+                    {
+                        response_packet.seqn = completed_packet->seqn;
+                        response_packet.cmd = IPC_CMD_RESPONSE;
+                        response_packet.data_len = dataout_size;
+                        response_packet.data = ipc_conn->response_data;
+                        res = ipc_send_packet(ipc_conn->sock, &response_packet);
+                    }
+                }
+                else if (IPC_CMD_RESPONSE == completed_packet->cmd)
                 {
                     response_packet.seqn = completed_packet->seqn;
-                    response_packet.cmd = IPC_CMD_RESPONSE;
-                    response_packet.data_len = dataout_size;
-                    response_packet.data = ipc_conn->response_data;
+                    response_packet.cmd = IPC_CMD_ACK;
+                    response_packet.data_len = 0;
+                    response_packet.data = NULL;
                     res = ipc_send_packet(ipc_conn->sock, &response_packet);
                 }
-            }
-            else if (IPC_CMD_RESPONSE == completed_packet->cmd)
-            {
-                response_packet.seqn = completed_packet->seqn;
-                response_packet.cmd = IPC_CMD_ACK;
-                response_packet.data_len = 0;
-                response_packet.data = NULL;
-                res = ipc_send_packet(ipc_conn->sock, &response_packet);
             }
         }
         break;
@@ -492,11 +496,11 @@ static int32_t packet_analyze_completed(IPC_CONN ipc_conn)
 }
 
 static void ipc_packet_analyze(
-    IPC_CONN ipc_conn
-    , int32_t (* on_completed)(IPC_CONN))
+    struct ipc_conn * ipc_conn
+    , int32_t (* on_completed)(struct ipc_conn *))
 {
     uint32_t diff = 0, walker_count = (((uint32_t)ipc_conn->recv_count) + ipc_conn->recv_bufs_offset);
-    IPC_CONN_PACKET packet = &(ipc_conn->packet);
+    struct ipc_conn_packet * packet = &(ipc_conn->packet);
 
     while (ipc_conn->recv_bufs_offset < walker_count)
     {
@@ -504,165 +508,176 @@ static void ipc_packet_analyze(
         {
         default:
         case IPC_CONN_STAGE_RECV_HEAD:
-            if (IPC_CONN_PACKET_BEGIN_TAG[ipc_conn->sub_offset] == ((uint8_t *)ipc_conn->recv_bufs)[ipc_conn->recv_bufs_offset])
             {
-                ipc_conn->sub_offset += sizeof(uint8_t);
-                if (IPC_CONN_PACKET_TAG_SIZE <= ipc_conn->sub_offset)
+                if (IPC_CONN_PACKET_BEGIN_TAG[ipc_conn->sub_offset] == ((uint8_t *)(ipc_conn->recv_bufs))[ipc_conn->recv_bufs_offset])
                 {
-                    /* Recvice a head tag, hence reset event fo receive a packet. */
-                    if (ipc_conn->evt_packet_received)
+                    ipc_conn->sub_offset += sizeof(uint8_t);
+                    if (IPC_CONN_PACKET_TAG_SIZE <= ipc_conn->sub_offset)
                     {
-                        cplus_pevent_reset(ipc_conn->evt_packet_received);
+                        /* Recvice a head tag, hence reset event fo receive a packet. */
+                        if (ipc_conn->evt_packet_received)
+                        {
+                            cplus_pevent_reset(ipc_conn->evt_packet_received);
+                        }
+
+                        ipc_conn->recv_stage = IPC_CONN_STAGE_RECV_SEQN;
+                        ipc_conn->sub_offset = 0;
                     }
-
-                    ipc_conn->recv_stage = IPC_CONN_STAGE_RECV_SEQN;
-                    ipc_conn->sub_offset = 0;
                 }
-            }
-            else
-            {
-                /* Drop this packet, re-pick a new one. */
-                ipc_conn->recv_stage = IPC_CONN_STAGE_RECV_HEAD;
-                ipc_conn->sub_offset = 0;
-            }
-            ipc_conn->recv_bufs_offset += sizeof(uint8_t);
-            break;
-        case IPC_CONN_STAGE_RECV_SEQN:
-            packet->seqn = ((uint8_t *)ipc_conn->recv_bufs)[ipc_conn->recv_bufs_offset];
-            ipc_conn->recv_stage = IPC_CONN_STAGE_RECV_CMD;
-            ipc_conn->recv_bufs_offset += sizeof(uint8_t);
-            break;
-        case IPC_CONN_STAGE_RECV_CMD:
-            packet->cmd = ((uint8_t *)ipc_conn->recv_bufs)[ipc_conn->recv_bufs_offset];
-            ipc_conn->recv_stage = IPC_CONN_STAGE_RECV_DATA_LEN;
-            ipc_conn->recv_bufs_offset += sizeof(uint8_t);
-            break;
-        case IPC_CONN_STAGE_RECV_DATA_LEN:
-            if (0 == ipc_conn->sub_offset)
-            {
-                packet->data_len = 0;
-            }
-
-            if (sizeof(packet->data_len) > ipc_conn->sub_offset)
-            {
-                packet->data_len <<= (ipc_conn->sub_offset? 8: 0);
-                packet->data_len += ((uint8_t *)ipc_conn->recv_bufs)[ipc_conn->recv_bufs_offset];
-                ipc_conn->sub_offset += sizeof(uint8_t);
-                ipc_conn->recv_bufs_offset += sizeof(uint8_t);
-            }
-            else
-            {
-                ipc_conn->sub_offset = 0;
-
-                if (MAX_PACKET_DATA_SIZE < packet->data_len)
+                else
                 {
                     /* Drop this packet, re-pick a new one. */
                     ipc_conn->recv_stage = IPC_CONN_STAGE_RECV_HEAD;
                     ipc_conn->sub_offset = 0;
                 }
-
-                if (0 < packet->data_len)
+                ipc_conn->recv_bufs_offset += sizeof(uint8_t);
+            }
+            break;
+        case IPC_CONN_STAGE_RECV_SEQN:
+            {
+                packet->seqn = ((uint8_t *)(ipc_conn->recv_bufs))[ipc_conn->recv_bufs_offset];
+                ipc_conn->recv_stage = IPC_CONN_STAGE_RECV_CMD;
+                ipc_conn->recv_bufs_offset += sizeof(uint8_t);
+            }
+            break;
+        case IPC_CONN_STAGE_RECV_CMD:
+            {
+                packet->cmd = ((uint8_t *)(ipc_conn->recv_bufs))[ipc_conn->recv_bufs_offset];
+                ipc_conn->recv_stage = IPC_CONN_STAGE_RECV_DATA_LEN;
+                ipc_conn->recv_bufs_offset += sizeof(uint8_t);
+            }
+            break;
+        case IPC_CONN_STAGE_RECV_DATA_LEN:
+            {
+                if (0 == ipc_conn->sub_offset)
                 {
-                    ipc_conn->recv_stage = IPC_CONN_STAGE_RECV_DATA;
+                    packet->data_len = 0;
+                }
+                if (sizeof(packet->data_len) > ipc_conn->sub_offset)
+                {
+                    packet->data_len <<= (ipc_conn->sub_offset? 8: 0);
+                    packet->data_len += ((uint8_t *)(ipc_conn->recv_bufs))[ipc_conn->recv_bufs_offset];
+                    ipc_conn->sub_offset += sizeof(uint8_t);
+                    ipc_conn->recv_bufs_offset += sizeof(uint8_t);
                 }
                 else
                 {
-                    ipc_conn->recv_stage = IPC_CONN_STAGE_RECV_TAIL;
+                    ipc_conn->sub_offset = 0;
+
+                    if (MAX_PACKET_DATA_SIZE < packet->data_len)
+                    {
+                        /* Drop this packet, re-pick a new one. */
+                        ipc_conn->recv_stage = IPC_CONN_STAGE_RECV_HEAD;
+                        ipc_conn->sub_offset = 0;
+                    }
+
+                    if (0 < packet->data_len)
+                    {
+                        ipc_conn->recv_stage = IPC_CONN_STAGE_RECV_DATA;
+                    }
+                    else
+                    {
+                        ipc_conn->recv_stage = IPC_CONN_STAGE_RECV_TAIL;
+                    }
                 }
             }
             break;
         case IPC_CONN_STAGE_RECV_DATA:
-            if (packet->data_len > ipc_conn->packet_databufs_size)
             {
-                if (NULL == ipc_conn->packet_databufs)
+                if (packet->data_len > ipc_conn->packet_databufs_size)
                 {
-                    ipc_conn->packet_databufs = (void *)cplus_malloc(packet->data_len);
+                    if (NULL == ipc_conn->packet_databufs)
+                    {
+                        ipc_conn->packet_databufs = (void *)cplus_malloc(packet->data_len);
+                    }
+                    else
+                    {
+                        ipc_conn->packet_databufs = (void *)cplus_realloc(
+                            ipc_conn->packet_databufs
+                            , packet->data_len);
+                    }
+
+                    if (ipc_conn->packet_databufs)
+                    {
+                        ipc_conn->packet_databufs_size = packet->data_len;
+                        cplus_mem_set(ipc_conn->packet_databufs, 0x00, ipc_conn->packet_databufs_size);
+                    }
                 }
                 else
                 {
-                    ipc_conn->packet_databufs = (void *)cplus_realloc(
-                        ipc_conn->packet_databufs
-                        , packet->data_len);
+                    if (NULL == ipc_conn->packet_databufs)
+                    {
+                        ipc_conn->packet_databufs = (void *)cplus_malloc(ipc_conn->packet_databufs_size);
+                        cplus_mem_set(ipc_conn->packet_databufs, 0x00, ipc_conn->packet_databufs_size);
+                    }
                 }
 
-                if (ipc_conn->packet_databufs)
-                {
-                    ipc_conn->packet_databufs_size = packet->data_len;
-                    cplus_mem_set(ipc_conn->packet_databufs, 0x00, ipc_conn->packet_databufs_size);
-                }
-            }
-            else
-            {
                 if (NULL == ipc_conn->packet_databufs)
                 {
-                    ipc_conn->packet_databufs = (void *)cplus_malloc(ipc_conn->packet_databufs_size);
-                    cplus_mem_set(ipc_conn->packet_databufs, 0x00, ipc_conn->packet_databufs_size);
+                    /* Cannot allocate memory
+                    Drop this packet, re-pick a new one. */
+                    ipc_conn->recv_stage = IPC_CONN_STAGE_RECV_HEAD;
+                    ipc_conn->sub_offset = 0;
                 }
-            }
-
-            if (NULL == ipc_conn->packet_databufs)
-            {
-                /* Cannot allocate memory
-                Drop this packet, re-pick a new one. */
-                ipc_conn->recv_stage = IPC_CONN_STAGE_RECV_HEAD;
-                ipc_conn->sub_offset = 0;
-            }
-            else
-            {
-                packet->data = ipc_conn->packet_databufs;
-
-                diff = CPLUS_MIN(
-                    (packet->data_len - ipc_conn->packet_databufs_offset)
-                    , (ipc_conn->recv_bufs_size - ipc_conn->recv_bufs_offset));
-
-                cplus_mem_cpy_ex(
-                    &(((uint8_t *)packet->data)[ipc_conn->packet_databufs_offset])
-                    , diff
-                    , &(ipc_conn->recv_bufs[ipc_conn->recv_bufs_offset])
-                    , diff);
-
-                ipc_conn->packet_databufs_offset += diff;
-                ipc_conn->recv_bufs_offset += diff;
-
-                if (0 >= (packet->data_len - ipc_conn->packet_databufs_offset))
+                else
                 {
-                    ipc_conn->recv_stage = IPC_CONN_STAGE_RECV_TAIL;
-                    ipc_conn->packet_databufs_offset = 0;
+                    packet->data = ipc_conn->packet_databufs;
+
+                    diff = CPLUS_MIN(
+                        (packet->data_len - ipc_conn->packet_databufs_offset)
+                        , (ipc_conn->recv_bufs_size - ipc_conn->recv_bufs_offset));
+
+                    cplus_mem_cpy_ex(
+                        &(((uint8_t *)(packet->data))[ipc_conn->packet_databufs_offset])
+                        , diff
+                        , &(ipc_conn->recv_bufs[ipc_conn->recv_bufs_offset])
+                        , diff);
+
+                    ipc_conn->packet_databufs_offset += diff;
+                    ipc_conn->recv_bufs_offset += diff;
+
+                    if (0 >= (packet->data_len - ipc_conn->packet_databufs_offset))
+                    {
+                        ipc_conn->recv_stage = IPC_CONN_STAGE_RECV_TAIL;
+                        ipc_conn->packet_databufs_offset = 0;
+                    }
                 }
             }
             break;
         case IPC_CONN_STAGE_RECV_TAIL:
-            if (IPC_CONN_PACKET_END_TAG[ipc_conn->sub_offset] == ((uint8_t *)ipc_conn->recv_bufs)[ipc_conn->recv_bufs_offset])
             {
-                ipc_conn->sub_offset += sizeof(uint8_t);
-                if (IPC_CONN_PACKET_TAG_SIZE <= ipc_conn->sub_offset)
+                if (IPC_CONN_PACKET_END_TAG[ipc_conn->sub_offset] == ((uint8_t *)(ipc_conn->recv_bufs))[ipc_conn->recv_bufs_offset])
                 {
-                    ipc_conn->recv_stage = IPC_CONN_STAGE_RECV_HEAD;
-                    ipc_conn->sub_offset = 0;
-
-                    if (on_completed)
+                    ipc_conn->sub_offset += sizeof(uint8_t);
+                    if (IPC_CONN_PACKET_TAG_SIZE <= ipc_conn->sub_offset)
                     {
-                        on_completed(ipc_conn);
-                    }
+                        ipc_conn->recv_stage = IPC_CONN_STAGE_RECV_HEAD;
+                        ipc_conn->sub_offset = 0;
 
-                    if (ipc_conn->evt_packet_received)
-                    {
-                        cplus_pevent_set(ipc_conn->evt_packet_received);
-                        if (true == ipc_conn->is_async)
+                        if (on_completed)
                         {
-                            /* Re-pick another new packet. */
-                            break;
+                            on_completed(ipc_conn);
+                        }
+
+                        if (ipc_conn->evt_packet_received)
+                        {
+                            cplus_pevent_set(ipc_conn->evt_packet_received);
+                            if (true == ipc_conn->is_async)
+                            {
+                                /* Re-pick another new packet. */
+                                break;
+                            }
                         }
                     }
                 }
+                else
+                {
+                    /* Drop this packet, re-pick a new one. */
+                    ipc_conn->recv_stage = IPC_CONN_STAGE_RECV_HEAD;
+                    ipc_conn->sub_offset = 0;
+                }
+                ipc_conn->recv_bufs_offset += sizeof(uint8_t);
             }
-            else
-            {
-                /* Drop this packet, re-pick a new one. */
-                ipc_conn->recv_stage = IPC_CONN_STAGE_RECV_HEAD;
-                ipc_conn->sub_offset = 0;
-            }
-            ipc_conn->recv_bufs_offset += sizeof(uint8_t);
             break;
         }
     }
@@ -670,7 +685,7 @@ static void ipc_packet_analyze(
 
 static void ipc_conn_proc(void * param1, void * param2)
 {
-    IPC_CONN ipc_conn = (IPC_CONN)param1;
+    struct ipc_conn * ipc_conn = (struct ipc_conn *)(param1);
     UNUSED_PARAM(param2);
 
     if (IPC_CONN_STATUS_NOT_CONNECTED == ipc_conn->status)
@@ -685,7 +700,7 @@ static void ipc_conn_proc(void * param1, void * param2)
 
     ipc_conn->recv_count = cplus_socket_recv(
         ipc_conn->sock
-        , &(((uint8_t *)ipc_conn->recv_bufs)[ipc_conn->recv_bufs_offset])
+        , &(((uint8_t *)(ipc_conn->recv_bufs))[ipc_conn->recv_bufs_offset])
         , (ipc_conn->recv_bufs_size - ipc_conn->recv_bufs_offset)
         , ipc_conn->recv_timeout);
 
@@ -731,16 +746,22 @@ static void ipc_conn_proc(void * param1, void * param2)
             /* Invalid argument passed. */
         case ENOMEM:
             /* Could not allocate memory for recv(). */
-            ipc_conn->status = IPC_CONN_STATUS_FAULT;
+            {
+                ipc_conn->status = IPC_CONN_STATUS_FAULT;
+            }
             break;
         case ETIMEDOUT:
             /* Timeout */
-            ipc_conn->status = IPC_CONN_STATUS_TIMEOUT;
+            {
+                ipc_conn->status = IPC_CONN_STATUS_TIMEOUT;
+            }
             break;
         case ENOTCONN:
             /* The socket is associated with a connection-oriented
             protocol and has not been connected */
-            ipc_conn->status = IPC_CONN_STATUS_NOT_CONNECTED;
+            {
+                ipc_conn->status = IPC_CONN_STATUS_NOT_CONNECTED;
+            }
             break;
         case EINTR:
             /* The receive was interrupted by delivery of a signal before
@@ -771,21 +792,21 @@ static void ipc_conn_proc(void * param1, void * param2)
     return;
 }
 
-static IPC_CONN ipc_conn_create(
-    IPC_SERVER ipc_serv
-    , cplus_socket * conn_sock
+static struct ipc_conn * ipc_conn_create(
+    struct ipc_server * ipc_serv
+    , cplus_socket conn_sock
     , bool is_async
     , CPLUS_IPC_CB_ON_RECEIVED on_received
     , CPLUS_IPC_CB_ON_DISCONNECTED on_disconnected
     , CPLUS_IPC_CB_ON_ERROR on_error)
 {
-    IPC_CONN conn = NULL;
+    struct ipc_conn * conn = NULL;
 
-    conn = (IPC_CONN)((ipc_serv)? cplus_mempool_alloc(ipc_serv->ipc_conn_pool): cplus_malloc(sizeof(struct ipc_conn)));
-    if (conn)
+    if ((conn = (struct ipc_conn *)((ipc_serv)
+        ? (struct ipc_conn *)cplus_mempool_alloc(ipc_serv->ipc_conn_pool)
+        : (struct ipc_conn *)cplus_malloc(sizeof(struct ipc_conn)))))
     {
         CPLUS_INITIALIZE_STRUCT_POINTER(conn);
-
         conn->ipc_serv = ipc_serv;
         conn->is_async = is_async;
         conn->recv_timeout = CPLUS_INFINITE_TIMEOUT;
@@ -863,19 +884,19 @@ error:
 static inline int32_t find_disconnect_conn(void * data, void * arg)
 {
     UNUSED_PARAM(arg);
-    return !(IPC_CONN_STATUS_NOT_CONNECTED == ((IPC_CONN)data)->status);
+    return !(IPC_CONN_STATUS_NOT_CONNECTED == ((struct ipc_conn *)(data))->status);
 }
 
 void ipc_server_proc(void * param1, void * param2)
 {
-    IPC_SERVER ipc_serv = (IPC_SERVER)param1;
+    struct ipc_server * ipc_serv = (struct ipc_server *)(param1);
     bool can_accept = false;
-    IPC_CONN conn = NULL;
+    struct ipc_conn * conn = NULL;
     cplus_socket sock = NULL;
     UNUSED_PARAM(param2);
 
     cplus_crit_sect_enter(ipc_serv->ipc_conn_sect);
-    while ((conn = (IPC_CONN)cplus_llist_pop_if(
+    while ((conn = (struct ipc_conn *)cplus_llist_pop_if(
         ipc_serv->ipc_conn_list
         , find_disconnect_conn
         , NULL)))
@@ -922,8 +943,8 @@ void ipc_server_proc(void * param1, void * param2)
 int32_t cplus_ipc_client_send_heartbeat(cplus_ipc_client obj, uint32_t timeout)
 {
     int32_t res = CPLUS_FAIL, count = 0;
-    IPC_CLIENT clt = (IPC_CLIENT)obj;
-    IPC_CONN_PACKET_T request_packet = {0}, response_packet = {0};
+    struct ipc_client * clt = (struct ipc_client *)(obj);
+    struct ipc_conn_packet request_packet = {0}, response_packet = {0};
 
     CHECK_OBJECT_TYPE_EX(obj, OBJ_TYPE_CLIENT);
 
@@ -939,7 +960,7 @@ int32_t cplus_ipc_client_send_heartbeat(cplus_ipc_client obj, uint32_t timeout)
         if (0 <= count)
         {
             if (request_packet.seqn == response_packet.seqn
-                and IPC_CMD_ACK == response_packet.cmd)
+                AND IPC_CMD_ACK == response_packet.cmd)
             {
                 res = CPLUS_SUCCESS;
             }
@@ -953,8 +974,8 @@ int32_t cplus_ipc_client_send_oneway(
     , uint32_t input_bufs_len
     , void * input_bufs)
 {
-    IPC_CLIENT clt = (IPC_CLIENT)obj;
-    IPC_CONN_PACKET_T resquest_packet = {0};
+    struct ipc_client * clt = (struct ipc_client *)(obj);
+    struct ipc_conn_packet resquest_packet = {0};
 
     CHECK_OBJECT_TYPE_EX(obj, OBJ_TYPE_CLIENT);
 
@@ -975,8 +996,8 @@ int32_t cplus_ipc_client_send_request(
     , uint32_t timeout)
 {
     int32_t res = CPLUS_SUCCESS, count = 0;
-    IPC_CLIENT clt = (IPC_CLIENT)obj;
-    IPC_CONN_PACKET_T resquest_packet = {0};
+    struct ipc_client * clt = (struct ipc_client *)(obj);
+    struct ipc_conn_packet resquest_packet = {0};
 
     CHECK_OBJECT_TYPE_EX(obj, OBJ_TYPE_CLIENT);
 
@@ -1072,7 +1093,7 @@ int32_t cplus_ipc_client_send_request(
             cplus_pevent_reset((clt->ipc_conn)->evt_packet_received);
 
             if (CPLUS_FAIL == res
-                or 0 != (clt->ipc_conn)->sock_error)
+                OR 0 != (clt->ipc_conn)->sock_error)
             {
                 errno = (0 != (clt->ipc_conn)->sock_error)? (clt->ipc_conn)->sock_error: errno;
                 res = CPLUS_FAIL;
@@ -1100,8 +1121,8 @@ static void * ipc_server_new(
     , uint32_t max_connection
     , CPLUS_IPC_CB_FUNCS cb_funcs)
 {
-    IPC_SERVER ipc_serv = NULL;
-    if ((ipc_serv = (IPC_SERVER)cplus_malloc(sizeof(IPC_SERVER_T))))
+    struct ipc_server * ipc_serv = NULL;
+    if ((ipc_serv = (struct ipc_server *)cplus_malloc(sizeof(struct ipc_server))))
     {
         CPLUS_INITIALIZE_STRUCT_POINTER(ipc_serv);
 
@@ -1187,9 +1208,9 @@ static void * ipc_client_new(
     const char * name
     , CPLUS_IPC_CB_FUNCS cb_funcs)
 {
-    IPC_CLIENT ipc_clt = NULL;
+    struct ipc_client * ipc_clt = NULL;
 
-    if ((ipc_clt = (IPC_CLIENT)cplus_malloc(sizeof(IPC_CLIENT_T))))
+    if ((ipc_clt = (struct ipc_client *)cplus_malloc(sizeof(struct ipc_client))))
     {
         CPLUS_INITIALIZE_STRUCT_POINTER(ipc_clt);
 
@@ -1539,7 +1560,7 @@ int32_t serv_request_on_received(
     , void * output_bufs)
 {
     if (((strlen(test_string0) + 1) == input_bufs_len)
-        and (0 == strcmp(input_bufs, test_string0)))
+        AND (0 == strcmp((const char *)(input_bufs), test_string0)))
     {
         cplus_mem_cpy_ex(
             output_bufs
@@ -1553,7 +1574,7 @@ int32_t serv_request_on_received(
         (*output_bufs_len) = strlen(response_string0) + 1;
     }
     else if (((strlen(test_string1) + 1) == input_bufs_len)
-        and (0 == strcmp(input_bufs, test_string1)))
+        AND (0 == strcmp((const char *)(input_bufs), test_string1)))
     {
         cplus_mem_cpy_ex(
             output_bufs
@@ -1567,7 +1588,7 @@ int32_t serv_request_on_received(
         (*output_bufs_len) = strlen(response_string1) + 1;
     }
     else if (((strlen(test_string2) + 1) == input_bufs_len)
-        and (0 == strcmp(input_bufs, test_string2)))
+        AND (0 == strcmp((const char *)(input_bufs), test_string2)))
     {
         cplus_mem_cpy_ex(
             output_bufs
@@ -1581,7 +1602,7 @@ int32_t serv_request_on_received(
         (*output_bufs_len) = strlen(response_string2) + 1;
     }
     else if (((strlen(test_string3) + 1) == input_bufs_len)
-        and (0 == strcmp(input_bufs, test_string3)))
+        AND (0 == strcmp((const char *)(input_bufs), test_string3)))
     {
         cplus_mem_cpy_ex(
             output_bufs
@@ -1595,7 +1616,7 @@ int32_t serv_request_on_received(
         (*output_bufs_len) = strlen(response_string3) + 1;
     }
     else if (((strlen(test_string4) + 1) == input_bufs_len)
-        and (0 == strcmp(input_bufs, test_string4)))
+        AND (0 == strcmp((const char *)(input_bufs), test_string4)))
     {
         cplus_mem_cpy_ex(
             output_bufs
@@ -1614,7 +1635,7 @@ int32_t serv_request_on_received(
 CPLUS_UNIT_TEST(CPLUS_IPC_CLIENT_SEND_REQUEST, functionity)
 {
     client_count = 0;
-    for (int i = 0; i < sizeof(verification_count)/sizeof(uint32_t); i++)
+    for (uint32_t i = 0; i < sizeof(verification_count)/sizeof(uint32_t); i++)
     {
         verification_count[i] = 0;
     }
@@ -1642,7 +1663,7 @@ CPLUS_UNIT_TEST(CPLUS_IPC_CLIENT_SEND_REQUEST, functionity)
                 , strlen(test_string0) + 1
                 , test_string0
                 , recv_bufs_size
-                , (void *)recv_bufs
+                , (void *)(recv_bufs)
                 , 10000))));
         UNITTEST_EXPECT_EQ(strlen(response_string0) + 1, recv_count);
         UNITTEST_EXPECT_EQ(0, strcmp(recv_bufs, response_string0));
@@ -1653,7 +1674,7 @@ CPLUS_UNIT_TEST(CPLUS_IPC_CLIENT_SEND_REQUEST, functionity)
                 , strlen(test_string1) + 1
                 , test_string1
                 , recv_bufs_size
-                , (void *)recv_bufs
+                , (void *)(recv_bufs)
                 , 10000))));
         UNITTEST_EXPECT_EQ(strlen(response_string1) + 1, recv_count);
         UNITTEST_EXPECT_EQ(0, strcmp(recv_bufs, response_string1));
@@ -1664,7 +1685,7 @@ CPLUS_UNIT_TEST(CPLUS_IPC_CLIENT_SEND_REQUEST, functionity)
                 , strlen(test_string2) + 1
                 , test_string2
                 , recv_bufs_size
-                , (void *)recv_bufs
+                , (void *)(recv_bufs)
                 , 10000))));
         UNITTEST_EXPECT_EQ(strlen(response_string2) + 1, recv_count);
         UNITTEST_EXPECT_EQ(0, strcmp(recv_bufs, response_string2));
@@ -1675,7 +1696,7 @@ CPLUS_UNIT_TEST(CPLUS_IPC_CLIENT_SEND_REQUEST, functionity)
                 , strlen(test_string3) + 1
                 , test_string3
                 , recv_bufs_size
-                , (void *)recv_bufs
+                , (void *)(recv_bufs)
                 , 10000))));
         UNITTEST_EXPECT_EQ(strlen(response_string3) + 1, recv_count);
         UNITTEST_EXPECT_EQ(0, strcmp(recv_bufs, response_string3));
@@ -1686,7 +1707,7 @@ CPLUS_UNIT_TEST(CPLUS_IPC_CLIENT_SEND_REQUEST, functionity)
                 , strlen(test_string4) + 1
                 , test_string4
                 , recv_bufs_size
-                , (void *)recv_bufs
+                , (void *)(recv_bufs)
                 , 10000*60))));
         UNITTEST_EXPECT_EQ(strlen(response_string4) + 1, recv_count);
         UNITTEST_EXPECT_EQ(0, strcmp(recv_bufs, response_string4));
@@ -1715,27 +1736,27 @@ int32_t serv_oneway_on_received(
     , void * output_bufs)
 {
     if (((strlen(test_string0) + 1) == input_bufs_len)
-        and (0 == strcmp(input_bufs, test_string0)))
+        AND (0 == strcmp((const char *)(input_bufs), test_string0)))
     {
         verification_count[0] += 1;
     }
     else if (((strlen(test_string1) + 1) == input_bufs_len)
-        and (0 == strcmp(input_bufs, test_string1)))
+        AND (0 == strcmp((const char *)(input_bufs), test_string1)))
     {
         verification_count[1] += 1;
     }
     else if (((strlen(test_string2) + 1) == input_bufs_len)
-        and (0 == strcmp(input_bufs, test_string2)))
+        AND (0 == strcmp((const char *)(input_bufs), test_string2)))
     {
         verification_count[2] += 1;
     }
     else if (((strlen(test_string3) + 1) == input_bufs_len)
-        and (0 == strcmp(input_bufs, test_string3)))
+        AND (0 == strcmp((const char *)(input_bufs), test_string3)))
     {
         verification_count[3] += 1;
     }
     else if (((strlen(test_string4) + 1) == input_bufs_len)
-        and (0 == strcmp(input_bufs, test_string4)))
+        AND (0 == strcmp((const char *)(input_bufs), test_string4)))
     {
         verification_count[4] += 1;
     }
@@ -1745,7 +1766,7 @@ int32_t serv_oneway_on_received(
 CPLUS_UNIT_TEST(CPLUS_IPC_CLIENT_SEND_ONEWAY, functionity)
 {
     client_count = 0;
-    for (int i = 0; i < sizeof(verification_count)/sizeof(uint32_t); i++)
+    for (uint32_t i = 0; i < sizeof(verification_count)/sizeof(uint32_t); i++)
     {
         verification_count[i] = 0;
     }
@@ -1839,7 +1860,7 @@ CPLUS_UNIT_TEST(CPLUS_IPC_CLIENT_SEND_REQUEST, bad_case_timeout)
                 , strlen(test_string0) + 1
                 , test_string0
                 , recv_bufs_size
-                , (void *)recv_bufs
+                , (void *)(recv_bufs)
                 , 1000))));
     UNITTEST_EXPECT_EQ(strlen(response_string0) + 1, recv_count);
     UNITTEST_EXPECT_EQ(0, strcmp(recv_bufs, response_string0));
@@ -1850,7 +1871,7 @@ CPLUS_UNIT_TEST(CPLUS_IPC_CLIENT_SEND_REQUEST, bad_case_timeout)
                 , strlen(test_string1) + 1
                 , test_string1
                 , recv_bufs_size
-                , (void *)recv_bufs
+                , (void *)(recv_bufs)
                 , 1))));
     UNITTEST_EXPECT_EQ(ETIMEDOUT, errno);
     UNITTEST_EXPECT_EQ(
@@ -1860,7 +1881,7 @@ CPLUS_UNIT_TEST(CPLUS_IPC_CLIENT_SEND_REQUEST, bad_case_timeout)
                 , strlen(test_string2) + 1
                 , test_string2
                 , recv_bufs_size
-                , (void *)recv_bufs
+                , (void *)(recv_bufs)
                 , 1000))));
     UNITTEST_EXPECT_EQ(strlen(response_string2) + 1, recv_count);
     UNITTEST_EXPECT_EQ(0, strcmp(recv_bufs, response_string2));

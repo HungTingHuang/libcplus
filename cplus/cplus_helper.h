@@ -13,7 +13,7 @@ extern "C" {
 #define CPLUS_CONTAINER_OF(PTR, TYPE, MEMBER) \
     ({ \
         void * memptr = (void *)PTR; \
-        (TYPE *)(memptr - CPLUS_OFFSETOF(TYPE, MEMBER)); \
+        (TYPE *)((char *)(memptr) - (char *)(CPLUS_OFFSETOF(TYPE, MEMBER))); \
     })
 
 #define CPLUS_INITIALIZE_STRUCT_POINTER(PTR) \
@@ -55,6 +55,5 @@ extern "C" {
 #ifdef __cplusplus
 }
 #endif
-
 #endif //__CPLUS_HELPER_H__
 

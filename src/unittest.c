@@ -55,8 +55,7 @@ void * unittest_add_test_case(
     struct test_case * cs = NULL;
     struct test_case * last_case = NULL;
 
-    cs = (struct test_case *)malloc(sizeof(struct test_case));
-    if (cs)
+    if ((cs = (struct test_case *)malloc(sizeof(struct test_case))))
     {
         cplus_str_printf(cs->test_case_name, UNITTEST_NAME_MAX_SIZE, "%s", test_case_name);
         cplus_str_printf(cs->test_name, UNITTEST_NAME_MAX_SIZE, "%s", test_name);
@@ -70,7 +69,7 @@ void * unittest_add_test_case(
         else
         {
             for (last_case = test_cases
-                ; (NULL != last_case) and (NULL != last_case->next)
+                ; (NULL != last_case) AND (NULL != last_case->next)
                 ; last_case = last_case->next) { }
 
             last_case->next = cs;
@@ -162,9 +161,24 @@ extern void unittest_event_server(void);
 extern void unittest_socket_server(void);
 extern void unittest_socket_client(void);
 
+void prinrf_compiler_info(void)
+{
+    printf("%s\n", YELLOW("COMPILER INFO"));
+    printf("%s\t\t%d\n", GREEN("GCC_VERSION"), GCC_VERSION);
+    printf("%s\t\t%d\n", GREEN("__STDC__"), __STDC__);
+#ifndef __cplusplus
+    printf("%s\t%ld\n", GREEN("__STDC_VERSION__"), __STDC_VERSION__);
+#else
+    printf("%s\t%d\n", GREEN("__STDC_VERSION__"), __STDC_VERSION__);
+    printf("%s\t\t%ld\n", GREEN("__cplusplus"), __cplusplus);
+#endif
+    printf("\n");
+}
+
 int32_t main(void)
 {
     parents_id = getpid();
+    prinrf_compiler_info();
 
     unittest_atomic();
     unittest_memmgr();
@@ -187,11 +201,11 @@ int32_t main(void)
     unittest_event_server();
 
 #if 0
-    #if 0
-    unittest_socket_server();
-    #else
-    unittest_socket_client();
-    #endif
+#   if 0
+        unittest_socket_server();
+#   else
+        unittest_socket_client();
+#   endif
 #endif
     unittest_run();
     return 0;

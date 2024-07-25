@@ -36,5 +36,4 @@ int32_t cplus_systime_get_local_time(cplus_systime * stime);
 #ifdef __cplusplus
 }
 #endif
-
 #endif //__CPLUS_SYSTIME_H__

@@ -46,5 +46,4 @@ int32_t cplus_rwlock_unlock(cplus_rwlock obj);
 #ifdef __cplusplus
 }
 #endif
-
 #endif //__CPLUS_RWLOCK_H__

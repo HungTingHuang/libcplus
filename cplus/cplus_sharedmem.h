@@ -20,5 +20,4 @@ bool cplus_sharedmem_is_owner(cplus_sharedmem obj);
 #ifdef __cplusplus
 }
 #endif
-
 #endif //__CPLUS_SHAREDMEM_H__

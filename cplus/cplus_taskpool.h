@@ -50,5 +50,4 @@ int32_t cplus_taskpool_clear_task(cplus_taskpool obj);
 #ifdef __cplusplus
 }
 #endif
-
 #endif // __CPLUS_TASKPOOL_H__

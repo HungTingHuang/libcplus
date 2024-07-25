@@ -47,14 +47,15 @@ struct task_worker
 
 int32_t cplus_taskpool_delete_ex(cplus_taskpool obj, uint32_t timeout)
 {
-    struct taskpool * tp = (struct taskpool *)obj;
-
+    struct taskpool * tp = (struct taskpool *)(obj);
+    struct task_worker * worker = NULL;
+    struct cplus_taskpool_task * task = NULL;
     CHECK_OBJECT_TYPE(obj);
+
     if (tp->worker_list)
     {
-        struct task_worker * worker = NULL;
         cplus_crit_sect_enter(tp->worker_access_sect);
-        while (NULL != (worker = cplus_llist_pop_back(tp->worker_list)))
+        while ((worker = (struct task_worker *)cplus_llist_pop_back(tp->worker_list)))
         {
             cplus_task_stop(worker->executor, timeout);
             cplus_mempool_free(tp->worker_pool, worker);
@@ -75,9 +76,8 @@ int32_t cplus_taskpool_delete_ex(cplus_taskpool obj, uint32_t timeout)
 
     if (tp->task_list)
     {
-        CPLUS_TASKPOOL_TASK * task = NULL;
         cplus_crit_sect_enter(tp->task_access_sect);
-        while (NULL != (task = cplus_llist_pop_back(tp->task_list)))
+        while ((task = (struct cplus_taskpool_task *)cplus_llist_pop_back(tp->task_list)))
         {
             cplus_mempool_free(tp->task_pool, task);
         }
@@ -125,7 +125,7 @@ void task_worker(void * param1, void * param2)
         cplus_crit_sect_enter(tp->task_access_sect);
         if (0 < (task_count = cplus_llist_get_size(tp->task_list)))
         {
-            if (!(task = fetch_task(tp->task_list)))
+            if (!(task = (struct cplus_taskpool_task *)fetch_task(tp->task_list)))
             {
                 cplus_systime_sleep_msec(1);
                 cplus_crit_sect_exit(tp->task_access_sect);
@@ -133,7 +133,7 @@ void task_worker(void * param1, void * param2)
             }
             else
             {
-                cplus_mem_cpy(&task_t, task, sizeof(CPLUS_TASKPOOL_TASK_T));
+                cplus_mem_cpy(&task_t, task, sizeof(struct cplus_taskpool_task));
                 if (!(tp->get_task_cycling))
                 {
                     cplus_mempool_free(tp->task_pool, task);
@@ -156,15 +156,14 @@ void task_worker(void * param1, void * param2)
 }
 
 static void * taskpool_initialize_object(
-    CPLUS_TASKPOOL_CONFIG config)
+    struct cplus_taskpool_config * config)
 {
     struct taskpool * tp = NULL;
-    CPLUS_TASK_CONFIG_T task_config = {0};
+    struct cplus_task_config task_config = {0};
 
     if ((tp = (struct taskpool *)cplus_malloc(sizeof(struct taskpool))))
     {
         CPLUS_INITIALIZE_STRUCT_POINTER(tp);
-
         tp->type = OBJ_TYPE;
         tp->stack_size = config->stack_size;
         tp->get_task_cycling = config->get_task_cycling;
@@ -177,7 +176,7 @@ static void * taskpool_initialize_object(
 
         tp->task_pool = cplus_mempool_new(
             config->max_task_count
-            , sizeof(CPLUS_TASKPOOL_TASK_T));
+            , sizeof(struct cplus_taskpool_task));
         if (NULL == tp->task_pool)
         {
             goto exit;
@@ -248,7 +247,7 @@ exit:
 
 cplus_taskpool cplus_taskpool_new(uint32_t worker_count)
 {
-    CPLUS_TASKPOOL_CONFIG_T config = {0};
+    struct cplus_taskpool_config config = {0};
     CHECK_IF(worker_count > MAX_WORKER_COUNT, NULL);
 
     config.worker_count = worker_count;
@@ -256,7 +255,7 @@ cplus_taskpool cplus_taskpool_new(uint32_t worker_count)
     return taskpool_initialize_object(&config);
 }
 
-cplus_taskpool cplus_taskpool_new_ex(CPLUS_TASKPOOL_CONFIG config)
+cplus_taskpool cplus_taskpool_new_ex(struct cplus_taskpool_config * config)
 {
     CHECK_NOT_NULL(config, NULL);
     CHECK_IN_INTERVAL(config->max_task_count, 1, MAX_TASK_COUNT, NULL);
@@ -271,11 +270,11 @@ bool cplus_taskpool_check(cplus_object obj)
     return (obj && (GET_OBJECT_TYPE(obj) == OBJ_TYPE));
 }
 
-int32_t cplus_taskpool_add_task_ex(cplus_taskpool obj, CPLUS_TASKPOOL_TASK task)
+int32_t cplus_taskpool_add_task_ex(cplus_taskpool obj, struct cplus_taskpool_task * task)
 {
     int32_t res = CPLUS_FAIL;
-    struct taskpool * tp = (struct taskpool *)obj;
-    CPLUS_TASKPOOL_TASK t = NULL;
+    struct taskpool * tp = (struct taskpool *)(obj);
+    struct cplus_taskpool_task * t = NULL;
 
     CHECK_OBJECT_TYPE(obj);
     CHECK_NOT_NULL(task, CPLUS_FAIL);
@@ -284,7 +283,7 @@ int32_t cplus_taskpool_add_task_ex(cplus_taskpool obj, CPLUS_TASKPOOL_TASK task)
     uint32_t task_count = cplus_llist_get_size(tp->task_list);
     if (MAX_TASK_COUNT > task_count)
     {
-        if ((t = (CPLUS_TASKPOOL_TASK)cplus_mempool_alloc(tp->task_pool)))
+        if ((t = (struct cplus_taskpool_task *)cplus_mempool_alloc(tp->task_pool)))
         {
             t->proc = task->proc;
             t->param1 = task->param1;
@@ -313,7 +312,7 @@ int32_t cplus_taskpool_add_task(
     CPLUS_TASK_PROC proc,
     void * param1)
 {
-    CPLUS_TASKPOOL_TASK_T task = {0};
+    struct cplus_taskpool_task task = {0};
     task.proc = proc;
     task.param1 = param1;
     task.param2 = NULL;
@@ -328,9 +327,9 @@ int32_t cplus_taskpool_remove_task(
     , void * arg)
 {
     int32_t res = CPLUS_FAIL;
-    struct taskpool * tp = (struct taskpool *)obj;
+    struct taskpool * tp = (struct taskpool *)(obj);
     uint32_t task_count = 0;
-    CPLUS_TASKPOOL_TASK task = NULL;
+    struct cplus_taskpool_task * task = NULL;
     CHECK_OBJECT_TYPE(obj);
     CHECK_NOT_NULL(comparator, CPLUS_FAIL);
 
@@ -338,7 +337,7 @@ int32_t cplus_taskpool_remove_task(
     {
         cplus_crit_sect_enter(tp->task_access_sect);
         {
-            if ((task = cplus_llist_pop_if(tp->task_list, comparator, arg)))
+            if ((task = (struct cplus_taskpool_task *)cplus_llist_pop_if(tp->task_list, comparator, arg)))
             {
                 cplus_mempool_free(tp->task_pool, task);
             }
@@ -353,7 +352,7 @@ int32_t cplus_taskpool_remove_task(
 uint32_t cplus_taskpool_get_worker_count(cplus_taskpool obj)
 {
     uint32_t worker_count = 0;
-    struct taskpool * tp = (struct taskpool *)obj;
+    struct taskpool * tp = (struct taskpool *)(obj);
     CHECK_OBJECT_TYPE(obj);
 
     cplus_crit_sect_enter(tp->worker_access_sect);
@@ -367,7 +366,7 @@ uint32_t cplus_taskpool_get_worker_count(cplus_taskpool obj)
 
 int32_t cplus_taskpool_reset_worker_count(cplus_taskpool obj, uint32_t worker_count)
 {
-    struct taskpool * tp = (struct taskpool *)obj;
+    struct taskpool * tp = (struct taskpool *)(obj);
     struct task_worker * worker = NULL;
     int32_t count_to_change = 0;
     uint32_t current_worker_count = 0;
@@ -431,7 +430,7 @@ int32_t cplus_taskpool_reset_worker_count(cplus_taskpool obj, uint32_t worker_co
 uint32_t cplus_taskpool_get_task_count(cplus_taskpool obj)
 {
     uint32_t count = 0;
-    struct taskpool * tp = (struct taskpool *)obj;
+    struct taskpool * tp = (struct taskpool *)(obj);
     CHECK_OBJECT_TYPE(obj);
 
     cplus_crit_sect_enter(tp->task_access_sect);
@@ -445,7 +444,7 @@ uint32_t cplus_taskpool_get_task_count(cplus_taskpool obj)
 
 int32_t cplus_taskpool_all_pause(cplus_taskpool obj, bool pause)
 {
-    struct taskpool * tp = (struct taskpool *)obj;
+    struct taskpool * tp = (struct taskpool *)(obj);
     struct task_worker * worker = NULL;
     CHECK_OBJECT_TYPE(obj);
 
@@ -463,14 +462,14 @@ int32_t cplus_taskpool_all_pause(cplus_taskpool obj, bool pause)
 
 int32_t cplus_taskpool_clear_task(cplus_taskpool obj)
 {
-    struct taskpool * tp = (struct taskpool *)obj;
-    CPLUS_TASKPOOL_TASK * task = NULL;
+    struct taskpool * tp = (struct taskpool *)(obj);
+    struct cplus_taskpool_task * task = NULL;
     CHECK_OBJECT_TYPE(obj);
     CHECK_NOT_NULL(tp->task_list, CPLUS_FAIL);
 
     cplus_crit_sect_enter(tp->task_access_sect);
     {
-        while (NULL != (task = cplus_llist_pop_back(tp->task_list)))
+        while (NULL != (task = (struct cplus_taskpool_task *)cplus_llist_pop_back(tp->task_list)))
         {
             cplus_mempool_free(tp->task_pool, task);
         }
@@ -501,8 +500,8 @@ CPLUS_UNIT_TEST(cplus_taskpool_new_ex, functionity)
 {
     cplus_taskpool taskpool = NULL;
     cplus_taskpool evt_start = NULL;
-    CPLUS_TASKPOOL_CONFIG_T config = {0};
-    CPLUS_TASKPOOL_TASK_T task = {0};
+    struct cplus_taskpool_config config = {0};
+    struct cplus_taskpool_task task = {0};
     int32_t result = 0;
 
     config.worker_count = 3;
@@ -549,7 +548,7 @@ CPLUS_UNIT_TEST(cplus_taskpool_add_task_ex, thread_safe)
     int inx = 0;
     cplus_taskpool taskpool = NULL;
     pthread_t tasks[TASK_COUNT];
-    CPLUS_TASKPOOL_CONFIG_T config = {0};
+    struct cplus_taskpool_config config = {0};
 
     config.worker_count = 10;
     config.max_task_count = 255;
@@ -622,7 +621,7 @@ void acc_proc(void * param1, void * param2)
 CPLUS_UNIT_TEST(cplus_taskpool_all_pause, functionity)
 {
     cplus_taskpool taskpool = NULL;
-    CPLUS_TASKPOOL_CONFIG_T config = {0};
+    struct cplus_taskpool_config config = {0};
     int32_t count = 0;
 
     config.worker_count = 5;

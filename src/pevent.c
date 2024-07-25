@@ -74,9 +74,9 @@ static int32_t unlock_and_wait_cond(struct pevent * evt, uint32_t timeout)
                 }
             }
         }
-        while (0 == res and false == (* (evt->ptr_setted)));
+        while (0 == res AND false == (* (evt->ptr_setted)));
 
-        if (0 == res and false == (* (evt->ptr_broadcast)))
+        if (0 == res AND false == (* (evt->ptr_broadcast)))
         {
             (* (evt->ptr_setted)) = false;
         }
@@ -94,7 +94,7 @@ static int32_t unlock_and_wait_cond(struct pevent * evt, uint32_t timeout)
 
 int32_t cplus_pevent_wait(cplus_pevent obj, uint32_t timeout)
 {
-    struct pevent * evt = (struct pevent *)obj;
+    struct pevent * evt = (struct pevent *)(obj);
     CHECK_OBJECT_TYPE(obj);
 
     if (0 == timeout)
@@ -129,7 +129,7 @@ int32_t cplus_pevent_wait(cplus_pevent obj, uint32_t timeout)
 int32_t cplus_pevent_reset(cplus_pevent obj)
 {
     int32_t res = CPLUS_SUCCESS;
-    struct pevent * evt = (struct pevent *)obj;
+    struct pevent * evt = (struct pevent *)(obj);
 
     CHECK_OBJECT_TYPE(obj);
 
@@ -151,7 +151,7 @@ int32_t cplus_pevent_reset(cplus_pevent obj)
 int32_t cplus_pevent_set(cplus_pevent obj)
 {
     int32_t res = CPLUS_SUCCESS;
-    struct pevent * evt = (struct pevent *)obj;
+    struct pevent * evt = (struct pevent *)(obj);
 
     CHECK_OBJECT_TYPE(obj);
 
@@ -183,7 +183,7 @@ int32_t cplus_pevent_set(cplus_pevent obj)
 bool cplus_pevent_get_status(cplus_pevent obj)
 {
     bool setted = false;
-    struct pevent * evt = (struct pevent *)obj;
+    struct pevent * evt = (struct pevent *)(obj);
 
     CHECK_OBJECT_TYPE(obj);
 
@@ -198,7 +198,7 @@ bool cplus_pevent_get_status(cplus_pevent obj)
 
 int32_t cplus_pevent_delete(cplus_pevent obj)
 {
-    struct pevent * evt = (struct pevent *)obj;
+    struct pevent * evt = (struct pevent *)(obj);
     CHECK_OBJECT_TYPE(obj);
 
     if (evt->shared_mem)
@@ -245,7 +245,6 @@ static void * pevent_initialize_object(
     if ((evt = (struct pevent * )cplus_malloc(sizeof(struct pevent))))
     {
         CPLUS_INITIALIZE_STRUCT_POINTER(evt);
-
         evt->type = OBJ_TYPE;
         evt->ptr_setted = NULL;
         evt->ptr_broadcast = NULL;
@@ -261,18 +260,18 @@ static void * pevent_initialize_object(
                 goto exit;
             }
 
-            if (0 != pthread_condattr_init(&cond_attr))
+            if (0 != pthread_condattr_init(&(cond_attr)))
             {
                 goto exit;
             }
 
-            if (0 != pthread_condattr_setclock(&cond_attr, CLOCK_MONOTONIC)
-                or 0 != pthread_cond_init(&(evt->cond), &cond_attr))
+            if (0 != pthread_condattr_setclock(&(cond_attr), CLOCK_MONOTONIC)
+                OR 0 != pthread_cond_init(&(evt->cond), &(cond_attr)))
             {
-                pthread_condattr_destroy(&cond_attr);
+                pthread_condattr_destroy(&(cond_attr));
                 goto exit;
             }
-            pthread_condattr_destroy(&cond_attr);
+            pthread_condattr_destroy(&(cond_attr));
 
             evt->setted = false;
             evt->broadcast = broadcast;
@@ -300,17 +299,21 @@ static void * pevent_initialize_object(
             switch(mode)
             {
             case INIT_CREATE:
-                evt->shared_mem = cplus_sharedmem_create(
-                    pevent_name
-                    , sizeof(struct named_pevent));
+                {
+                    evt->shared_mem = cplus_sharedmem_create(pevent_name
+                        , sizeof(struct named_pevent));
+                }
                 break;
             case INIT_OPEN:
-                evt->shared_mem = cplus_sharedmem_open(pevent_name);
+                {
+                    evt->shared_mem = cplus_sharedmem_open(pevent_name);
+                }
                 break;
             case INIT_HYBRID:
-                evt->shared_mem = cplus_sharedmem_new(
-                    pevent_name
-                    , sizeof(struct named_pevent));
+                {
+                    evt->shared_mem = cplus_sharedmem_new(pevent_name
+                        , sizeof(struct named_pevent));
+                }
                 break;
             case INIT_NONE:
             default:
@@ -328,32 +331,32 @@ static void * pevent_initialize_object(
 
                 if (true == cplus_sharedmem_is_owner(evt->shared_mem))
                 {
-                    if (0 != pthread_mutexattr_init(&mutex_attr))
+                    if (0 != pthread_mutexattr_init(&(mutex_attr)))
                     {
                         goto exit;
                     }
 
-                    if (0 != pthread_mutexattr_setpshared(&mutex_attr, PTHREAD_PROCESS_SHARED)
-                        or 0 != pthread_mutex_init(&(shared_pevent->mutex), &mutex_attr))
+                    if (0 != pthread_mutexattr_setpshared(&(mutex_attr), PTHREAD_PROCESS_SHARED)
+                        OR 0 != pthread_mutex_init(&(shared_pevent->mutex), &(mutex_attr)))
                     {
-                        pthread_mutexattr_destroy(&mutex_attr);
+                        pthread_mutexattr_destroy(&(mutex_attr));
                         goto exit;
                     }
-                    pthread_mutexattr_destroy(&mutex_attr);
+                    pthread_mutexattr_destroy(&(mutex_attr));
 
-                    if (0 != pthread_condattr_init(&cond_attr))
+                    if (0 != pthread_condattr_init(&(cond_attr)))
                     {
                         goto exit;
                     }
 
-                    if (0 != pthread_condattr_setclock(&cond_attr, CLOCK_MONOTONIC)
-                        or 0 != pthread_condattr_setpshared(&cond_attr, PTHREAD_PROCESS_SHARED)
-                        or 0 != pthread_cond_init(&(shared_pevent->cond), &cond_attr))
+                    if (0 != pthread_condattr_setclock(&(cond_attr), CLOCK_MONOTONIC)
+                        OR 0 != pthread_condattr_setpshared(&(cond_attr), PTHREAD_PROCESS_SHARED)
+                        OR 0 != pthread_cond_init(&(shared_pevent->cond), &(cond_attr)))
                     {
-                        pthread_condattr_destroy(&cond_attr);
+                        pthread_condattr_destroy(&(cond_attr));
                         goto exit;
                     }
-                    pthread_condattr_destroy(&cond_attr);
+                    pthread_condattr_destroy(&(cond_attr));
 
                     shared_pevent->setted = false;
                     shared_pevent->broadcast = broadcast;
@@ -459,7 +462,7 @@ CPLUS_UNIT_TEST(cplus_pevent_wait, functionity)
     UNITTEST_EXPECT_EQ(CPLUS_FAIL, cplus_pevent_wait(event_sv, 1500));
     UNITTEST_EXPECT_EQ(ETIMEDOUT, errno);
     time = cplus_systime_elapsed_tick(time);
-    UNITTEST_EXPECT_EQ(true, time >= 1500 and time < 1550);
+    UNITTEST_EXPECT_EQ(true, time >= 1500 AND time < 1550);
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_pevent_delete(event_sv));
 
     UNITTEST_EXPECT_EQ(true, (NULL != (event_sv = cplus_pevent_new(false, true))));
@@ -474,12 +477,12 @@ CPLUS_UNIT_TEST(cplus_pevent_wait, functionity)
     UNITTEST_EXPECT_EQ(CPLUS_FAIL, cplus_pevent_wait(event_sv, 1500));
     UNITTEST_EXPECT_EQ(ETIMEDOUT, errno);
     time = cplus_systime_elapsed_tick(time);
-    UNITTEST_EXPECT_EQ(true, time >= 1500 and time < 1550);
+    UNITTEST_EXPECT_EQ(true, time >= 1500 AND time < 1550);
     time = cplus_systime_get_tick();
     UNITTEST_EXPECT_EQ(CPLUS_FAIL, cplus_pevent_wait(event_sv, 1500));
     UNITTEST_EXPECT_EQ(ETIMEDOUT, errno);
     time = cplus_systime_elapsed_tick(time);
-    UNITTEST_EXPECT_EQ(true, time >= 1500 and time < 1550);
+    UNITTEST_EXPECT_EQ(true, time >= 1500 AND time < 1550);
 
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_pevent_set(event_sv));
 
@@ -639,7 +642,7 @@ CPLUS_UNIT_TEST(cplus_pevent_wait, cross_process_test)
         UNITTEST_EXPECT_EQ(CPLUS_FAIL, cplus_pevent_wait(event_ch, 1500));
         UNITTEST_EXPECT_EQ(ETIMEDOUT, errno);
         time = cplus_systime_elapsed_tick(time);
-        UNITTEST_EXPECT_EQ(true, time >= 1500 and time < 1550);
+        UNITTEST_EXPECT_EQ(true, time >= 1500 AND time < 1550);
         UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_pevent_delete(event_ch));
         UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_pevent_delete(event_sv));
         UNITTEST_EXPECT_EQ(0, cplus_mgr_report());
@@ -687,12 +690,12 @@ CPLUS_UNIT_TEST(cplus_pevent_wait, cross_process_test)
         UNITTEST_EXPECT_EQ(CPLUS_FAIL, cplus_pevent_wait(event_ch, 1500));
         UNITTEST_EXPECT_EQ(ETIMEDOUT, errno);
         time = cplus_systime_elapsed_tick(time);
-        UNITTEST_EXPECT_EQ(true, time >= 1500 and time < 1550);
+        UNITTEST_EXPECT_EQ(true, time >= 1500 AND time < 1550);
         time = cplus_systime_get_tick();
         UNITTEST_EXPECT_EQ(CPLUS_FAIL, cplus_pevent_wait(event_ch, 1500));
         UNITTEST_EXPECT_EQ(ETIMEDOUT, errno);
         time = cplus_systime_elapsed_tick(time);
-        UNITTEST_EXPECT_EQ(true, time >= 1500 and time < 1550);
+        UNITTEST_EXPECT_EQ(true, time >= 1500 AND time < 1550);
         UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_pevent_delete(event_ch));
         UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_pevent_delete(event_sv));
         UNITTEST_EXPECT_EQ(0, cplus_mgr_report());

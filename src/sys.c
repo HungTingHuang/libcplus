@@ -11,15 +11,14 @@
 
 const char * cplus_sys_skip_file_path(const char * filepath)
 {
-    const char * target = strrchr(filepath, '\\');
-    if (target)
+    const char * target = NULL;
+    if ((target = strrchr(filepath, '\\')))
     {
         return target + 1;
     }
     else
     {
-        target = strrchr(filepath, '/');
-        if (target)
+        if ((target = strrchr(filepath, '/')))
         {
             return target + 1;
         }

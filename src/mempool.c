@@ -12,11 +12,17 @@
 
 #define OBJ_TYPE (OBJ_NONE + CORE + 1)
 
+static uint8_t spin_up = 1;
+static uint8_t spin_down = 0;
+
 #define MEMPOOL_SPIN_LOCK() \
-    do { if (mp->thread_safe) { SPIN_LOCK(&(mp->spin)); }} while (0)
+    do { while ((spin_up == cplus_atomic_read(&(mp->spinlock))) \
+        || !cplus_atomic_compare_exchange(&(mp->spinlock), \
+                &(spin_down), &(spin_up))) { } \
+    } while (0)
 
 #define MEMPOOL_SPIN_UNLOCK() \
-    do { if (mp->thread_safe) { SPIN_UNLOCK(&(mp->spin)); }} while (0)
+    do { cplus_atomic_write(&(mp->spinlock), spin_down); } while(0)
 
 struct mempool
 {
@@ -28,22 +34,22 @@ struct mempool
     void * mem_start;
     void * next_block; // next available memory block
     bool thread_safe;
-    uint8_t spin;
+    uint8_t spinlock;
 };
 
 static void * index_to_addr(struct mempool * mp, uint32_t index)
 {
-    return (mp->mem_start + (mp->block_size * index));
+    return (void *)((uint8_t *)(mp->mem_start) + (mp->block_size * index));
 }
 
 static uint32_t addr_to_index(struct mempool * mp, void * addr)
 {
-    return ((uint32_t)(addr - mp->mem_start)) / mp->block_size;
+    return ((uint32_t)((uint8_t *)(addr) - (uint8_t *)(mp->mem_start))) / mp->block_size;
 }
 
 uint32_t cplus_mempool_get_free_blocks_count(cplus_mempool obj)
 {
-    struct mempool * mp = (struct mempool *)obj;
+    struct mempool * mp = (struct mempool *)(obj);
     uint32_t free_blocks_count = 0;
     CHECK_OBJECT_TYPE(obj);
 
@@ -56,22 +62,19 @@ uint32_t cplus_mempool_get_free_blocks_count(cplus_mempool obj)
 
 int32_t cplus_mempool_free(cplus_mempool obj, void * addr)
 {
-    struct mempool * mp = (struct mempool *)obj;
+    struct mempool * mp = (struct mempool *)(obj);
     CHECK_OBJECT_TYPE(obj);
     CHECK_NOT_NULL(addr, CPLUS_FAIL);
 
     MEMPOOL_SPIN_LOCK();
-    if (mp->next_block)
-    {
-        *((uint32_t *)addr) = addr_to_index(mp, mp->next_block);
-    }
-    else
-    {
-        *((uint32_t *)addr) = mp->block_count;
-    }
+
+    *((uint32_t *)(addr)) = (mp->next_block)
+        ? addr_to_index(mp, mp->next_block)
+        : mp->block_count;
 
     mp->next_block = addr;
     mp->free_blocks_count ++;
+
     MEMPOOL_SPIN_UNLOCK();
 
     return CPLUS_SUCCESS;
@@ -79,18 +82,16 @@ int32_t cplus_mempool_free(cplus_mempool obj, void * addr)
 
 void * cplus_mempool_alloc(cplus_mempool obj)
 {
-    struct mempool * mp = (struct mempool *)obj;
+    struct mempool * mp = (struct mempool *)(obj);
     void * addr = NULL;
+    uint32_t * p = NULL;
     CHECK_OBJECT_TYPE(obj);
 
     // initialize
     MEMPOOL_SPIN_LOCK();
     if (mp->initialized_blocks_count < mp->block_count)
     {
-        uint32_t * p = (uint32_t *)index_to_addr(
-            mp
-            , mp->initialized_blocks_count);
-
+        p = (uint32_t *)index_to_addr(mp, mp->initialized_blocks_count);
         *p = mp->initialized_blocks_count + 1;
         mp->initialized_blocks_count ++;
     }
@@ -98,19 +99,11 @@ void * cplus_mempool_alloc(cplus_mempool obj)
     if (0 < mp->free_blocks_count)
     {
         addr = mp->next_block;
-
         mp->free_blocks_count --;
 
-        if (0 < mp->free_blocks_count)
-        {
-            mp->next_block = (void *)index_to_addr(
-                mp
-                , *((uint32_t *)mp->next_block));
-        }
-        else
-        {
-            mp->next_block = NULL;
-        }
+        mp->next_block = (0 < mp->free_blocks_count)
+            ? (void *)index_to_addr(mp, *((uint32_t *)mp->next_block))
+            : NULL;
     }
     else
     {
@@ -124,7 +117,7 @@ void * cplus_mempool_alloc(cplus_mempool obj)
 uint32_t cplus_mempool_get_index(cplus_mempool obj, void * addr)
 {
     uint32_t index = 0;
-    struct mempool * mp = (struct mempool *)obj;
+    struct mempool * mp = (struct mempool *)(obj);
     CHECK_OBJECT_TYPE(obj);
     CHECK_NOT_NULL(addr, CPLUS_FAIL);
 
@@ -138,7 +131,7 @@ uint32_t cplus_mempool_get_index(cplus_mempool obj, void * addr)
 void * cplus_mempool_get_addr_by_index(cplus_mempool obj, uint32_t index)
 {
     void * addr = NULL;
-    struct mempool * mp = (struct mempool *)obj;
+    struct mempool * mp = (struct mempool *)(obj);
     CHECK_OBJECT_TYPE(obj);
 
     MEMPOOL_SPIN_LOCK();
@@ -151,12 +144,11 @@ void * cplus_mempool_get_addr_by_index(cplus_mempool obj, uint32_t index)
 uint32_t cplus_mempool_alloc_as_index(cplus_mempool obj)
 {
     uint32_t index = 0;
-    struct mempool * mp = (struct mempool *)obj;
-
+    void * addr = NULL;
+    struct mempool * mp = (struct mempool *)(obj);
     CHECK_OBJECT_TYPE(obj);
 
-    void * addr = cplus_mempool_alloc(obj);
-    if (addr)
+    if ((addr = (void *)cplus_mempool_alloc(obj)))
     {
         index = cplus_mempool_get_index(mp, addr);
     }
@@ -166,12 +158,11 @@ uint32_t cplus_mempool_alloc_as_index(cplus_mempool obj)
 int32_t cplus_mempool_free_by_index(cplus_mempool obj, uint32_t index)
 {
     int32_t res = CPLUS_FAIL;
-    struct mempool * mp = (struct mempool *)obj;
-
+    struct mempool * mp = (struct mempool *)(obj);
+    void * addr = NULL;
     CHECK_OBJECT_TYPE(obj);
 
-    void * addr = cplus_mempool_get_addr_by_index(obj, index);
-    if (addr)
+    if ((addr = cplus_mempool_get_addr_by_index(obj, index)))
     {
         res = cplus_mempool_free(mp, addr);
     }
@@ -180,7 +171,7 @@ int32_t cplus_mempool_free_by_index(cplus_mempool obj, uint32_t index)
 
 int32_t cplus_mempool_delete(cplus_mempool obj)
 {
-    struct mempool * mp = (struct mempool *)obj;
+    struct mempool * mp = (struct mempool *)(obj);
     CHECK_OBJECT_TYPE(obj);
 
     if (mp->mem_start)
@@ -202,7 +193,6 @@ static void * mempool_initialize_object(
     if ((mp = (struct mempool *)cplus_malloc(sizeof(struct mempool))))
     {
         CPLUS_INITIALIZE_STRUCT_POINTER(mp);
-
         mp->type = OBJ_TYPE;
         mp->block_count = block_count;
         mp->block_size = block_size;
@@ -216,7 +206,7 @@ static void * mempool_initialize_object(
         }
         mp->next_block = mp->mem_start;
         mp->thread_safe = thread_safe;
-        mp->spin = SPINDOWN;
+        mp->spinlock = 0;
     }
     else
     {
@@ -271,27 +261,27 @@ static uint8_t b1f[] = {0xff}, b2f[] = {0xff, 0xff}, b4f[] = {0xff, 0xff, 0xff, 
 CPLUS_UNIT_TEST(cplus_mempool_alloc, functionity)
 {
     cplus_mempool mp = NULL;
-    UNITTEST_EXPECT_EQ(true, (NULL != (mp = cplus_mempool_new(5, sizeof(int)))));
+    UNITTEST_EXPECT_EQ(true, (NULL != (mp = (cplus_mempool)cplus_mempool_new(5, sizeof(int)))));
     UNITTEST_EXPECT_EQ(5, cplus_mempool_get_free_blocks_count(mp));
-    UNITTEST_EXPECT_EQ(true, (NULL != (test0 = cplus_mempool_alloc(mp))));
+    UNITTEST_EXPECT_EQ(true, (NULL != (test0 = (int32_t *)cplus_mempool_alloc(mp))));
     UNITTEST_EXPECT_EQ(4, cplus_mempool_get_free_blocks_count(mp));
-    UNITTEST_EXPECT_EQ(true, (NULL != (test1 = cplus_mempool_alloc(mp))));
+    UNITTEST_EXPECT_EQ(true, (NULL != (test1 = (int32_t *)cplus_mempool_alloc(mp))));
     UNITTEST_EXPECT_EQ(3, cplus_mempool_get_free_blocks_count(mp));
-    UNITTEST_EXPECT_EQ(true, (NULL != (test2 = cplus_mempool_alloc(mp))));
+    UNITTEST_EXPECT_EQ(true, (NULL != (test2 = (int32_t *)cplus_mempool_alloc(mp))));
     UNITTEST_EXPECT_EQ(2, cplus_mempool_get_free_blocks_count(mp));
-    UNITTEST_EXPECT_EQ(true, (NULL != (test3 = cplus_mempool_alloc(mp))));
+    UNITTEST_EXPECT_EQ(true, (NULL != (test3 = (int32_t *)cplus_mempool_alloc(mp))));
     UNITTEST_EXPECT_EQ(1, cplus_mempool_get_free_blocks_count(mp));
-    UNITTEST_EXPECT_EQ(true, (NULL != (test4 = cplus_mempool_alloc(mp))));
+    UNITTEST_EXPECT_EQ(true, (NULL != (test4 = (int32_t *)cplus_mempool_alloc(mp))));
     UNITTEST_EXPECT_EQ(0, cplus_mempool_get_free_blocks_count(mp));
-    UNITTEST_EXPECT_EQ(true, (NULL == (test5 = cplus_mempool_alloc(mp))));
+    UNITTEST_EXPECT_EQ(true, (NULL == (test5 = (int32_t *)cplus_mempool_alloc(mp))));
     UNITTEST_EXPECT_EQ(ENOMEM, errno);
-    UNITTEST_EXPECT_EQ(true, (NULL == (test6 = cplus_mempool_alloc(mp))));
+    UNITTEST_EXPECT_EQ(true, (NULL == (test6 = (int32_t *)cplus_mempool_alloc(mp))));
     UNITTEST_EXPECT_EQ(ENOMEM, errno);
-    UNITTEST_EXPECT_EQ(true, (NULL == (test7 = cplus_mempool_alloc(mp))));
+    UNITTEST_EXPECT_EQ(true, (NULL == (test7 = (int32_t *)cplus_mempool_alloc(mp))));
     UNITTEST_EXPECT_EQ(ENOMEM, errno);
-    UNITTEST_EXPECT_EQ(true, (NULL == (test8 = cplus_mempool_alloc(mp))));
+    UNITTEST_EXPECT_EQ(true, (NULL == (test8 = (int32_t *)cplus_mempool_alloc(mp))));
     UNITTEST_EXPECT_EQ(ENOMEM, errno);
-    UNITTEST_EXPECT_EQ(true, (NULL == (test9 = cplus_mempool_alloc(mp))));
+    UNITTEST_EXPECT_EQ(true, (NULL == (test9 = (int32_t *)cplus_mempool_alloc(mp))));
     UNITTEST_EXPECT_EQ(ENOMEM, errno);
     UNITTEST_EXPECT_EQ(0, (*test0 = 0));
     UNITTEST_EXPECT_EQ(1, (*test1 = 1));
@@ -314,16 +304,16 @@ CPLUS_UNIT_TEST(cplus_mempool_alloc, functionity)
 CPLUS_UNIT_TEST(cplus_mempool_alloc, overlap)
 {
     cplus_mempool mp = NULL;
-    UNITTEST_EXPECT_EQ(true, (NULL != (mp = cplus_mempool_new(5, sizeof(int)))));
-    UNITTEST_EXPECT_EQ(true, (NULL != (test0 = cplus_mempool_alloc(mp))));
+    UNITTEST_EXPECT_EQ(true, (NULL != (mp = (cplus_mempool)cplus_mempool_new(5, sizeof(int)))));
+    UNITTEST_EXPECT_EQ(true, (NULL != (test0 = (int32_t *)cplus_mempool_alloc(mp))));
     UNITTEST_EXPECT_EQ(4, cplus_mempool_get_free_blocks_count(mp));
-    UNITTEST_EXPECT_EQ(true, (NULL != (test1 = cplus_mempool_alloc(mp))));
+    UNITTEST_EXPECT_EQ(true, (NULL != (test1 = (int32_t *)cplus_mempool_alloc(mp))));
     UNITTEST_EXPECT_EQ(3, cplus_mempool_get_free_blocks_count(mp));
-    UNITTEST_EXPECT_EQ(true, (NULL != (test2 = cplus_mempool_alloc(mp))));
+    UNITTEST_EXPECT_EQ(true, (NULL != (test2 = (int32_t *)cplus_mempool_alloc(mp))));
     UNITTEST_EXPECT_EQ(2, cplus_mempool_get_free_blocks_count(mp));
-    UNITTEST_EXPECT_EQ(true, (NULL != (test3 = cplus_mempool_alloc(mp))));
+    UNITTEST_EXPECT_EQ(true, (NULL != (test3 = (int32_t *)cplus_mempool_alloc(mp))));
     UNITTEST_EXPECT_EQ(1, cplus_mempool_get_free_blocks_count(mp));
-    UNITTEST_EXPECT_EQ(true, (NULL != (test4 = cplus_mempool_alloc(mp))));
+    UNITTEST_EXPECT_EQ(true, (NULL != (test4 = (int32_t *)cplus_mempool_alloc(mp))));
     UNITTEST_EXPECT_EQ(0, cplus_mempool_get_free_blocks_count(mp));
     UNITTEST_EXPECT_EQ(0, (*test0 = 0));
     UNITTEST_EXPECT_EQ(1, (*test1 = 1));
@@ -346,13 +336,13 @@ CPLUS_UNIT_TEST(cplus_mempool_alloc, overlap)
 CPLUS_UNIT_TEST(cplus_mempool_alloc, overlap_struct)
 {
     cplus_mempool mp = NULL;
-    UNITTEST_EXPECT_EQ(true, (NULL != (mp = cplus_mempool_new(5, sizeof(struct test_block)))));
+    UNITTEST_EXPECT_EQ(true, (NULL != (mp = (cplus_mempool)cplus_mempool_new(5, sizeof(struct test_block)))));
     UNITTEST_EXPECT_EQ(5, cplus_mempool_get_free_blocks_count(mp));
-    UNITTEST_EXPECT_EQ(true, (NULL != (test_block0 = cplus_mempool_alloc(mp))));
+    UNITTEST_EXPECT_EQ(true, (NULL != (test_block0 = (struct test_block *)cplus_mempool_alloc(mp))));
     UNITTEST_EXPECT_EQ(4, cplus_mempool_get_free_blocks_count(mp));
-    UNITTEST_EXPECT_EQ(true, (NULL != (test_block1 = cplus_mempool_alloc(mp))));
+    UNITTEST_EXPECT_EQ(true, (NULL != (test_block1 = (struct test_block *)cplus_mempool_alloc(mp))));
     UNITTEST_EXPECT_EQ(3, cplus_mempool_get_free_blocks_count(mp));
-    UNITTEST_EXPECT_EQ(true, (NULL != (test_block2 = cplus_mempool_alloc(mp))));
+    UNITTEST_EXPECT_EQ(true, (NULL != (test_block2 = (struct test_block *)cplus_mempool_alloc(mp))));
     UNITTEST_EXPECT_EQ(2, cplus_mempool_get_free_blocks_count(mp));
     UNITTEST_EXPECT_EQ(true , (NULL != cplus_mem_set(&test_block0->a, 0x00, sizeof(test_block0->a))));
     UNITTEST_EXPECT_EQ(true , (NULL != cplus_mem_set(&test_block0->b, 0x00, sizeof(test_block0->b))));
@@ -387,25 +377,25 @@ CPLUS_UNIT_TEST(cplus_mempool_alloc, overlap_struct)
 CPLUS_UNIT_TEST(cplus_mempool_new, bad_parameter)
 {
     cplus_mempool mp = NULL;
-    UNITTEST_EXPECT_EQ(true, (NULL == (mp = cplus_mempool_new(0, 4))));
+    UNITTEST_EXPECT_EQ(true, (NULL == (mp = (cplus_mempool)cplus_mempool_new(0, 4))));
     UNITTEST_EXPECT_EQ(EINVAL, errno);
-    UNITTEST_EXPECT_EQ(true, (NULL == (mp = cplus_mempool_new(5, 0))));
+    UNITTEST_EXPECT_EQ(true, (NULL == (mp = (cplus_mempool)cplus_mempool_new(5, 0))));
     UNITTEST_EXPECT_EQ(EINVAL, errno);
-    UNITTEST_EXPECT_EQ(true, (NULL == (mp = cplus_mempool_new(5, 1))));
+    UNITTEST_EXPECT_EQ(true, (NULL == (mp = (cplus_mempool)cplus_mempool_new(5, 1))));
     UNITTEST_EXPECT_EQ(EINVAL, errno);
-    UNITTEST_EXPECT_EQ(true, (NULL == (mp = cplus_mempool_new(5, 2))));
+    UNITTEST_EXPECT_EQ(true, (NULL == (mp = (cplus_mempool)cplus_mempool_new(5, 2))));
     UNITTEST_EXPECT_EQ(EINVAL, errno);
-    UNITTEST_EXPECT_EQ(true, (NULL == (mp = cplus_mempool_new(5, 3))));
+    UNITTEST_EXPECT_EQ(true, (NULL == (mp = (cplus_mempool)cplus_mempool_new(5, 3))));
     UNITTEST_EXPECT_EQ(EINVAL, errno);
-    UNITTEST_EXPECT_EQ(true, (NULL == (mp = cplus_mempool_new(3, GB))));
+    UNITTEST_EXPECT_EQ(true, (NULL == (mp = (cplus_mempool)cplus_mempool_new(3, GB))));
     UNITTEST_EXPECT_EQ(ENOMEM, errno);
 }
 
 CPLUS_UNIT_TEST(cplus_mempool_alloc, no_mempool)
 {
-    UNITTEST_EXPECT_EQ(true, (NULL != (test_block0 = cplus_malloc(sizeof(struct test_block)))));
-    UNITTEST_EXPECT_EQ(true, (NULL != (test_block1 = cplus_malloc(sizeof(struct test_block)))));
-    UNITTEST_EXPECT_EQ(true, (NULL != (test_block2 = cplus_malloc(sizeof(struct test_block)))));
+    UNITTEST_EXPECT_EQ(true, (NULL != (test_block0 = (struct test_block *)cplus_malloc(sizeof(struct test_block)))));
+    UNITTEST_EXPECT_EQ(true, (NULL != (test_block1 = (struct test_block *)cplus_malloc(sizeof(struct test_block)))));
+    UNITTEST_EXPECT_EQ(true, (NULL != (test_block2 = (struct test_block *)cplus_malloc(sizeof(struct test_block)))));
     UNITTEST_EXPECT_EQ(true , (NULL != cplus_mem_set(&test_block0->a, 0x00, sizeof(test_block0->a))));
     UNITTEST_EXPECT_EQ(true , (NULL != cplus_mem_set(&test_block0->b, 0x00, sizeof(test_block0->b))));
     UNITTEST_EXPECT_EQ(true , (NULL != cplus_mem_set(&test_block0->c, 0x00, sizeof(test_block0->c))));
@@ -438,27 +428,27 @@ CPLUS_UNIT_TEST(cplus_mempool_alloc, no_mempool)
 CPLUS_UNIT_TEST(cplus_mempool_new_s, functionity)
 {
     cplus_mempool mp = NULL;
-    UNITTEST_EXPECT_EQ(true, (NULL != (mp = cplus_mempool_new_s(5, sizeof(int)))));
+    UNITTEST_EXPECT_EQ(true, (NULL != (mp = (cplus_mempool)cplus_mempool_new_s(5, sizeof(int)))));
     UNITTEST_EXPECT_EQ(5, cplus_mempool_get_free_blocks_count(mp));
-    UNITTEST_EXPECT_EQ(true, (NULL != (test0 = cplus_mempool_alloc(mp))));
+    UNITTEST_EXPECT_EQ(true, (NULL != (test0 = (int32_t *)cplus_mempool_alloc(mp))));
     UNITTEST_EXPECT_EQ(4, cplus_mempool_get_free_blocks_count(mp));
-    UNITTEST_EXPECT_EQ(true, (NULL != (test1 = cplus_mempool_alloc(mp))));
+    UNITTEST_EXPECT_EQ(true, (NULL != (test1 = (int32_t *)cplus_mempool_alloc(mp))));
     UNITTEST_EXPECT_EQ(3, cplus_mempool_get_free_blocks_count(mp));
-    UNITTEST_EXPECT_EQ(true, (NULL != (test2 = cplus_mempool_alloc(mp))));
+    UNITTEST_EXPECT_EQ(true, (NULL != (test2 = (int32_t *)cplus_mempool_alloc(mp))));
     UNITTEST_EXPECT_EQ(2, cplus_mempool_get_free_blocks_count(mp));
-    UNITTEST_EXPECT_EQ(true, (NULL != (test3 = cplus_mempool_alloc(mp))));
+    UNITTEST_EXPECT_EQ(true, (NULL != (test3 = (int32_t *)cplus_mempool_alloc(mp))));
     UNITTEST_EXPECT_EQ(1, cplus_mempool_get_free_blocks_count(mp));
-    UNITTEST_EXPECT_EQ(true, (NULL != (test4 = cplus_mempool_alloc(mp))));
+    UNITTEST_EXPECT_EQ(true, (NULL != (test4 = (int32_t *)cplus_mempool_alloc(mp))));
     UNITTEST_EXPECT_EQ(0, cplus_mempool_get_free_blocks_count(mp));
-    UNITTEST_EXPECT_EQ(true, (NULL == (test5 = cplus_mempool_alloc(mp))));
+    UNITTEST_EXPECT_EQ(true, (NULL == (test5 = (int32_t *)cplus_mempool_alloc(mp))));
     UNITTEST_EXPECT_EQ(ENOMEM, errno);
-    UNITTEST_EXPECT_EQ(true, (NULL == (test6 = cplus_mempool_alloc(mp))));
+    UNITTEST_EXPECT_EQ(true, (NULL == (test6 = (int32_t *)cplus_mempool_alloc(mp))));
     UNITTEST_EXPECT_EQ(ENOMEM, errno);
-    UNITTEST_EXPECT_EQ(true, (NULL == (test7 = cplus_mempool_alloc(mp))));
+    UNITTEST_EXPECT_EQ(true, (NULL == (test7 = (int32_t *)cplus_mempool_alloc(mp))));
     UNITTEST_EXPECT_EQ(ENOMEM, errno);
-    UNITTEST_EXPECT_EQ(true, (NULL == (test8 = cplus_mempool_alloc(mp))));
+    UNITTEST_EXPECT_EQ(true, (NULL == (test8 = (int32_t *)cplus_mempool_alloc(mp))));
     UNITTEST_EXPECT_EQ(ENOMEM, errno);
-    UNITTEST_EXPECT_EQ(true, (NULL == (test9 = cplus_mempool_alloc(mp))));
+    UNITTEST_EXPECT_EQ(true, (NULL == (test9 = (int32_t *)cplus_mempool_alloc(mp))));
     UNITTEST_EXPECT_EQ(ENOMEM, errno);
     UNITTEST_EXPECT_EQ(0, (*test0 = 0));
     UNITTEST_EXPECT_EQ(1, (*test1 = 1));
@@ -483,10 +473,10 @@ CPLUS_UNIT_TEST(cplus_mempool_get_index, functionity)
     cplus_mempool mp = NULL;
     int32_t * addr[5], * new_addr = NULL;
 
-    UNITTEST_EXPECT_EQ(true, (NULL != (mp = cplus_mempool_new_s(5, sizeof(uint32_t)))));
+    UNITTEST_EXPECT_EQ(true, (NULL != (mp = (cplus_mempool)cplus_mempool_new_s(5, sizeof(uint32_t)))));
     for (int32_t idx = 0; idx < 5; idx++)
     {
-        UNITTEST_EXPECT_EQ(true, (NULL != (addr[idx] = cplus_mempool_alloc(mp))));
+        UNITTEST_EXPECT_EQ(true, (NULL != (addr[idx] = (int32_t *)cplus_mempool_alloc(mp))));
     }
     UNITTEST_EXPECT_EQ(0, cplus_mempool_get_index(mp, addr[0]));
     UNITTEST_EXPECT_EQ(1, cplus_mempool_get_index(mp, addr[1]));
@@ -494,13 +484,13 @@ CPLUS_UNIT_TEST(cplus_mempool_get_index, functionity)
     UNITTEST_EXPECT_EQ(3, cplus_mempool_get_index(mp, addr[3]));
     UNITTEST_EXPECT_EQ(4, cplus_mempool_get_index(mp, addr[4]));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_mempool_free(mp, addr[2]));
-    UNITTEST_EXPECT_EQ(true, (NULL != (new_addr = cplus_mempool_alloc(mp))));
+    UNITTEST_EXPECT_EQ(true, (NULL != (new_addr = (int32_t *)cplus_mempool_alloc(mp))));
     UNITTEST_EXPECT_EQ(2, cplus_mempool_get_index(mp, new_addr));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_mempool_free(mp, addr[1]));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_mempool_free(mp, addr[3]));
-    UNITTEST_EXPECT_EQ(true, (NULL != (new_addr = cplus_mempool_alloc(mp))));
+    UNITTEST_EXPECT_EQ(true, (NULL != (new_addr = (int32_t *)cplus_mempool_alloc(mp))));
     UNITTEST_EXPECT_EQ(3, cplus_mempool_get_index(mp, new_addr));
-    UNITTEST_EXPECT_EQ(true, (NULL != (new_addr = cplus_mempool_alloc(mp))));
+    UNITTEST_EXPECT_EQ(true, (NULL != (new_addr = (int32_t *)cplus_mempool_alloc(mp))));
     UNITTEST_EXPECT_EQ(1, cplus_mempool_get_index(mp, new_addr));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_mempool_delete(mp));
     UNITTEST_EXPECT_EQ(0, cplus_mgr_report());
@@ -511,10 +501,10 @@ CPLUS_UNIT_TEST(cplus_mempool_get_addr_by_index, functionity)
     cplus_mempool mp = NULL;
     int32_t * addr[5];
 
-    UNITTEST_EXPECT_EQ(true, (NULL != (mp = cplus_mempool_new_s(5, sizeof(uint32_t)))));
+    UNITTEST_EXPECT_EQ(true, (NULL != (mp = (cplus_mempool)cplus_mempool_new_s(5, sizeof(uint32_t)))));
     for (int32_t idx = 0; idx < 5; idx++)
     {
-        UNITTEST_EXPECT_EQ(true, (NULL != (addr[idx] = cplus_mempool_alloc(mp))));
+        UNITTEST_EXPECT_EQ(true, (NULL != (addr[idx] = (int32_t *)cplus_mempool_alloc(mp))));
     }
     UNITTEST_EXPECT_EQ(true, (addr[0] == ((int32_t *)cplus_mempool_get_addr_by_index(mp, 0))));
     UNITTEST_EXPECT_EQ(true, (addr[1] == ((int32_t *)cplus_mempool_get_addr_by_index(mp, 1))));
@@ -529,7 +519,7 @@ CPLUS_UNIT_TEST(cplus_mempool_alloc_as_index, functionity)
 {
     cplus_mempool mp = NULL;
 
-    UNITTEST_EXPECT_EQ(true, (NULL != (mp = cplus_mempool_new_s(5, sizeof(uint32_t)))));
+    UNITTEST_EXPECT_EQ(true, (NULL != (mp = (cplus_mempool)cplus_mempool_new_s(5, sizeof(uint32_t)))));
     for (int32_t idx = 0; idx < 5; idx++)
     {
         UNITTEST_EXPECT_EQ(idx, cplus_mempool_alloc_as_index(mp));
@@ -541,7 +531,7 @@ CPLUS_UNIT_TEST(cplus_mempool_alloc_as_index, functionity)
 CPLUS_UNIT_TEST(cplus_mempool_free_by_index, functionity)
 {
     cplus_mempool mp = NULL;
-    UNITTEST_EXPECT_EQ(true, (NULL != (mp = cplus_mempool_new_s(5, sizeof(uint32_t)))));
+    UNITTEST_EXPECT_EQ(true, (NULL != (mp = (cplus_mempool)cplus_mempool_new_s(5, sizeof(uint32_t)))));
     for (int32_t idx = 0; idx < 5; idx++)
     {
         UNITTEST_EXPECT_EQ(idx, cplus_mempool_alloc_as_index(mp));

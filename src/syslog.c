@@ -85,7 +85,7 @@ static void append_new_line(const char * str)
 int32_t cplus_syslog_delete(cplus_syslog obj)
 {
     int32_t res = CPLUS_SUCCESS;
-    struct syslog * slog = (struct syslog *)obj;
+    struct syslog * slog = (struct syslog *)(obj);
     CHECK_OBJECT_TYPE(obj);
 
     if (slog->message_logger_wroker)
@@ -150,7 +150,7 @@ void custom_logger_executer(void * param1, void * param2)
                 if (0 <= fd)
                 {
                     char * msg_buf = NULL;
-                    while (NULL != (msg_buf = cplus_llist_pop_back(slog->message_list)))
+                    while (NULL != (msg_buf = (char *)cplus_llist_pop_back(slog->message_list)))
                     {
                         write(fd, msg_buf, strlen(msg_buf));
                         if ('\n' != msg_buf[strlen(msg_buf) - 1])
@@ -349,6 +349,7 @@ static int32_t syslog_logger_print(
     char * msg)
 {
     int32_t len = 0;
+    char * msg_buf = NULL;
 #if SUPPORT_SYSLOG
     if (CPLUS_SYSLOG_LEVEL_INFO >= slog->logger_level)
     {
@@ -360,8 +361,7 @@ static int32_t syslog_logger_print(
     {
         if(MAX_MESSAGE_COUNT > cplus_llist_get_size(slog->message_list))
         {
-            char * msg_buf = cplus_mempool_alloc(slog->message_buffer_pool);
-            if (msg_buf)
+            if ((msg_buf = (char *)cplus_mempool_alloc(slog->message_buffer_pool)))
             {
                 cplus_systime stime;
                 cplus_systime_get_local_time(&stime);
@@ -391,7 +391,7 @@ static int32_t syslog_logger_print(
 }
 
 #define DEBUG_PRINT(slog, debug_lev) \
-    if (CPLUS_SYSLOG_LEVEL_NONE == slog->debug_level and CPLUS_SYSLOG_LEVEL_NONE == slog->logger_level) \
+    if (CPLUS_SYSLOG_LEVEL_NONE == slog->debug_level AND CPLUS_SYSLOG_LEVEL_NONE == slog->logger_level) \
     { \
         errno = ENOTSUP; return -1; \
     } \
@@ -433,7 +433,7 @@ static int32_t syslog_logger_print(
 
 int32_t cplus_syslog_fatal(cplus_syslog obj, const char * format, ...)
 {
-    struct syslog * slog = (struct syslog *)obj;
+    struct syslog * slog = (struct syslog *)(obj);
     CHECK_OBJECT_TYPE(obj);
 
     DEBUG_PRINT(slog, CPLUS_SYSLOG_LEVEL_FATAL);
@@ -442,7 +442,7 @@ int32_t cplus_syslog_fatal(cplus_syslog obj, const char * format, ...)
 
 int32_t cplus_syslog_error(cplus_syslog obj, const char * format, ...)
 {
-    struct syslog * slog = (struct syslog *)obj;
+    struct syslog * slog = (struct syslog *)(obj);
     CHECK_OBJECT_TYPE(obj);
 
     DEBUG_PRINT(slog, CPLUS_SYSLOG_LEVEL_ERROR);
@@ -451,7 +451,7 @@ int32_t cplus_syslog_error(cplus_syslog obj, const char * format, ...)
 
 int32_t cplus_syslog_warn(cplus_syslog obj, const char * format, ...)
 {
-    struct syslog * slog = (struct syslog *)obj;
+    struct syslog * slog = (struct syslog *)(obj);
     CHECK_OBJECT_TYPE(obj);
 
     DEBUG_PRINT(slog, CPLUS_SYSLOG_LEVEL_WARN);
@@ -460,7 +460,7 @@ int32_t cplus_syslog_warn(cplus_syslog obj, const char * format, ...)
 
 int32_t cplus_syslog_info(cplus_syslog obj, const char * format, ...)
 {
-    struct syslog * slog = (struct syslog *)obj;
+    struct syslog * slog = (struct syslog *)(obj);
     CHECK_OBJECT_TYPE(obj);
 
     DEBUG_PRINT(slog, CPLUS_SYSLOG_LEVEL_INFO);
@@ -469,7 +469,7 @@ int32_t cplus_syslog_info(cplus_syslog obj, const char * format, ...)
 
 int32_t cplus_syslog_debug(cplus_syslog obj, const char * format, ...)
 {
-    struct syslog * slog = (struct syslog *)obj;
+    struct syslog * slog = (struct syslog *)(obj);
     CHECK_OBJECT_TYPE(obj);
 
     DEBUG_PRINT(slog, CPLUS_SYSLOG_LEVEL_DEBUG);
@@ -478,7 +478,7 @@ int32_t cplus_syslog_debug(cplus_syslog obj, const char * format, ...)
 
 int32_t cplus_syslog_trace(cplus_syslog obj, const char * format, ...)
 {
-    struct syslog * slog = (struct syslog *)obj;
+    struct syslog * slog = (struct syslog *)(obj);
     CHECK_OBJECT_TYPE(obj);
 
     DEBUG_PRINT(slog, CPLUS_SYSLOG_LEVEL_TRACE);
@@ -487,7 +487,7 @@ int32_t cplus_syslog_trace(cplus_syslog obj, const char * format, ...)
 
 CPLUS_DEBUG_LEVEL cplus_syslog_get_debug_level(cplus_syslog obj)
 {
-    struct syslog * slog = (struct syslog *)obj;
+    struct syslog * slog = (struct syslog *)(obj);
     CHECK_OBJECT_TYPE(obj);
 
     return (CPLUS_DEBUG_LEVEL)slog->debug_level;
@@ -495,7 +495,7 @@ CPLUS_DEBUG_LEVEL cplus_syslog_get_debug_level(cplus_syslog obj)
 
 CPLUS_DEBUG_LEVEL cplus_syslog_get_logger_level(cplus_syslog obj)
 {
-    struct syslog * slog = (struct syslog *)obj;
+    struct syslog * slog = (struct syslog *)(obj);
     CHECK_OBJECT_TYPE(obj);
 
     return (CPLUS_DEBUG_LEVEL)slog->logger_level;

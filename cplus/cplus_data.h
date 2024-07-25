@@ -7,22 +7,22 @@ extern "C" {
 #endif
 
 #define CPLUS_DATA_REVERSE(DATAPTR) \
-    ({ \
-        switch (sizeof(typeof(* DATAPTR))) \
+    do { \
+        switch (sizeof(typeof((* (DATAPTR))))) \
         { \
         default: \
             break; \
         case 2: \
-            cplus_data_reverse16((uint16_t *)DATAPTR); \
+            cplus_data_reverse16((uint16_t *)(DATAPTR)); \
             break; \
         case 4: \
-            cplus_data_reverse32((uint32_t *)DATAPTR); \
+            cplus_data_reverse32((uint32_t *)(DATAPTR)); \
             break; \
         case 8: \
-            cplus_data_reverse64((uint64_t *)DATAPTR); \
+            cplus_data_reverse64((uint64_t *)(DATAPTR)); \
             break; \
         } \
-    })
+    } while (0)
 
 #define CPLUS_DATA_SWAP(DATA) \
     ({ \
@@ -45,21 +45,25 @@ extern "C" {
         value; \
     })
 
-#define CPLUS_DATA_TYPE_CONV(DATA) _Generic((DATA), \
-    bool: CPLUS_DATA_TYPE_BOOL, \
-    int8_t: CPLUS_DATA_TYPE_INT8, \
-    int16_t: CPLUS_DATA_TYPE_INT16, \
-    int32_t: CPLUS_DATA_TYPE_INT32, \
-    int64_t: CPLUS_DATA_TYPE_INT64, \
-    uint8_t: CPLUS_DATA_TYPE_UINT8, \
-    uint16_t: CPLUS_DATA_TYPE_UINT16, \
-    uint32_t: CPLUS_DATA_TYPE_UINT32, \
-    uint64_t: CPLUS_DATA_TYPE_UINT64, \
-    float: CPLUS_DATA_TYPE_FLOAT, \
-    double: CPLUS_DATA_TYPE_DOUBLE, \
-    void *: CPLUS_DATA_TYPE_POINTER, \
-    char *: CPLUS_DATA_TYPE_STRING, \
-    default: CPLUS_DATA_TYPE_UNKNOWN)
+#ifdef __cplusplus
+    #define CPLUS_DATA_TYPE_CONV(DATA) CPLUS_DATA_TYPE_UNKNOWN
+#else
+    #define CPLUS_DATA_TYPE_CONV(DATA) _Generic((DATA), \
+        bool: CPLUS_DATA_TYPE_BOOL, \
+        int8_t: CPLUS_DATA_TYPE_INT8, \
+        int16_t: CPLUS_DATA_TYPE_INT16, \
+        int32_t: CPLUS_DATA_TYPE_INT32, \
+        int64_t: CPLUS_DATA_TYPE_INT64, \
+        uint8_t: CPLUS_DATA_TYPE_UINT8, \
+        uint16_t: CPLUS_DATA_TYPE_UINT16, \
+        uint32_t: CPLUS_DATA_TYPE_UINT32, \
+        uint64_t: CPLUS_DATA_TYPE_UINT64, \
+        float: CPLUS_DATA_TYPE_FLOAT, \
+        double: CPLUS_DATA_TYPE_DOUBLE, \
+        void *: CPLUS_DATA_TYPE_POINTER, \
+        char *: CPLUS_DATA_TYPE_STRING, \
+        default: CPLUS_DATA_TYPE_UNKNOWN)
+#endif
 
 typedef enum cplus_data_type
 {
@@ -149,7 +153,7 @@ int32_t cplus_data_get_value(cplus_data obj, void * value1, void * value2);
 int32_t cplus_data_set_value(cplus_data obj, void * value1, void * value2);
 bool cplus_data_is_valid(cplus_data obj);
 char * cplus_data_get_key(cplus_data obj);
-int32_t cplus_data_set_key(cplus_data obj, uint32_t key_len, char * key);
+int32_t cplus_data_set_key(cplus_data obj, uint32_t key_len, const char * key);
 int32_t cplus_data_clone_value(cplus_data dest, cplus_data src);
 
 uint16_t cplus_data_swap16(uint16_t value);
@@ -196,8 +200,8 @@ char * cplus_data_get_string(cplus_data obj);
 uint32_t cplus_data_get_string_code(cplus_data obj);
 
 cplus_data cplus_data_create_group_node(char * data_group_name);
-cplus_llist cplus_data_get_group(cplus_data * data_group_node);
-int32_t cplus_data_delete_group_node(cplus_data * data_group_node);
+cplus_llist cplus_data_get_group(cplus_data data_group_node);
+int32_t cplus_data_delete_group_node(cplus_data data_group_node);
 
 int32_t cplus_data_get_as_bool(cplus_data obj, bool * value);
 int32_t cplus_data_get_as_int8(cplus_data obj, int8_t * value);
@@ -229,9 +233,7 @@ int32_t cplus_data_set_as_double(cplus_data obj, double value);
 int32_t cplus_data_set_as_byte_array(cplus_data obj, uint32_t array_len, uint8_t * array_bufs);
 int32_t cplus_data_set_as_string(cplus_data obj, uint32_t str_len, char * str_bufs);
 
-
 #ifdef __cplusplus
 }
 #endif
-
 #endif // __CPLUS_DATA_H__

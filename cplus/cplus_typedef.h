@@ -1,7 +1,6 @@
 #ifndef __CPLUS_TYPEDEF_H__
 #define __CPLUS_TYPEDEF_H__
 #include <stdint.h>
-#include <stddef.h>
 #include <stdbool.h>
 
 #define CPLUS_FAIL -1

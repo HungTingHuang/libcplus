@@ -100,5 +100,4 @@ cplus_data cplus_llist_add_data_string(cplus_llist obj, char * key, char * str_b
 #ifdef __cplusplus
 }
 #endif
-
 #endif //__CPLUS_LLIST_H__

@@ -12,9 +12,84 @@
 #include "cplus_sys.h"
 #include "cplus_atomic.h"
 
-#define GB 1073741824
+#if !defined(__GNUC__)
+#   define __GNUC__ 0
+#endif
 
+#if !defined(__GNUC_MINOR__)
+#   define __GNUC_MINOR__ 0
+#endif
+
+#if !defined(__GNUC_PATCHLEVEL__)
+#   define __GNUC_PATCHLEVEL__ 0
+#endif
+
+#define GCC_VERSION (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
+
+#if !defined(__STDC__)
+#   define __STDC__ 0
+#endif
+
+#if !defined(__STDC_VERSION__)
+#   define __STDC_VERSION__ 0
+#endif
+
+#ifdef __arm__
+    #define REG_LD "%lld"
+    #define REG_LU "%llu"
+#else
+    #define REG_LD "%ld"
+    #define REG_LU "%lu"
+#endif
+
+/* constant variable */
 #define OBJ_NONE 0xAC00
+#define GB 1073741824
+#define INVALID_FD -1
+#define INVALID_SOCKET -1
+
+/* build operator */
+#define UNUSED_PARAM(PARAM) (void)(PARAM)
+
+/* logical operator */
+#define AND &&
+#define OR ||
+#define NOT !
+#ifdef __cplusplus
+    // #define NULL nullptr
+#endif
+
+/* color font */
+#define RED(str) "\x1B[31m" str "\033[0m"
+#define GREEN(str) "\x1B[32m" str "\033[0m"
+#define YELLOW(str) "\x1B[33m" str "\033[0m"
+#define BLUE(str) "\x1B[36m" str "\033[0m"
+#define PURPLE(str) "\x1B[35m" str "\033[0m"
+#define CHANGE_COLOR_RED() printf("\x1B[31m")
+#define CHANGE_COLOR_GREEN() printf("\x1B[32m")
+#define CHANGE_COLOR_YELLOW() printf("\x1B[33m")
+#define CHANGE_COLOR_BLUE() printf("\x1B[36m")
+#define CHANGE_COLOR_PURPLE() printf("\x1B[35m")
+#define RECOVER_COLOR() printf("\033[0m")
+
+/* condition statement */
+#define IF_DO(CONDITION, ACTION_FN) if (CONDITION) { ACTION_FN; }
+#define IF_THEN_RETURN(CONDITION, VALUE) if (CONDITION) { errno = EINVAL; return VALUE; }
+#define IF_THEN_BREAK(CONDITION) if (CONDITION) { break; }
+#define CHECK_IF(CONDITION, VALUE) IF_THEN_RETURN(CONDITION, VALUE)
+#define CHECK_IF_NOT(CONDITION, VALUE) IF_THEN_RETURN(!(CONDITION), VALUE)
+#define CHECK_GT_ZERO(PARAMETER, VALUE) IF_THEN_RETURN(0 >= PARAMETER, VALUE)
+#define CHECK_NOT_NULL(PARAMETER, VALUE) IF_THEN_RETURN(NULL == PARAMETER, VALUE)
+#define CHECK_IN_INTERVAL(PARAMETER, MIN, MAX, VALUE) IF_THEN_RETURN((MIN > PARAMETER || PARAMETER > MAX), VALUE)
+#define CHECK_OBJECT_NOT_NULL(OBJECT) assert((NULL != OBJECT))
+#define CHECK_OBJECT_TYPE(OBJECT) assert((NULL != OBJECT) && (OBJ_TYPE == ((uint16_t *)OBJECT)[0]))
+#define CHECK_OBJECT_TYPE_EX(OBJECT, TYPE) assert((NULL != OBJECT) && ((TYPE) == ((uint16_t *)OBJECT)[0]))
+#define CHECK_OBJECT_TYPE_BOTH(OBJECT, TYPE1, TYPE2) assert((NULL != OBJECT) && (((TYPE1) == ((uint16_t *)OBJECT)[0]) || ((TYPE2) == ((uint16_t *)OBJECT)[0])))
+#define GET_OBJECT_TYPE(OBJECT) (((uint16_t *)OBJECT)[0])
+
+/* Helper */
+#define SAFE_FREE(PTR, RELEASE_FN) if (NULL != PTR) { RELEASE_FN(PTR); PTR = NULL; }
+#define TRACE_CODE() printf("[%s](%d)\n", __FUNCTION__, __LINE__)
 
 enum HDLR_CLASS
 {
@@ -27,65 +102,6 @@ enum HDLR_CLASS
     HELPER = 0x60,
 };
 
-#define RED(str) "\x1B[31m"str"\033[0m"
-#define GREEN(str) "\x1B[32m"str"\033[0m"
-#define YELLOW(str) "\x1B[33m"str"\033[0m"
-#define BLUE(str) "\x1B[36m"str"\033[0m"
-#define PURPLE(str) "\x1B[35m"str"\033[0m"
-#define CHANGE_COLOR_RED() printf("\x1B[31m")
-#define CHANGE_COLOR_GREEN() printf("\x1B[32m")
-#define CHANGE_COLOR_YELLOW() printf("\x1B[33m")
-#define CHANGE_COLOR_BLUE() printf("\x1B[36m")
-#define CHANGE_COLOR_PURPLE() printf("\x1B[35m")
-#define RECOVER_COLOR() printf("\033[0m")
-
-#define IF_THEN_RETURN(CONDITION, VALUE) \
-    if (CONDITION) \
-    { \
-        errno = EINVAL; \
-        return VALUE; \
-    }
-
-#define IF_THEN_BREAK(CONDITION) \
-    if (CONDITION) \
-    { \
-        break; \
-    }
-
-#define CHECK_IF(CONDITION, VALUE) \
-    IF_THEN_RETURN(CONDITION, VALUE)
-#define CHECK_IF_NOT(CONDITION, VALUE) \
-    IF_THEN_RETURN(!(CONDITION), VALUE)
-#define CHECK_GT_ZERO(PARAMETER, VALUE) \
-    IF_THEN_RETURN(0 >= PARAMETER, VALUE)
-#define CHECK_NOT_NULL(PARAMETER, VALUE) \
-    IF_THEN_RETURN(NULL == PARAMETER, VALUE)
-#define CHECK_IN_INTERVAL(PARAMETER, MIN, MAX, VALUE) \
-    IF_THEN_RETURN((MIN > PARAMETER || PARAMETER > MAX), VALUE)
-#define CHECK_OBJECT_NOT_NULL(OBJECT) \
-    assert((NULL != OBJECT))
-#define CHECK_OBJECT_TYPE(OBJECT) \
-    assert((NULL != OBJECT) && (OBJ_TYPE == ((uint16_t *)OBJECT)[0]))
-#define CHECK_OBJECT_TYPE_EX(OBJECT, TYPE) \
-    assert((NULL != OBJECT) && ((TYPE) == ((uint16_t *)OBJECT)[0]))
-#define CHECK_OBJECT_TYPE_BOTH(OBJECT, TYPE1, TYPE2) \
-    assert((NULL != OBJECT) \
-        && (((TYPE1) == ((uint16_t *)OBJECT)[0]) || ((TYPE2) == ((uint16_t *)OBJECT)[0])))
-#define GET_OBJECT_TYPE(OBJECT) (((uint16_t *)OBJECT)[0])
-
-#define SAFE_FREE(PTR, RELEASE_FN) \
-    if (NULL != PTR) \
-    { \
-        RELEASE_FN(PTR); \
-        PTR = NULL; \
-    }
-
-#define IF_DO(CONDITION, ACTION_FN) \
-    if (CONDITION) \
-    { \
-        ACTION_FN; \
-    }
-
 enum INIT_MODE
 {
     INIT_NONE = 0,
@@ -93,33 +109,6 @@ enum INIT_MODE
     INIT_OPEN,
     INIT_HYBRID,
 };
-
-#define and &&
-#define or ||
-#define not !
-
-#ifdef __arm__
-    #define REG_LD "%lld"
-    #define REG_LU "%llu"
-#else
-    #define REG_LD "%ld"
-    #define REG_LU "%lu"
-#endif
-
-#define UNUSED_PARAM(PARAM) (void)(PARAM)
-
-#define SPINUP      1
-#define SPINDOWN    0
-
-#define SPIN_LOCK(FLAG_PTR) \
-    do { while ((SPINUP == cplus_atomic_read((FLAG_PTR))) \
-        || !cplus_atomic_compare_exchange((FLAG_PTR), \
-                &((typeof(*(FLAG_PTR))){SPINDOWN}), \
-                &((typeof(*(FLAG_PTR))){SPINUP}))) { } \
-    } while (0)
-
-#define SPIN_UNLOCK(FLAG_PTR) \
-    do { cplus_atomic_write((FLAG_PTR), SPINDOWN); } while(0)
 
 #ifdef __CPLUS_UNITTEST__
 #include <sys/wait.h>
@@ -145,7 +134,7 @@ extern int32_t total_failed_count;
             CHANGE_COLOR_PURPLE(); \
             fprintf( \
                 stdout \
-                , "LN: %04d %s("REG_LD") is not equal to the expect value: "REG_LD" \n" \
+                , "LN: %04d %s(" REG_LD ") is not equal to the expect value: " REG_LD " \n" \
                 , __LINE__ \
                 , #actual \
                 , retval_testfunc \
@@ -171,7 +160,7 @@ extern int32_t total_failed_count;
             CHANGE_COLOR_PURPLE(); \
             fprintf( \
                 stdout \
-                , "LN: %04d %s("REG_LD") is equal to the expect value: "REG_LD" \n" \
+                , "LN: %04d %s(" REG_LD ") is equal to the expect value: " REG_LD " \n" \
                 , __LINE__ \
                 , #actual \
                 , retval_testfunc \

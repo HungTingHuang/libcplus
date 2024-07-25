@@ -31,11 +31,11 @@ struct semaphore
 int32_t cplus_semaphore_get_value(cplus_semaphore obj)
 {
     int32_t pc = 0;
-    struct semaphore * sema = (struct semaphore *)obj;
+    struct semaphore * sema = (struct semaphore *)(obj);
 
     CHECK_OBJECT_TYPE(obj);
 
-    if (0 == sem_getvalue(sema->psem, &pc))
+    if (0 == sem_getvalue(sema->psem, &(pc)))
     {
         return pc;
     }
@@ -44,7 +44,7 @@ int32_t cplus_semaphore_get_value(cplus_semaphore obj)
 
 int32_t cplus_semaphore_push(cplus_semaphore obj, int32_t count)
 {
-    struct semaphore * sema = (struct semaphore *)obj;
+    struct semaphore * sema = (struct semaphore *)(obj);
     int32_t remain = (SEMAPHORE_MAX_VALUE - cplus_semaphore_get_value(obj));
 
     CHECK_OBJECT_TYPE(obj);
@@ -65,7 +65,7 @@ int32_t cplus_semaphore_push(cplus_semaphore obj, int32_t count)
 int32_t cplus_semaphore_wait_poll(cplus_semaphore obj, uint32_t timeout)
 {
     int32_t res = CPLUS_SUCCESS;
-    struct semaphore * sema = (struct semaphore *)obj;
+    struct semaphore * sema = (struct semaphore *)(obj);
 
     CHECK_OBJECT_TYPE(obj);
 
@@ -79,9 +79,9 @@ int32_t cplus_semaphore_wait_poll(cplus_semaphore obj, uint32_t timeout)
     }
     else
     {
-        struct timespec ts;
-        cplus_systime_get_abstime_after_msec(&ts, timeout);
-        res = sem_timedwait(sema->psem, &ts);
+        struct timespec ts = {0};
+        cplus_systime_get_abstime_after_msec(&(ts), timeout);
+        res = sem_timedwait(sema->psem, &(ts));
     }
     return res;
 }
@@ -89,11 +89,11 @@ int32_t cplus_semaphore_wait_poll(cplus_semaphore obj, uint32_t timeout)
 int32_t cplus_semaphore_delete(cplus_semaphore obj)
 {
     int32_t res = CPLUS_SUCCESS;
-    struct semaphore * sema = (struct semaphore *)obj;
+    struct semaphore * sema = (struct semaphore *)(obj);
 
     CHECK_OBJECT_TYPE(obj);
 
-    if ((sem_t *)SEM_FAILED != sema->psem)
+    if ((sem_t *)(SEM_FAILED) != sema->psem)
     {
         if (sema->is_named)
         {
@@ -117,11 +117,9 @@ static void * semaphore_xp_create(const char * name, int32_t initial_count)
 {
     struct semaphore * sema = NULL;
 
-    sema = (struct semaphore *)cplus_malloc(sizeof(struct semaphore));
-    if (sema)
+    if ((sema = (struct semaphore *)cplus_malloc(sizeof(struct semaphore))))
     {
         CPLUS_INITIALIZE_STRUCT_POINTER(sema);
-
         sema->type = OBJ_TYPE;
         sema->psem = NULL;
         sema->is_named = false;
@@ -142,7 +140,7 @@ static void * semaphore_xp_create(const char * name, int32_t initial_count)
             , DEFFILEMODE
             , initial_count);
 
-        if ((sem_t *)SEM_FAILED == sema->psem)
+        if ((sem_t *)(SEM_FAILED) == sema->psem)
         {
             goto exit;
         }
@@ -163,11 +161,9 @@ static void * semaphore_xp_open(const char * name)
 {
     struct semaphore * sema = NULL;
 
-    sema = (struct semaphore *)cplus_malloc(sizeof(struct semaphore));
-    if (sema)
+    if ((sema = (struct semaphore *)cplus_malloc(sizeof(struct semaphore))))
     {
         CPLUS_INITIALIZE_STRUCT_POINTER(sema);
-
         sema->type = OBJ_TYPE;
         sema->psem = NULL;
         sema->is_named = false;
@@ -183,7 +179,7 @@ static void * semaphore_xp_open(const char * name)
         }
 
         sema->psem = sem_open(sema->name, O_RDWR);
-        if ((sem_t *)SEM_FAILED == sema->psem)
+        if ((sem_t *)(SEM_FAILED) == sema->psem)
         {
             goto exit;
         }
@@ -203,12 +199,11 @@ static void * semaphore_xp_new(const char * name, int32_t initial_count)
 {
     struct semaphore * sema = NULL;
 
-    sema = semaphore_xp_open(name);
-    if (NULL == sema)
+    if (!(sema = (struct semaphore *)semaphore_xp_open(name)))
     {
         if (ENOENT == errno)
         {
-            sema = semaphore_xp_create(name, initial_count);
+            sema = (struct semaphore *)semaphore_xp_create(name, initial_count);
         }
     }
 
@@ -220,11 +215,9 @@ cplus_semaphore cplus_semaphore_new(int32_t initial_count)
     struct semaphore * sema = NULL;
     CHECK_IN_INTERVAL(initial_count, 0, SEMAPHORE_MAX_VALUE, NULL);
 
-    sema = (struct semaphore *)cplus_malloc(sizeof(struct semaphore));
-    if (sema)
+    if ((sema = (struct semaphore *)cplus_malloc(sizeof(struct semaphore))))
     {
         CPLUS_INITIALIZE_STRUCT_POINTER(sema);
-
         sema->type = OBJ_TYPE;
         sema->psem = NULL;
         sema->is_named = false;
@@ -248,8 +241,7 @@ cplus_semaphore cplus_semaphore_new_xp(
     , int32_t initial_count)
 {
     CHECK_NOT_NULL(name, NULL);
-    CHECK_IF(
-        SEMAPHORE_NAME_SIZE < (strlen(name) + SEMAPHORE_NAME_PATTERN_SIZE)
+    CHECK_IF(SEMAPHORE_NAME_SIZE < (strlen(name) + SEMAPHORE_NAME_PATTERN_SIZE)
         , NULL);
     CHECK_IN_INTERVAL(initial_count, 0, SEMAPHORE_MAX_VALUE, NULL);
     return semaphore_xp_new(name, initial_count);
@@ -260,11 +252,9 @@ cplus_semaphore cplus_semaphore_create_xp(
     , int32_t initial_count)
 {
     CHECK_NOT_NULL(name, NULL);
-    CHECK_IF(
-        SEMAPHORE_NAME_SIZE < (strlen(name) + SEMAPHORE_NAME_PATTERN_SIZE)
+    CHECK_IF(SEMAPHORE_NAME_SIZE < (strlen(name) + SEMAPHORE_NAME_PATTERN_SIZE)
         , NULL);
-    CHECK_IN_INTERVAL(
-        initial_count
+    CHECK_IN_INTERVAL(initial_count
         , 0
         , SEMAPHORE_MAX_VALUE
         , NULL);
@@ -274,8 +264,7 @@ cplus_semaphore cplus_semaphore_create_xp(
 cplus_semaphore cplus_semaphore_open_xp(const char * name)
 {
     CHECK_NOT_NULL(name, NULL);
-    CHECK_IF(
-        SEMAPHORE_NAME_SIZE < (strlen(name) + SEMAPHORE_NAME_PATTERN_SIZE)
+    CHECK_IF(SEMAPHORE_NAME_SIZE < (strlen(name) + SEMAPHORE_NAME_PATTERN_SIZE)
         , NULL);
     return semaphore_xp_open(name);
 }
@@ -328,7 +317,7 @@ CPLUS_UNIT_TEST(cplus_semaphore_wait_poll, functionity)
     UNITTEST_EXPECT_EQ(CPLUS_FAIL, cplus_semaphore_wait_poll(semp, 1500));
     UNITTEST_EXPECT_EQ(ETIMEDOUT, errno);
     time = cplus_systime_elapsed_tick(time);
-    UNITTEST_EXPECT_EQ(true, time >= 1500 and time < 1550);
+    UNITTEST_EXPECT_EQ(true, time >= 1500 AND time < 1550);
 
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_semaphore_delete(semp));
     UNITTEST_EXPECT_EQ(0, cplus_mgr_report());

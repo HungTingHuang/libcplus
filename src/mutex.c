@@ -31,7 +31,7 @@ struct mutex
 
 int32_t cplus_crit_sect_enter(cplus_mutex obj)
 {
-    if (0 != (errno = pthread_mutex_lock(((struct mutex *)obj)->mutex)))
+    if (0 != (errno = pthread_mutex_lock(((struct mutex *)(obj))->mutex)))
     {
         return CPLUS_FAIL;
     }
@@ -40,14 +40,14 @@ int32_t cplus_crit_sect_enter(cplus_mutex obj)
 
 int32_t cplus_crit_sect_exit(cplus_mutex obj)
 {
-    pthread_mutex_unlock(((struct mutex *)obj)->mutex);
+    pthread_mutex_unlock(((struct mutex *)(obj))->mutex);
     return CPLUS_SUCCESS;
 }
 
 int32_t cplus_mutex_lock(cplus_mutex obj, uint32_t timeout)
 {
     int32_t res = CPLUS_SUCCESS;
-    struct mutex * mtx = (struct mutex *)obj;
+    struct mutex * mtx = (struct mutex *)(obj);
 
     CHECK_OBJECT_TYPE(obj);
 
@@ -77,7 +77,7 @@ int32_t cplus_mutex_lock(cplus_mutex obj, uint32_t timeout)
 
 int32_t cplus_mutex_unlock(cplus_mutex obj)
 {
-    struct mutex * mtx = (struct mutex *)obj;
+    struct mutex * mtx = (struct mutex *)(obj);
 
     CHECK_OBJECT_TYPE(obj);
 
@@ -86,13 +86,13 @@ int32_t cplus_mutex_unlock(cplus_mutex obj)
 
 int32_t cplus_mutex_delete(cplus_mutex obj)
 {
-    struct mutex * mtx = (struct mutex *)obj;
+    struct mutex * mtx = (struct mutex *)(obj);
 
     CHECK_OBJECT_TYPE(obj);
 
     if (mtx->shared_mem)
     {
-        if (true == cplus_sharedmem_is_owner(mtx->shared_mem))
+        if (cplus_sharedmem_is_owner(mtx->shared_mem))
         {
             if (mtx->mutex)
             {
@@ -120,7 +120,6 @@ static void * mutex_initialize_object(const char * name, enum INIT_MODE mode)
     if ((mtx = (struct mutex *)cplus_malloc(sizeof(struct mutex))))
     {
         CPLUS_INITIALIZE_STRUCT_POINTER(mtx);
-
         mtx->type = OBJ_TYPE;
         mtx->mutex = NULL;
         mtx->shared_mem = NULL;
@@ -149,17 +148,21 @@ static void * mutex_initialize_object(const char * name, enum INIT_MODE mode)
             switch(mode)
             {
             case INIT_CREATE:
-                mtx->shared_mem = cplus_sharedmem_create(
-                    mutex_name
-                    , sizeof(struct named_mutex));
+                {
+                    mtx->shared_mem = cplus_sharedmem_create(mutex_name
+                        , sizeof(struct named_mutex));
+                }
                 break;
             case INIT_OPEN:
-                mtx->shared_mem = cplus_sharedmem_open(mutex_name);
+                {
+                    mtx->shared_mem = cplus_sharedmem_open(mutex_name);
+                }
                 break;
             case INIT_HYBRID:
-                mtx->shared_mem = cplus_sharedmem_new(
-                    mutex_name
-                    , sizeof(struct named_mutex));
+                {
+                    mtx->shared_mem = cplus_sharedmem_new(mutex_name
+                        , sizeof(struct named_mutex));
+                }
                 break;
             case INIT_NONE:
             default:
@@ -175,7 +178,7 @@ static void * mutex_initialize_object(const char * name, enum INIT_MODE mode)
             {
                 struct named_mutex * shared_mutex = (struct named_mutex *)cplus_sharedmem_alloc(mtx->shared_mem);
 
-                if (true == cplus_sharedmem_is_owner(mtx->shared_mem))
+                if (cplus_sharedmem_is_owner(mtx->shared_mem))
                 {
                     pthread_mutexattr_t mutex_attr;
 
@@ -185,7 +188,7 @@ static void * mutex_initialize_object(const char * name, enum INIT_MODE mode)
                     }
 
                     if (0 != pthread_mutexattr_setpshared(&mutex_attr, PTHREAD_PROCESS_SHARED)
-                        or 0 != pthread_mutex_init(&(shared_mutex->mutex), &mutex_attr))
+                        OR 0 != pthread_mutex_init(&(shared_mutex->mutex), &mutex_attr))
                     {
                         pthread_mutexattr_destroy(&mutex_attr);
                         goto exit;
@@ -260,7 +263,7 @@ CPLUS_UNIT_TEST(cplus_mutex_lock, functionity)
     UNITTEST_EXPECT_EQ(CPLUS_FAIL, cplus_mutex_lock(mtx, 1500));
     UNITTEST_EXPECT_EQ(ETIMEDOUT, errno);
     time = cplus_systime_elapsed_tick(time);
-    UNITTEST_EXPECT_EQ(true, time >= 1500 and time < 1550);
+    UNITTEST_EXPECT_EQ(true, time >= 1500 AND time < 1550);
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_mutex_unlock(mtx));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_mutex_delete(mtx));
     UNITTEST_EXPECT_EQ(0, cplus_mgr_report());
@@ -289,7 +292,7 @@ CPLUS_UNIT_TEST(cplus_mutex_new_xp, cross_process_test)
         UNITTEST_EXPECT_EQ(CPLUS_FAIL, cplus_mutex_lock(mtx_ch, 1500));
         UNITTEST_EXPECT_EQ(ETIMEDOUT, errno);
         time = cplus_systime_elapsed_tick(time);
-        UNITTEST_EXPECT_EQ(true, time >= 1500 and time < 1550);
+        UNITTEST_EXPECT_EQ(true, time >= 1500 AND time < 1550);
 
         UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_mutex_delete(mtx_ch));
         UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_mutex_delete(mtx_sv));
@@ -324,7 +327,7 @@ CPLUS_UNIT_TEST(cplus_mutex_create_xp, cross_process_test)
         UNITTEST_EXPECT_EQ(CPLUS_FAIL, cplus_mutex_lock(mtx_ch, 1500));
         UNITTEST_EXPECT_EQ(ETIMEDOUT, errno);
         time = cplus_systime_elapsed_tick(time);
-        UNITTEST_EXPECT_EQ(true, time >= 1500 and time < 1550);
+        UNITTEST_EXPECT_EQ(true, time >= 1500 AND time < 1550);
 
         UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_mutex_delete(mtx_ch));
         UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_mutex_delete(mtx_sv));
