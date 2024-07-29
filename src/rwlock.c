@@ -182,7 +182,7 @@ int32_t cplus_rwlock_delete(cplus_rwlock obj)
 static void * rwlock_initialize_object(CPLUS_RWLOCK_CONFIG config)
 {
     bool has_attr = false, do_init = true;
-    struct rwlock * lock = NULL;
+    struct rwlock * lock = CPLUS_NULL;
     pthread_rwlockattr_t rwlock_attr;
     char rwlock_name[RWLOCK_NAME_MAX_SIZE + 1] = {0};
     struct named_rwlock * shared_rwlock;
@@ -197,7 +197,7 @@ static void * rwlock_initialize_object(CPLUS_RWLOCK_CONFIG config)
     lock->type = OBJ_TYPE;
     lock->st_locked = false;
     lock->count_rdlocked = 0;
-    lock->shared_mem = NULL;
+    lock->shared_mem = CPLUS_NULL;
     lock->rwlock = &(lock->nonamed_rwlock);
 
     if (CPLUS_RWLOCK_KIND_MAX > config->kind && CPLUS_RWLOCK_KIND_NONE != config->kind)
@@ -215,7 +215,7 @@ static void * rwlock_initialize_object(CPLUS_RWLOCK_CONFIG config)
         }
     }
 
-    if (NULL != config->name && CPLUS_RWLOCK_MODE_NONE != config->mode)
+    if (CPLUS_NULL != config->name && CPLUS_RWLOCK_MODE_NONE != config->mode)
     {
         if (0 > cplus_str_printf(rwlock_name, RWLOCK_NAME_MAX_SIZE, RWLOCK_NAME_PATTERN, config->name))
         {
@@ -277,7 +277,7 @@ static void * rwlock_initialize_object(CPLUS_RWLOCK_CONFIG config)
 
     if (do_init)
     {
-        if(pthread_rwlock_init(lock->rwlock, (has_attr)? &(rwlock_attr): NULL))
+        if(pthread_rwlock_init(lock->rwlock, (has_attr)? &(rwlock_attr): CPLUS_NULL))
         {
             goto exit;
         }
@@ -293,14 +293,14 @@ exit:
         pthread_rwlockattr_destroy(&(rwlock_attr));
     }
     cplus_rwlock_delete(lock);
-    return NULL;
+    return CPLUS_NULL;
 }
 
 cplus_rwlock cplus_rwlock_xp_new(const char * name)
 {
     struct cplus_rwlock_config config = {0};
-    CHECK_NOT_NULL(name, NULL);
-    CHECK_IF(RWLOCK_NAME_MAX_SIZE < (strlen(name) + RWLOCK_NAME_PATTERN_SIZE), NULL);
+    CHECK_NOT_NULL(name, CPLUS_NULL);
+    CHECK_IF(RWLOCK_NAME_MAX_SIZE < (strlen(name) + RWLOCK_NAME_PATTERN_SIZE), CPLUS_NULL);
 
     config.name = (char *)(name);
     config.mode = CPLUS_RWLOCK_MODE_HYBRID;
@@ -310,8 +310,8 @@ cplus_rwlock cplus_rwlock_xp_new(const char * name)
 cplus_rwlock cplus_rwlock_xp_create(const char * name)
 {
     struct cplus_rwlock_config config = {0};
-    CHECK_NOT_NULL(name, NULL);
-    CHECK_IF(RWLOCK_NAME_MAX_SIZE < (strlen(name) + RWLOCK_NAME_PATTERN_SIZE), NULL);
+    CHECK_NOT_NULL(name, CPLUS_NULL);
+    CHECK_IF(RWLOCK_NAME_MAX_SIZE < (strlen(name) + RWLOCK_NAME_PATTERN_SIZE), CPLUS_NULL);
 
     config.name = (char *)(name);
     config.mode = CPLUS_RWLOCK_MODE_CREATE;
@@ -321,8 +321,8 @@ cplus_rwlock cplus_rwlock_xp_create(const char * name)
 cplus_rwlock cplus_rwlock_xp_open(const char * name)
 {
     struct cplus_rwlock_config config = {0};
-    CHECK_NOT_NULL(name, NULL);
-    CHECK_IF(RWLOCK_NAME_MAX_SIZE < (strlen(name) + RWLOCK_NAME_PATTERN_SIZE), NULL);
+    CHECK_NOT_NULL(name, CPLUS_NULL);
+    CHECK_IF(RWLOCK_NAME_MAX_SIZE < (strlen(name) + RWLOCK_NAME_PATTERN_SIZE), CPLUS_NULL);
 
     config.name = (char *)(name);
     config.mode = CPLUS_RWLOCK_MODE_OPEN;
@@ -350,26 +350,26 @@ static char TEST_RWLOCK_NAME[] = "test";
 
 CPLUS_UNIT_TEST(cplus_rwlock_new, functionity)
 {
-    cplus_rwlock lock_sv = NULL;
-    UNITTEST_EXPECT_EQ(true, (NULL != (lock_sv = cplus_rwlock_new())));
+    cplus_rwlock lock_sv = CPLUS_NULL;
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (lock_sv = cplus_rwlock_new())));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_rwlock_delete(lock_sv));
     UNITTEST_EXPECT_EQ(0, cplus_mgr_report());
 }
 
 CPLUS_UNIT_TEST(cplus_rwlock_xp_new, cross_process_test)
 {
-    cplus_rwlock lock_sv = NULL;
-    UNITTEST_EXPECT_EQ(true, (NULL != (lock_sv = cplus_rwlock_xp_new(TEST_RWLOCK_NAME))));
+    cplus_rwlock lock_sv = CPLUS_NULL;
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (lock_sv = cplus_rwlock_xp_new(TEST_RWLOCK_NAME))));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_rwlock_delete(lock_sv));
     UNITTEST_EXPECT_EQ(0, cplus_mgr_report());
 }
 
 CPLUS_UNIT_TEST(cplus_rwlock_wrlock, functionity)
 {
-    cplus_rwlock lock_sv = NULL;
+    cplus_rwlock lock_sv = CPLUS_NULL;
     uint32_t time;
 
-    UNITTEST_EXPECT_EQ(true, (NULL != (lock_sv = cplus_rwlock_new())));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (lock_sv = cplus_rwlock_new())));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_rwlock_wrlock(lock_sv, CPLUS_INFINITE_TIMEOUT));
     UNITTEST_EXPECT_EQ(CPLUS_FAIL, cplus_rwlock_wrlock(lock_sv, 0));
     UNITTEST_EXPECT_EQ(EBUSY, errno);
@@ -385,10 +385,10 @@ CPLUS_UNIT_TEST(cplus_rwlock_wrlock, functionity)
 
 CPLUS_UNIT_TEST(cplus_rwlock_wrlock, cross_process_test)
 {
-    cplus_rwlock lock_sv = NULL;
+    cplus_rwlock lock_sv = CPLUS_NULL;
     uint32_t time;
 
-    UNITTEST_EXPECT_EQ(true, (NULL != (lock_sv = cplus_rwlock_xp_new(TEST_RWLOCK_NAME))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (lock_sv = cplus_rwlock_xp_new(TEST_RWLOCK_NAME))));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_rwlock_wrlock(lock_sv, CPLUS_INFINITE_TIMEOUT));
 
     if (0 != fork())
@@ -396,9 +396,9 @@ CPLUS_UNIT_TEST(cplus_rwlock_wrlock, cross_process_test)
     }
     else
     {
-        cplus_rwlock lock_ch = NULL;
+        cplus_rwlock lock_ch = CPLUS_NULL;
 
-        UNITTEST_EXPECT_EQ(true, (NULL != (lock_ch = cplus_rwlock_xp_new(TEST_RWLOCK_NAME))));
+        UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (lock_ch = cplus_rwlock_xp_new(TEST_RWLOCK_NAME))));
         UNITTEST_EXPECT_EQ(CPLUS_FAIL, cplus_rwlock_wrlock(lock_ch, 0));
         UNITTEST_EXPECT_EQ(EBUSY, errno);
         time = cplus_systime_get_tick();
@@ -420,9 +420,9 @@ CPLUS_UNIT_TEST(cplus_rwlock_wrlock, cross_process_test)
     }
     else
     {
-        cplus_rwlock lock_ch = NULL;
+        cplus_rwlock lock_ch = CPLUS_NULL;
 
-        UNITTEST_EXPECT_EQ(true, (NULL != (lock_ch = cplus_rwlock_xp_new(TEST_RWLOCK_NAME))));
+        UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (lock_ch = cplus_rwlock_xp_new(TEST_RWLOCK_NAME))));
         UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_rwlock_wrlock(lock_ch, 0));
         time = cplus_systime_get_tick();
         UNITTEST_EXPECT_EQ(CPLUS_FAIL, cplus_rwlock_wrlock(lock_ch, 1500));
@@ -443,10 +443,10 @@ CPLUS_UNIT_TEST(cplus_rwlock_wrlock, cross_process_test)
 
 CPLUS_UNIT_TEST(cplus_rwlock_rdlock, functionity)
 {
-    cplus_rwlock lock_sv = NULL;
+    cplus_rwlock lock_sv = CPLUS_NULL;
     uint32_t time;
 
-    UNITTEST_EXPECT_EQ(true, (NULL != (lock_sv = cplus_rwlock_new())));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (lock_sv = cplus_rwlock_new())));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_rwlock_rdlock(lock_sv, CPLUS_INFINITE_TIMEOUT));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_rwlock_rdlock(lock_sv, 0));
     time = cplus_systime_get_tick();
@@ -472,10 +472,10 @@ CPLUS_UNIT_TEST(cplus_rwlock_rdlock, functionity)
 
 CPLUS_UNIT_TEST(cplus_rwlock_rdlock, cross_process_test)
 {
-    cplus_rwlock lock_sv = NULL;
+    cplus_rwlock lock_sv = CPLUS_NULL;
     uint32_t time;
 
-    UNITTEST_EXPECT_EQ(true, (NULL != (lock_sv = cplus_rwlock_xp_new(TEST_RWLOCK_NAME))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (lock_sv = cplus_rwlock_xp_new(TEST_RWLOCK_NAME))));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_rwlock_rdlock(lock_sv, CPLUS_INFINITE_TIMEOUT));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_rwlock_rdlock(lock_sv, 0));
     time = cplus_systime_get_tick();
@@ -493,9 +493,9 @@ CPLUS_UNIT_TEST(cplus_rwlock_rdlock, cross_process_test)
     }
     else
     {
-        cplus_rwlock lock_ch = NULL;
+        cplus_rwlock lock_ch = CPLUS_NULL;
 
-        UNITTEST_EXPECT_EQ(true, (NULL != (lock_ch = cplus_rwlock_xp_new(TEST_RWLOCK_NAME))));
+        UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (lock_ch = cplus_rwlock_xp_new(TEST_RWLOCK_NAME))));
         UNITTEST_EXPECT_EQ(CPLUS_FAIL, cplus_rwlock_rdlock(lock_ch, 0));
         UNITTEST_EXPECT_EQ(EBUSY, errno);
         time = cplus_systime_get_tick();
@@ -518,9 +518,9 @@ CPLUS_UNIT_TEST(cplus_rwlock_rdlock, cross_process_test)
     }
     else
     {
-        cplus_rwlock lock_ch = NULL;
+        cplus_rwlock lock_ch = CPLUS_NULL;
 
-        UNITTEST_EXPECT_EQ(true, (NULL != (lock_ch = cplus_rwlock_xp_new(TEST_RWLOCK_NAME))));
+        UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (lock_ch = cplus_rwlock_xp_new(TEST_RWLOCK_NAME))));
         UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_rwlock_rdlock(lock_ch, 0));
         time = cplus_systime_get_tick();
         UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_rwlock_rdlock(lock_ch, 1500));
@@ -541,22 +541,22 @@ CPLUS_UNIT_TEST(cplus_rwlock_rdlock, cross_process_test)
 
 CPLUS_UNIT_TEST(cplus_rwlock_xp_new, bad_parameter)
 {
-    cplus_rwlock lock_sv = NULL;
+    cplus_rwlock lock_sv = CPLUS_NULL;
     char bad_name[26] = "0123456789abcdef012345678";
 
-    UNITTEST_EXPECT_EQ(true, (NULL == (lock_sv = cplus_rwlock_xp_new(bad_name))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL == (lock_sv = cplus_rwlock_xp_new(bad_name))));
     UNITTEST_EXPECT_EQ(EINVAL, errno);
-    UNITTEST_EXPECT_EQ(true, (NULL != (lock_sv = cplus_rwlock_xp_new(&bad_name[1]))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (lock_sv = cplus_rwlock_xp_new(&bad_name[1]))));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_rwlock_delete(lock_sv));
     UNITTEST_EXPECT_EQ(0, cplus_mgr_report());
 }
 
 CPLUS_UNIT_TEST(cplus_rwlock_xp_create, functionity)
 {
-    cplus_rwlock lock_sv = NULL;
+    cplus_rwlock lock_sv = CPLUS_NULL;
     uint32_t time;
 
-    UNITTEST_EXPECT_EQ(true, (NULL != (lock_sv = cplus_rwlock_xp_create(TEST_RWLOCK_NAME))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (lock_sv = cplus_rwlock_xp_create(TEST_RWLOCK_NAME))));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_rwlock_wrlock(lock_sv, CPLUS_INFINITE_TIMEOUT));
 
     if (0 != fork())
@@ -564,9 +564,9 @@ CPLUS_UNIT_TEST(cplus_rwlock_xp_create, functionity)
     }
     else
     {
-        cplus_rwlock lock_ch = NULL;
+        cplus_rwlock lock_ch = CPLUS_NULL;
 
-        UNITTEST_EXPECT_EQ(true, (NULL != (lock_ch = cplus_rwlock_xp_open(TEST_RWLOCK_NAME))));
+        UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (lock_ch = cplus_rwlock_xp_open(TEST_RWLOCK_NAME))));
         UNITTEST_EXPECT_EQ(CPLUS_FAIL, cplus_rwlock_wrlock(lock_ch, 0));
         UNITTEST_EXPECT_EQ(EBUSY, errno);
         time = cplus_systime_get_tick();
@@ -588,9 +588,9 @@ CPLUS_UNIT_TEST(cplus_rwlock_xp_create, functionity)
     }
     else
     {
-        cplus_rwlock lock_ch = NULL;
+        cplus_rwlock lock_ch = CPLUS_NULL;
 
-        UNITTEST_EXPECT_EQ(true, (NULL != (lock_ch = cplus_rwlock_xp_create(TEST_RWLOCK_NAME))));
+        UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (lock_ch = cplus_rwlock_xp_create(TEST_RWLOCK_NAME))));
         UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_rwlock_wrlock(lock_ch, 0));
         time = cplus_systime_get_tick();
         UNITTEST_EXPECT_EQ(CPLUS_FAIL, cplus_rwlock_wrlock(lock_ch, 1500));
@@ -611,12 +611,12 @@ CPLUS_UNIT_TEST(cplus_rwlock_xp_create, functionity)
 
 CPLUS_UNIT_TEST(cplus_rwlock_wrlock, PREFER_WRITER)
 {
-    cplus_rwlock lock_sv = NULL;
+    cplus_rwlock lock_sv = CPLUS_NULL;
     uint32_t time;
     struct cplus_rwlock_config config = {0};
 
     config.kind = CPLUS_RWLOCK_KIND_PREFER_WRITER_NONRECURSIVE;
-    UNITTEST_EXPECT_EQ(true, (NULL != (lock_sv = cplus_rwlock_new_config(&config))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (lock_sv = cplus_rwlock_new_config(&config))));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_rwlock_wrlock(lock_sv, CPLUS_INFINITE_TIMEOUT));
     UNITTEST_EXPECT_EQ(CPLUS_FAIL, cplus_rwlock_wrlock(lock_sv, 0));
     UNITTEST_EXPECT_EQ(EBUSY, errno);

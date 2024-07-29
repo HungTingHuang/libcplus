@@ -28,7 +28,6 @@ typedef enum cplus_debug_level
 cplus_syslog cplus_syslog_new(void);
 cplus_syslog cplus_syslog_new_ex(const char * custom_program_name);
 int32_t cplus_syslog_delete(cplus_syslog obj);
-
 bool cplus_syslog_check(cplus_object obj);
 int32_t cplus_syslog_fatal(cplus_syslog obj, const char * format, ...);
 int32_t cplus_syslog_error(cplus_syslog obj, const char * format, ...);
@@ -36,7 +35,6 @@ int32_t cplus_syslog_warn(cplus_syslog obj, const char * format, ...);
 int32_t cplus_syslog_info(cplus_syslog obj, const char * format, ...);
 int32_t cplus_syslog_debug(cplus_syslog obj, const char * format, ...);
 int32_t cplus_syslog_trace(cplus_syslog obj, const char * format, ...);
-
 CPLUS_DEBUG_LEVEL cplus_syslog_get_debug_level(cplus_syslog obj);
 CPLUS_DEBUG_LEVEL cplus_syslog_get_logger_level(cplus_syslog obj);
 

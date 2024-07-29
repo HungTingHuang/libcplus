@@ -53,43 +53,20 @@ typedef enum cplus_socket_type
 cplus_socket cplus_socket_new(CPLUS_SOCKET_TYPE type);
 cplus_socket cplus_socket_new_ex(int32_t domain, int32_t style, int32_t ip_protocol);
 int32_t cplus_socket_delete(cplus_socket obj);
-
 bool cplus_socket_check(cplus_object obj);
 int32_t cplus_socket_shutdown(cplus_socket obj);
 int32_t cplus_socket_shutdown_ex(cplus_socket obj, CPLUS_SOCKET_SHUTDOWN_MODE mode);
 int32_t cplus_socket_close(cplus_socket obj);
-
 int32_t cplus_socket_bind(cplus_socket obj, const char * addr, int32_t port);
 int32_t cplus_socket_connect(cplus_socket obj, const char * addr, int32_t port);
 int32_t cplus_socket_listen(cplus_socket obj, int32_t max_conn);
 cplus_socket cplus_socket_accept(cplus_socket obj, uint32_t timeout);
-
 int32_t cplus_socket_recvfrom(
-    cplus_socket obj
-    , void * data_bufs
-    , int32_t data_len
-    , char * from_addr
-    , int32_t from_addr_size
-    , int32_t * from_port
-    , uint32_t timeout);
-
-int32_t cplus_socket_recv(
-    cplus_socket obj
-    , void * data_bufs
-    , int32_t data_len
-    , uint32_t timeout);
-
-int32_t cplus_socket_sendto(
-    cplus_socket obj
-    , void * data_bufs
-    , int32_t data_len
-    , const char * addr
-    , int32_t port);
-
+    cplus_socket obj, void * data_bufs, int32_t data_len, char * from_addr, int32_t from_addr_size, int32_t * from_port, uint32_t timeout);
+int32_t cplus_socket_recv(cplus_socket obj, void * data_bufs, int32_t data_len, uint32_t timeout);
+int32_t cplus_socket_sendto(cplus_socket obj, void * data_bufs, int32_t data_len, const char * addr, int32_t port);
 int32_t cplus_socket_send(cplus_socket obj, void * data_bufs, int32_t data_len);
-
 int32_t cplus_socket_setopt_reuse_addr(cplus_socket obj, bool enable_reuse_addr);
-
 int32_t cplus_socket_recv_fd(cplus_socket obj, int32_t * recvfd, uint32_t timeout);
 int32_t cplus_socket_send_fd(cplus_socket obj, int32_t sendfd, const char * addr, int32_t port);
 

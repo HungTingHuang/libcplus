@@ -44,7 +44,6 @@ typedef enum cplus_object_option
 } CPLUS_OBJECT_OPTION;
 
 int32_t cplus_object_delete(cplus_object object);
-
 int32_t cplus_lock_shlock(cplus_object object, uint32_t timeout);
 int32_t cplus_lock_exlock(cplus_object object, uint32_t timeout);
 int32_t cplus_lock_unlock(cplus_object object);

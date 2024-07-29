@@ -20,12 +20,8 @@ typedef struct systime {
     uint32_t microsecond;    // range 0 ~ 999
 } cplus_systime;
 
-int32_t cplus_systime_get_abstime_after_msec(
-    struct timespec * abstime
-    , uint32_t msec);
-int32_t cplus_systime_get_abstick_after_msec(
-    struct timespec * abstick
-    , uint32_t msec);
+int32_t cplus_systime_get_abstime_after_msec(struct timespec * abstime, uint32_t msec);
+int32_t cplus_systime_get_abstick_after_msec(struct timespec * abstick, uint32_t msec);
 uint32_t cplus_systime_get_tick(void);
 uint32_t cplus_systime_diff_tick(uint32_t early_msec, uint32_t late_msec);
 uint32_t cplus_systime_elapsed_tick(uint32_t msec);

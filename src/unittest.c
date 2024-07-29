@@ -26,7 +26,7 @@ struct test_case
 };
 
 static pid_t parents_id = 0;
-static struct test_case * test_cases = NULL;
+static struct test_case * test_cases = CPLUS_NULL;
 
 int32_t unittest_wait_child_proc_end(uint32_t timeout)
 {
@@ -52,24 +52,24 @@ void * unittest_add_test_case(
     , const char * test_name
     , void (* test_func)(bool *))
 {
-    struct test_case * cs = NULL;
-    struct test_case * last_case = NULL;
+    struct test_case * cs = CPLUS_NULL;
+    struct test_case * last_case = CPLUS_NULL;
 
     if ((cs = (struct test_case *)malloc(sizeof(struct test_case))))
     {
         cplus_str_printf(cs->test_case_name, UNITTEST_NAME_MAX_SIZE, "%s", test_case_name);
         cplus_str_printf(cs->test_name, UNITTEST_NAME_MAX_SIZE, "%s", test_name);
         cs->test_case_func = test_func;
-        cs->next = NULL;
+        cs->next = CPLUS_NULL;
 
-        if (NULL == test_cases)
+        if (CPLUS_NULL == test_cases)
         {
             test_cases = cs;
         }
         else
         {
             for (last_case = test_cases
-                ; (NULL != last_case) AND (NULL != last_case->next)
+                ; (CPLUS_NULL != last_case) AND (CPLUS_NULL != last_case->next)
                 ; last_case = last_case->next) { }
 
             last_case->next = cs;
@@ -80,10 +80,10 @@ void * unittest_add_test_case(
 
 void unittest_run(void)
 {
-    struct test_case * next_case = NULL;
+    struct test_case * next_case = CPLUS_NULL;
 
     fprintf(stdout, "unit test begin ... \n");
-    while (NULL != test_cases)
+    while (CPLUS_NULL != test_cases)
     {
         next_case = test_cases->next;
 
@@ -104,7 +104,7 @@ void unittest_run(void)
             fprintf(stdout, "LN: %04d CHILD PROCESS END!! result: ", __LINE__);
 
             /* clean all testcase */
-            while (NULL != test_cases)
+            while (CPLUS_NULL != test_cases)
             {
                 next_case = test_cases->next;
                 free(test_cases);

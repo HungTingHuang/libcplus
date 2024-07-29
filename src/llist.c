@@ -40,7 +40,7 @@ struct linked_list
 
 static void * llist_initialize_object(uint32_t max_count, bool thread_safe)
 {
-    struct linked_list * list = NULL;
+    struct linked_list * list = CPLUS_NULL;
 
     if ((list = (struct linked_list *)cplus_malloc(sizeof(struct linked_list))))
     {
@@ -52,13 +52,13 @@ static void * llist_initialize_object(uint32_t max_count, bool thread_safe)
         list->mempool = cplus_mempool_new(
             max_count
             , sizeof(struct llist_node));
-        if (NULL == list->mempool AND 0 != max_count)
+        if (CPLUS_NULL == list->mempool AND 0 != max_count)
         {
             errno = ENOMEM;
             goto exit;
         }
-        list->head = NULL;
-        list->tail = NULL;
+        list->head = CPLUS_NULL;
+        list->tail = CPLUS_NULL;
         list->cur_index = HEAD;
         list->current = &(list->head);
         if (thread_safe)
@@ -74,7 +74,7 @@ static void * llist_initialize_object(uint32_t max_count, bool thread_safe)
     return list;
 exit:
     cplus_llist_delete(list);
-    return NULL;
+    return CPLUS_NULL;
 }
 
 static inline bool is_empty(struct linked_list * list)
@@ -96,7 +96,7 @@ static void free_node(struct linked_list * list, struct llist_node * node)
 {
     if (node)
     {
-        if (NULL != list->mempool)
+        if (CPLUS_NULL != list->mempool)
         {
             cplus_mempool_free(list->mempool, node);
         }
@@ -109,9 +109,9 @@ static void free_node(struct linked_list * list, struct llist_node * node)
 
 static struct llist_node * new_node(struct linked_list * list, void * data)
 {
-    struct llist_node * node = NULL;
+    struct llist_node * node = CPLUS_NULL;
 
-    if (NULL != list->mempool)
+    if (CPLUS_NULL != list->mempool)
     {
         node = (struct llist_node *)cplus_mempool_alloc(list->mempool);
     }
@@ -120,15 +120,15 @@ static struct llist_node * new_node(struct linked_list * list, void * data)
         node = (struct llist_node *)cplus_malloc(sizeof(struct llist_node));
     }
 
-    if (NULL == node)
+    if (CPLUS_NULL == node)
     {
         errno = ENOMEM;
     }
     else
     {
         node->data = data;
-        node->next = NULL;
-        node->prev = NULL;
+        node->next = CPLUS_NULL;
+        node->prev = CPLUS_NULL;
     }
     return node;
 }
@@ -152,32 +152,32 @@ static int32_t remove_node(struct linked_list * list, struct llist_node * node)
         list->head = node->next;
         if (node->next)
         {
-            (node->next)->prev = NULL;
+            (node->next)->prev = CPLUS_NULL;
         }
-        node->next = NULL;
+        node->next = CPLUS_NULL;
     }
     else if (list->tail == node)
     {
         list->tail = node->prev;
         if (node->prev)
         {
-            (node->prev)->next = NULL;
+            (node->prev)->next = CPLUS_NULL;
         }
-        node->prev = NULL;
+        node->prev = CPLUS_NULL;
     }
     else
     {
         (node->prev)->next = node->next;
         (node->next)->prev = node->prev;
-        node->next = NULL;
-        node->prev = NULL;
+        node->next = CPLUS_NULL;
+        node->prev = CPLUS_NULL;
     }
     list->count--;
 
     if (is_empty(list))
     {
-        list->head = NULL;
-        list->tail = NULL;
+        list->head = CPLUS_NULL;
+        list->tail = CPLUS_NULL;
     }
 
     reset_cur_node(list);
@@ -187,9 +187,9 @@ static int32_t remove_node(struct linked_list * list, struct llist_node * node)
 
 static void swap_data(struct llist_node * front, struct llist_node * back)
 {
-    void * temp = NULL;
+    void * temp = CPLUS_NULL;
 
-    if (NULL == front || NULL == back)
+    if (CPLUS_NULL == front || CPLUS_NULL == back)
     {
         return;
     }
@@ -224,7 +224,7 @@ static struct llist_node * get_next(struct linked_list * list)
         list->cur_index ++;
         return *(list->current);
     }
-    return NULL;
+    return CPLUS_NULL;
 }
 
 static struct llist_node * get_prev(struct linked_list * list)
@@ -235,7 +235,7 @@ static struct llist_node * get_prev(struct linked_list * list)
         list->cur_index --;
         return *(list->current);
     }
-    return NULL;
+    return CPLUS_NULL;
 }
 
 static struct llist_node * get_node_of(
@@ -282,7 +282,7 @@ static struct llist_node * get_node_if(
             return *(list->current);
         }
 
-        if (NULL == (*(list->current))->next)
+        if (CPLUS_NULL == (*(list->current))->next)
         {
             break;
         }
@@ -294,7 +294,7 @@ static struct llist_node * get_node_if(
     }
 
     errno = ENOENT;
-    return NULL;
+    return CPLUS_NULL;
 }
 
 static int32_t get_index_if(
@@ -313,7 +313,7 @@ static int32_t get_index_if(
             return list->cur_index;
         }
 
-        if (NULL == (*(list->current))->next)
+        if (CPLUS_NULL == (*(list->current))->next)
         {
             break;
         }
@@ -330,12 +330,12 @@ static int32_t get_index_if(
 
 static struct llist_node * pop_of(struct linked_list * list, int32_t index)
 {
-    struct llist_node * node = NULL;
+    struct llist_node * node = CPLUS_NULL;
 
     if (is_empty(list))
     {
         errno = ENOENT;
-        return NULL;
+        return CPLUS_NULL;
     }
     else
     {
@@ -345,9 +345,9 @@ static struct llist_node * pop_of(struct linked_list * list, int32_t index)
             list->head = node->next;
             if (node->next)
             {
-                (node->next)->prev = NULL;
+                (node->next)->prev = CPLUS_NULL;
             }
-            node->next = NULL;
+            node->next = CPLUS_NULL;
             reset_cur_node(list);
         }
         else if (get_size(list) == ((uint32_t)(index)))
@@ -356,9 +356,9 @@ static struct llist_node * pop_of(struct linked_list * list, int32_t index)
             list->tail = node->prev;
             if (node->prev)
             {
-                (node->prev)->next = NULL;
+                (node->prev)->next = CPLUS_NULL;
             }
-            node->prev = NULL;
+            node->prev = CPLUS_NULL;
             reset_cur_node(list);
         }
         else
@@ -367,16 +367,16 @@ static struct llist_node * pop_of(struct linked_list * list, int32_t index)
             {
                 (node->prev)->next = node->next;
                 (node->next)->prev = node->prev;
-                node->next = NULL;
-                node->prev = NULL;
+                node->next = CPLUS_NULL;
+                node->prev = CPLUS_NULL;
             }
         }
         list->count--;
 
         if (is_empty(list))
         {
-            list->head = NULL;
-            list->tail = NULL;
+            list->head = CPLUS_NULL;
+            list->tail = CPLUS_NULL;
             reset_cur_node(list);
         }
     }
@@ -390,7 +390,7 @@ static int32_t push_at(
     , struct llist_node * node)
 {
     int32_t res = CPLUS_SUCCESS;
-    struct llist_node * target = NULL;
+    struct llist_node * target = CPLUS_NULL;
 
     if (is_empty(list))
     {
@@ -456,7 +456,7 @@ static struct llist_node * pop_if(
             return target;
         }
 
-        if (NULL == (*(list->current))->next)
+        if (CPLUS_NULL == (*(list->current))->next)
         {
             break;
         }
@@ -468,7 +468,7 @@ static struct llist_node * pop_if(
     }
 
     errno = ENOENT;
-    return NULL;
+    return CPLUS_NULL;
 }
 
 static void * get_set_if(
@@ -476,8 +476,8 @@ static void * get_set_if(
     , int32_t (* comparator)(void * data, void * arg)
     , void * arg)
 {
-    struct linked_list * target_list = NULL;
-    struct llist_node * node = NULL;
+    struct linked_list * target_list = CPLUS_NULL;
+    struct llist_node * node = CPLUS_NULL;
 
     list->cur_index = 0;
     list->current = &(list->head);
@@ -487,7 +487,7 @@ static void * get_set_if(
         void * data = get_data(*(list->current));
         if (data && !comparator(data, arg))
         {
-            if (NULL == target_list)
+            if (CPLUS_NULL == target_list)
             {
                 target_list = (struct linked_list *)llist_initialize_object(0, false);
             }
@@ -498,7 +498,7 @@ static void * get_set_if(
             }
         }
 
-        if (NULL == (*(list->current))->next)
+        if (CPLUS_NULL == (*(list->current))->next)
         {
             break;
         }
@@ -509,7 +509,7 @@ static void * get_set_if(
         }
     }
 
-    if (NULL == target_list)
+    if (CPLUS_NULL == target_list)
     {
         errno = ENOENT;
     }
@@ -533,7 +533,7 @@ static int32_t remove_data(
             return CPLUS_SUCCESS;
         }
 
-        if (NULL == (*(list->current))->next)
+        if (CPLUS_NULL == (*(list->current))->next)
         {
             break;
         }
@@ -550,21 +550,21 @@ static void llist_sort(
     struct linked_list * list
     , int32_t (* comparator)(void * data1, void * data2))
 {
-    struct llist_node * node1 = list->head, * node2 = NULL;
-    void * data1 = NULL, * data2 = NULL;
+    struct llist_node * node1 = list->head, * node2 = CPLUS_NULL;
+    void * data1 = CPLUS_NULL, * data2 = CPLUS_NULL;
     uint32_t size = get_size(list);
 
     for (uint32_t i = 0
-        ; i < get_size(list) && NULL != node1
+        ; i < get_size(list) && CPLUS_NULL != node1
         ; i ++, size --)
     {
         node1 = list->head;
         for (uint32_t j = 0
-            ; j < size && NULL != node1
+            ; j < size && CPLUS_NULL != node1
             ; j++, node1 = node1->next)
         {
             node2 = node1->next;
-            if (NULL == node1 || NULL == node2)
+            if (CPLUS_NULL == node1 || CPLUS_NULL == node2)
             {
                 break;
             }
@@ -599,12 +599,12 @@ uint32_t cplus_llist_get_size(cplus_llist obj)
 
 void * cplus_llist_get_of(cplus_llist obj, int32_t index)
 {
-    void * target = NULL;
-    struct llist_node * node = NULL;
+    void * target = CPLUS_NULL;
+    struct llist_node * node = CPLUS_NULL;
     struct linked_list * list = (struct linked_list *)(obj);
 
     CHECK_OBJECT_TYPE(obj);
-    CHECK_IN_INTERVAL(index, 0, (int32_t)(cplus_llist_get_size(obj) - 1), NULL);
+    CHECK_IN_INTERVAL(index, 0, (int32_t)(cplus_llist_get_size(obj) - 1), CPLUS_NULL);
 
     cplus_lock_shlock(list->lock, CPLUS_INFINITE_TIMEOUT);
     if ((node = get_node_of(list, index)))
@@ -635,11 +635,11 @@ int32_t cplus_llist_get_index_if(
 
 void * cplus_llist_pop_of(cplus_llist obj, int32_t index)
 {
-    void * target = NULL;
-    struct llist_node * node = NULL;
+    void * target = CPLUS_NULL;
+    struct llist_node * node = CPLUS_NULL;
     struct linked_list * list = (struct linked_list *)(obj);
     CHECK_OBJECT_TYPE(obj);
-    CHECK_IN_INTERVAL(index, 0, (int32_t)(cplus_llist_get_size(obj)), NULL);
+    CHECK_IN_INTERVAL(index, 0, (int32_t)(cplus_llist_get_size(obj)), CPLUS_NULL);
 
     cplus_lock_exlock(list->lock, CPLUS_INFINITE_TIMEOUT);
     if ((node = pop_of(list, index)))
@@ -659,7 +659,7 @@ int32_t cplus_llist_push_at(
 {
     int32_t res = CPLUS_FAIL;
     struct linked_list * list = (struct linked_list *)(obj);
-    struct llist_node * node = NULL;
+    struct llist_node * node = CPLUS_NULL;
     CHECK_OBJECT_TYPE(obj);
     CHECK_NOT_NULL(data, CPLUS_FAIL);
     CHECK_IN_INTERVAL(index, 0, (int32_t)(cplus_llist_get_size(obj)), CPLUS_FAIL);
@@ -696,7 +696,7 @@ int32_t cplus_llist_push_back(cplus_llist obj, void * data)
 
 int32_t cplus_llist_clear(cplus_llist obj)
 {
-    struct llist_node * node = NULL, * temp = NULL;
+    struct llist_node * node = CPLUS_NULL, * temp = CPLUS_NULL;
     struct linked_list * list = (struct linked_list *)(obj);
     CHECK_OBJECT_TYPE(obj);
 
@@ -711,8 +711,8 @@ int32_t cplus_llist_clear(cplus_llist obj)
 
     list->count = 0;
     list->sort_count = 0;
-    list->head = NULL;
-    list->tail = NULL;
+    list->head = CPLUS_NULL;
+    list->tail = CPLUS_NULL;
     reset_cur_node(list);
     cplus_lock_unlock(list->lock);
 
@@ -747,10 +747,10 @@ cplus_llist cplus_llist_get_set_if(
     , int32_t (* comparator)(void * data, void * arg)
     , void * arg)
 {
-    cplus_llist target = NULL;
+    cplus_llist target = CPLUS_NULL;
     struct linked_list * list = (struct linked_list *)(obj);
     CHECK_OBJECT_TYPE(obj);
-    CHECK_NOT_NULL(comparator, NULL);
+    CHECK_NOT_NULL(comparator, CPLUS_NULL);
 
     cplus_lock_shlock(list->lock, CPLUS_INFINITE_TIMEOUT);
     target = get_set_if(list, comparator, arg);
@@ -764,11 +764,11 @@ void * cplus_llist_pop_if(
     , int32_t (* comparator)(void * data, void * arg)
     , void * arg)
 {
-    void * target = NULL;
-    struct llist_node * node = NULL;
+    void * target = CPLUS_NULL;
+    struct llist_node * node = CPLUS_NULL;
     struct linked_list * list = (struct linked_list *)(obj);
     CHECK_OBJECT_TYPE(obj);
-    CHECK_NOT_NULL(comparator, NULL);
+    CHECK_NOT_NULL(comparator, CPLUS_NULL);
 
     cplus_lock_exlock(list->lock, CPLUS_INFINITE_TIMEOUT);
     node = pop_if(list, comparator, arg);
@@ -787,11 +787,11 @@ void * cplus_llist_get_if(
     , int32_t (* comparator)(void * data, void * arg)
     , void * arg)
 {
-    void * target = NULL;
-    struct llist_node * node = NULL;
+    void * target = CPLUS_NULL;
+    struct llist_node * node = CPLUS_NULL;
     struct linked_list * list = (struct linked_list *)(obj);
     CHECK_OBJECT_TYPE(obj);
-    CHECK_NOT_NULL(comparator, NULL);
+    CHECK_NOT_NULL(comparator, CPLUS_NULL);
 
     cplus_lock_shlock(list->lock, CPLUS_INFINITE_TIMEOUT);
     if ((node = get_node_if(list, comparator, arg)))
@@ -878,9 +878,9 @@ bool cplus_llist_is_sort(cplus_llist obj)
 
 void * cplus_llist_get_head(cplus_llist obj)
 {
-    void * target = NULL;
+    void * target = CPLUS_NULL;
     struct linked_list * list = (struct linked_list *)(obj);
-    struct llist_node * node = NULL;
+    struct llist_node * node = CPLUS_NULL;
     CHECK_OBJECT_TYPE(obj);
 
     cplus_lock_shlock(list->lock, CPLUS_INFINITE_TIMEOUT);
@@ -895,9 +895,9 @@ void * cplus_llist_get_head(cplus_llist obj)
 
 void * cplus_llist_get_tail(cplus_llist obj)
 {
-    void * target = NULL;
+    void * target = CPLUS_NULL;
     struct linked_list * list = (struct linked_list *)(obj);
-    struct llist_node * node = NULL;
+    struct llist_node * node = CPLUS_NULL;
     CHECK_OBJECT_TYPE(obj);
 
     cplus_lock_shlock(list->lock, CPLUS_INFINITE_TIMEOUT);
@@ -912,9 +912,9 @@ void * cplus_llist_get_tail(cplus_llist obj)
 
 void * cplus_llist_get_current(cplus_llist obj)
 {
-    void * target = NULL;
+    void * target = CPLUS_NULL;
     struct linked_list * list = (struct linked_list *)(obj);
-    struct llist_node * node = NULL;
+    struct llist_node * node = CPLUS_NULL;
     CHECK_OBJECT_TYPE(obj);
 
     cplus_lock_shlock(list->lock, CPLUS_INFINITE_TIMEOUT);
@@ -929,9 +929,9 @@ void * cplus_llist_get_current(cplus_llist obj)
 
 void * cplus_llist_get_next(cplus_llist obj)
 {
-    void * target = NULL;
+    void * target = CPLUS_NULL;
     struct linked_list * list = (struct linked_list *)(obj);
-    struct llist_node * node = NULL;
+    struct llist_node * node = CPLUS_NULL;
     CHECK_OBJECT_TYPE(obj);
 
     cplus_lock_exlock(list->lock, CPLUS_INFINITE_TIMEOUT);
@@ -946,9 +946,9 @@ void * cplus_llist_get_next(cplus_llist obj)
 
 void * cplus_llist_get_prev(cplus_llist obj)
 {
-    void * target = NULL;
+    void * target = CPLUS_NULL;
     struct linked_list * list = (struct linked_list *)(obj);
-    struct llist_node * node = NULL;
+    struct llist_node * node = CPLUS_NULL;
     CHECK_OBJECT_TYPE(obj);
 
     cplus_lock_exlock(list->lock, CPLUS_INFINITE_TIMEOUT);
@@ -963,9 +963,9 @@ void * cplus_llist_get_prev(cplus_llist obj)
 
 void * cplus_llist_get_cycling_next(cplus_llist obj)
 {
-    void * target = NULL;
+    void * target = CPLUS_NULL;
     struct linked_list * list = (struct linked_list *)(obj);
-    struct llist_node * node = NULL;
+    struct llist_node * node = CPLUS_NULL;
     CHECK_OBJECT_TYPE(obj);
 
     cplus_lock_exlock(list->lock, CPLUS_INFINITE_TIMEOUT);
@@ -984,7 +984,7 @@ void * cplus_llist_get_cycling_next(cplus_llist obj)
 
 cplus_llist cplus_llist_prev_new(uint32_t max_count)
 {
-    CHECK_IF(MAX_NODE_COUNT < max_count, NULL);
+    CHECK_IF(MAX_NODE_COUNT < max_count, CPLUS_NULL);
     return llist_initialize_object(max_count, false);
 }
 
@@ -995,7 +995,7 @@ cplus_llist cplus_llist_new(void)
 
 cplus_llist cplus_llist_prev_new_s(uint32_t max_count)
 {
-    CHECK_IF(MAX_NODE_COUNT < max_count, NULL);
+    CHECK_IF(MAX_NODE_COUNT < max_count, CPLUS_NULL);
     return llist_initialize_object(max_count, true);
 }
 
@@ -1011,10 +1011,10 @@ bool cplus_llist_check(cplus_object obj)
 
 static int find_node_by_key(void * data1, void * data2)
 {
-    char * data_key = cplus_data_get_key((cplus_data)(data1));
-    char * key = (char *)(data2);
+    const char * data_key = cplus_data_get_key((cplus_data)(data1));
+    const char * key = (const char *)(data2);
 
-    if (NULL == data_key OR NULL == key)
+    if (CPLUS_NULL == data_key OR CPLUS_NULL == key)
     {
         return 1;
     }
@@ -1024,14 +1024,14 @@ static int find_node_by_key(void * data1, void * data2)
 cplus_data cplus_llist_add_data(
     cplus_llist obj
     , CPLUS_DATA_TYPE type
-    , char * key
+    , const char * key
     , void * value1
     , void * value2)
 {
-    cplus_data data = NULL;
+    cplus_data data = CPLUS_NULL;
     CHECK_OBJECT_TYPE(obj);
-    CHECK_NOT_NULL(key, NULL);
-    CHECK_NOT_NULL(value1, NULL);
+    CHECK_NOT_NULL(key, CPLUS_NULL);
+    CHECK_NOT_NULL(value1, CPLUS_NULL);
 
     data = cplus_llist_get_if(obj, find_node_by_key, (void *)(key));
     if (!cplus_data_check(data))
@@ -1048,26 +1048,26 @@ cplus_data cplus_llist_add_data(
     return data;
 }
 
-cplus_data cplus_llist_find_data(cplus_llist obj, char * key)
+cplus_data cplus_llist_find_data(cplus_llist obj, const char * key)
 {
     CHECK_OBJECT_TYPE(obj);
-    CHECK_NOT_NULL(key, NULL);
+    CHECK_NOT_NULL(key, CPLUS_NULL);
     return cplus_llist_get_if(obj, find_node_by_key, (void *)(key));
 }
 
-cplus_data cplus_llist_update_data(cplus_llist obj, char * key, cplus_data data)
+cplus_data cplus_llist_update_data(cplus_llist obj, const char * key, cplus_data data)
 {
-    cplus_data target = NULL;
+    cplus_data target = CPLUS_NULL;
 
     CHECK_OBJECT_TYPE(obj);
-    CHECK_NOT_NULL(key, NULL);
-    CHECK_IF_NOT(cplus_data_check(data), NULL);
+    CHECK_NOT_NULL(key, CPLUS_NULL);
+    CHECK_IF_NOT(cplus_data_check(data), CPLUS_NULL);
 
-    if (NULL != (target = cplus_llist_get_if(obj, find_node_by_key, (void *)(key))))
+    if (CPLUS_NULL != (target = cplus_llist_get_if(obj, find_node_by_key, (void *)(key))))
     {
         if (CPLUS_SUCCESS != cplus_data_clone_value(target, data))
         {
-            return NULL;
+            return CPLUS_NULL;
         }
     }
     if (CPLUS_SUCCESS == cplus_data_set_key(data, strlen(key), key)
@@ -1078,9 +1078,9 @@ cplus_data cplus_llist_update_data(cplus_llist obj, char * key, cplus_data data)
     return target;
 }
 
-int32_t cplus_llist_remove_data(cplus_llist obj, char * key)
+int32_t cplus_llist_remove_data(cplus_llist obj, const char * key)
 {
-    cplus_data data = NULL;
+    cplus_data data = CPLUS_NULL;
     CHECK_NOT_NULL(obj, CPLUS_FAIL);
     CHECK_NOT_NULL(key, CPLUS_FAIL);
 
@@ -1093,67 +1093,67 @@ int32_t cplus_llist_remove_data(cplus_llist obj, char * key)
     return CPLUS_SUCCESS;
 }
 
-cplus_data cplus_llist_add_data_bool(cplus_llist obj, char * key, bool value)
+cplus_data cplus_llist_add_data_bool(cplus_llist obj, const char * key, bool value)
 {
-    return cplus_llist_add_data(obj, CPLUS_DATA_TYPE_BOOL, key, &(value), NULL);
+    return cplus_llist_add_data(obj, CPLUS_DATA_TYPE_BOOL, key, &(value), CPLUS_NULL);
 }
 
-cplus_data cplus_llist_add_data_int8(cplus_llist obj, char * key, int8_t value)
+cplus_data cplus_llist_add_data_int8(cplus_llist obj, const char * key, int8_t value)
 {
-    return cplus_llist_add_data(obj, CPLUS_DATA_TYPE_INT8, key, &(value), NULL);
+    return cplus_llist_add_data(obj, CPLUS_DATA_TYPE_INT8, key, &(value), CPLUS_NULL);
 }
 
-cplus_data cplus_llist_add_data_int16(cplus_llist obj, char * key, int16_t value)
+cplus_data cplus_llist_add_data_int16(cplus_llist obj, const char * key, int16_t value)
 {
-    return cplus_llist_add_data(obj, CPLUS_DATA_TYPE_INT16, key, &(value), NULL);
+    return cplus_llist_add_data(obj, CPLUS_DATA_TYPE_INT16, key, &(value), CPLUS_NULL);
 }
 
-cplus_data cplus_llist_add_data_int32(cplus_llist obj, char * key, int32_t value)
+cplus_data cplus_llist_add_data_int32(cplus_llist obj, const char * key, int32_t value)
 {
-    return cplus_llist_add_data(obj, CPLUS_DATA_TYPE_INT32, key, &(value), NULL);
+    return cplus_llist_add_data(obj, CPLUS_DATA_TYPE_INT32, key, &(value), CPLUS_NULL);
 }
 
-cplus_data cplus_llist_add_data_int64(cplus_llist obj, char * key, int64_t value)
+cplus_data cplus_llist_add_data_int64(cplus_llist obj, const char * key, int64_t value)
 {
-    return cplus_llist_add_data(obj, CPLUS_DATA_TYPE_INT64, key, &(value), NULL);
+    return cplus_llist_add_data(obj, CPLUS_DATA_TYPE_INT64, key, &(value), CPLUS_NULL);
 }
 
-cplus_data cplus_llist_add_data_uint8(cplus_llist obj, char * key, uint8_t value)
+cplus_data cplus_llist_add_data_uint8(cplus_llist obj, const char * key, uint8_t value)
 {
-    return cplus_llist_add_data(obj, CPLUS_DATA_TYPE_UINT8, key, &(value), NULL);
+    return cplus_llist_add_data(obj, CPLUS_DATA_TYPE_UINT8, key, &(value), CPLUS_NULL);
 }
 
-cplus_data cplus_llist_add_data_uint16(cplus_llist obj, char * key, uint16_t value)
+cplus_data cplus_llist_add_data_uint16(cplus_llist obj, const char * key, uint16_t value)
 {
-    return cplus_llist_add_data(obj, CPLUS_DATA_TYPE_UINT16, key, &(value), NULL);
+    return cplus_llist_add_data(obj, CPLUS_DATA_TYPE_UINT16, key, &(value), CPLUS_NULL);
 }
 
-cplus_data cplus_llist_add_data_uint32(cplus_llist obj, char * key, uint32_t value)
+cplus_data cplus_llist_add_data_uint32(cplus_llist obj, const char * key, uint32_t value)
 {
-    return cplus_llist_add_data(obj, CPLUS_DATA_TYPE_UINT32, key, &(value), NULL);
+    return cplus_llist_add_data(obj, CPLUS_DATA_TYPE_UINT32, key, &(value), CPLUS_NULL);
 }
 
-cplus_data cplus_llist_add_data_uint64(cplus_llist obj, char * key, uint64_t value)
+cplus_data cplus_llist_add_data_uint64(cplus_llist obj, const char * key, uint64_t value)
 {
-    return cplus_llist_add_data(obj, CPLUS_DATA_TYPE_UINT64, key, &(value), NULL);
+    return cplus_llist_add_data(obj, CPLUS_DATA_TYPE_UINT64, key, &(value), CPLUS_NULL);
 }
 
-cplus_data cplus_llist_add_data_float(cplus_llist obj, char * key, float value)
+cplus_data cplus_llist_add_data_float(cplus_llist obj, const char * key, float value)
 {
-    return cplus_llist_add_data(obj, CPLUS_DATA_TYPE_FLOAT, key, &(value), NULL);
+    return cplus_llist_add_data(obj, CPLUS_DATA_TYPE_FLOAT, key, &(value), CPLUS_NULL);
 }
 
-cplus_data ccplus_llist_add_data_double(cplus_llist obj, char * key, double value)
+cplus_data ccplus_llist_add_data_double(cplus_llist obj, const char * key, double value)
 {
-    return cplus_llist_add_data(obj, CPLUS_DATA_TYPE_DOUBLE, key, &(value), NULL);
+    return cplus_llist_add_data(obj, CPLUS_DATA_TYPE_DOUBLE, key, &(value), CPLUS_NULL);
 }
 
-cplus_data cplus_llist_add_data_pointer(cplus_llist obj, char * key, void * value)
+cplus_data cplus_llist_add_data_pointer(cplus_llist obj, const char * key, void * value)
 {
-    return cplus_llist_add_data(obj, CPLUS_DATA_TYPE_POINTER, key, &(value), NULL);
+    return cplus_llist_add_data(obj, CPLUS_DATA_TYPE_POINTER, key, &(value), CPLUS_NULL);
 }
 
-cplus_data cplus_llist_add_data_string(cplus_llist obj, char * key, char * str_bufs, uint32_t str_len)
+cplus_data cplus_llist_add_data_string(cplus_llist obj, const char * key, char * str_bufs, uint32_t str_len)
 {
     return cplus_llist_add_data(obj, CPLUS_DATA_TYPE_STRING, key, &(str_len), str_bufs);
 }
@@ -1181,8 +1181,8 @@ int32_t compare_num(void * data1, void * data2)
 
 CPLUS_UNIT_TEST(cplus_llist_push_front, sequence)
 {
-    cplus_llist list = NULL;
-    UNITTEST_EXPECT_EQ(true, (NULL != (list = cplus_llist_new())));
+    cplus_llist list = CPLUS_NULL;
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (list = cplus_llist_new())));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_front(list, &num0));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_front(list, &num1));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_front(list, &num2));
@@ -1226,9 +1226,9 @@ CPLUS_UNIT_TEST(cplus_llist_push_front, sequence)
 
 CPLUS_UNIT_TEST(cplus_llist_push_front, bad_parameter)
 {
-    cplus_llist list = NULL;
-    UNITTEST_EXPECT_EQ(true, (NULL != (list = cplus_llist_new())));
-    UNITTEST_EXPECT_EQ(CPLUS_FAIL, cplus_llist_push_front(list, NULL));
+    cplus_llist list = CPLUS_NULL;
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (list = cplus_llist_new())));
+    UNITTEST_EXPECT_EQ(CPLUS_FAIL, cplus_llist_push_front(list, CPLUS_NULL));
     UNITTEST_EXPECT_EQ(EINVAL, errno);
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_delete(list));
     UNITTEST_EXPECT_EQ(0, cplus_mgr_report());
@@ -1236,8 +1236,8 @@ CPLUS_UNIT_TEST(cplus_llist_push_front, bad_parameter)
 
 CPLUS_UNIT_TEST(cplus_llist_push_back, sequence)
 {
-    cplus_llist list = NULL;
-    UNITTEST_EXPECT_EQ(true, (NULL != (list = cplus_llist_new())));
+    cplus_llist list = CPLUS_NULL;
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (list = cplus_llist_new())));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_back(list, &num0));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_back(list, &num1));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_back(list, &num2));
@@ -1281,9 +1281,9 @@ CPLUS_UNIT_TEST(cplus_llist_push_back, sequence)
 
 CPLUS_UNIT_TEST(cplus_llist_push_back, bad_parameter)
 {
-    cplus_llist list = NULL;
-    UNITTEST_EXPECT_EQ(true, (NULL != (list = cplus_llist_new())));
-    UNITTEST_EXPECT_EQ(CPLUS_FAIL, cplus_llist_push_back(list, NULL));
+    cplus_llist list = CPLUS_NULL;
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (list = cplus_llist_new())));
+    UNITTEST_EXPECT_EQ(CPLUS_FAIL, cplus_llist_push_back(list, CPLUS_NULL));
     UNITTEST_EXPECT_EQ(EINVAL, errno);
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_delete(list));
     UNITTEST_EXPECT_EQ(0, cplus_mgr_report());
@@ -1291,8 +1291,8 @@ CPLUS_UNIT_TEST(cplus_llist_push_back, bad_parameter)
 
 CPLUS_UNIT_TEST(cplus_llist_push_at, push_randomly)
 {
-    cplus_llist list = NULL;
-    UNITTEST_EXPECT_EQ(true, (NULL != (list = cplus_llist_new())));
+    cplus_llist list = CPLUS_NULL;
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (list = cplus_llist_new())));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_at(list, 0, &num0));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_at(list, 0, &num1));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_at(list, 1, &num2));
@@ -1318,8 +1318,8 @@ CPLUS_UNIT_TEST(cplus_llist_push_at, push_randomly)
 
 CPLUS_UNIT_TEST(cplus_llist_pop_of, pop_randomly)
 {
-    cplus_llist list = NULL;
-    UNITTEST_EXPECT_EQ(true, (NULL != (list = cplus_llist_new())));
+    cplus_llist list = CPLUS_NULL;
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (list = cplus_llist_new())));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_back(list, &num0));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_back(list, &num1));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_back(list, &num2));
@@ -1340,8 +1340,8 @@ CPLUS_UNIT_TEST(cplus_llist_pop_of, pop_randomly)
 
 CPLUS_UNIT_TEST(cplus_llist_get_index_if, functionity)
 {
-    cplus_llist list = NULL;
-    UNITTEST_EXPECT_EQ(true, (NULL != (list = cplus_llist_new())));
+    cplus_llist list = CPLUS_NULL;
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (list = cplus_llist_new())));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_back(list, &num0));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_back(list, &num1));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_back(list, &num2));
@@ -1361,8 +1361,8 @@ CPLUS_UNIT_TEST(cplus_llist_get_index_if, functionity)
 
 CPLUS_UNIT_TEST(cplus_llist_get_index_if, bad_parameter)
 {
-    cplus_llist list = NULL;
-    UNITTEST_EXPECT_EQ(true, (NULL != (list = cplus_llist_new())));
+    cplus_llist list = CPLUS_NULL;
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (list = cplus_llist_new())));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_back(list, &num0));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_back(list, &num1));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_back(list, &num2));
@@ -1370,7 +1370,7 @@ CPLUS_UNIT_TEST(cplus_llist_get_index_if, bad_parameter)
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_back(list, &num4));
     UNITTEST_EXPECT_EQ(5, cplus_llist_get_size(list));
     UNITTEST_EXPECT_EQ(6, cplus_mgr_report());
-    UNITTEST_EXPECT_EQ(CPLUS_FAIL, cplus_llist_get_index_if(list, NULL, NULL));
+    UNITTEST_EXPECT_EQ(CPLUS_FAIL, cplus_llist_get_index_if(list, CPLUS_NULL, CPLUS_NULL));
     UNITTEST_EXPECT_EQ(EINVAL, errno);
     UNITTEST_EXPECT_EQ(CPLUS_FAIL, cplus_llist_get_index_if(list, find_num, &num5));
     UNITTEST_EXPECT_EQ(ENOENT, errno);
@@ -1380,8 +1380,8 @@ CPLUS_UNIT_TEST(cplus_llist_get_index_if, bad_parameter)
 
 CPLUS_UNIT_TEST(cplus_llist_push_front, sequence_with_mempool)
 {
-    cplus_llist list = NULL;
-    UNITTEST_EXPECT_EQ(true, (NULL != (list = cplus_llist_prev_new(1024))));
+    cplus_llist list = CPLUS_NULL;
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (list = cplus_llist_prev_new(1024))));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_front(list, &num0));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_front(list, &num1));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_front(list, &num2));
@@ -1423,9 +1423,9 @@ CPLUS_UNIT_TEST(cplus_llist_push_front, sequence_with_mempool)
 
 CPLUS_UNIT_TEST(cplus_llist_push_front, bad_parameter_with_mempool)
 {
-    cplus_llist list = NULL;
-    UNITTEST_EXPECT_EQ(true, (NULL != (list = cplus_llist_prev_new(1024))));
-    UNITTEST_EXPECT_EQ(CPLUS_FAIL, cplus_llist_push_front(list, NULL));
+    cplus_llist list = CPLUS_NULL;
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (list = cplus_llist_prev_new(1024))));
+    UNITTEST_EXPECT_EQ(CPLUS_FAIL, cplus_llist_push_front(list, CPLUS_NULL));
     UNITTEST_EXPECT_EQ(EINVAL, errno);
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_delete(list));
     UNITTEST_EXPECT_EQ(0, cplus_mgr_report());
@@ -1433,8 +1433,8 @@ CPLUS_UNIT_TEST(cplus_llist_push_front, bad_parameter_with_mempool)
 
 CPLUS_UNIT_TEST(CPLUS_LLIST_FOREACH, sequence)
 {
-    cplus_llist list = NULL;
-    UNITTEST_EXPECT_EQ(true, (NULL != (list = cplus_llist_new())));
+    cplus_llist list = CPLUS_NULL;
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (list = cplus_llist_new())));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_front(list, &num0));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_front(list, &num1));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_front(list, &num2));
@@ -1442,7 +1442,7 @@ CPLUS_UNIT_TEST(CPLUS_LLIST_FOREACH, sequence)
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_front(list, &num4));
     UNITTEST_EXPECT_EQ(5, cplus_llist_get_size(list));
 
-    int * data = NULL, value = 4;
+    int * data = CPLUS_NULL, value = 4;
     CPLUS_LLIST_FOREACH(list, data)
     {
         UNITTEST_EXPECT_EQ(value, *data);
@@ -1454,8 +1454,8 @@ CPLUS_UNIT_TEST(CPLUS_LLIST_FOREACH, sequence)
 
 CPLUS_UNIT_TEST(cplus_llist_get_set_if, functionity)
 {
-    cplus_llist list = NULL;
-    UNITTEST_EXPECT_EQ(true, (NULL != (list = cplus_llist_new())));
+    cplus_llist list = CPLUS_NULL;
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (list = cplus_llist_new())));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_back(list, &num1));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_back(list, &num2));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_back(list, &num4));
@@ -1474,16 +1474,16 @@ CPLUS_UNIT_TEST(cplus_llist_get_set_if, functionity)
     UNITTEST_EXPECT_EQ(15, cplus_llist_get_size(list));
     UNITTEST_EXPECT_EQ(16, cplus_mgr_report());
 
-    cplus_llist list_0 = NULL, list_1 = NULL, list_2 = NULL;
-    cplus_llist list_3 = NULL, list_4 = NULL, list_5 = NULL;
+    cplus_llist list_0 = CPLUS_NULL, list_1 = CPLUS_NULL, list_2 = CPLUS_NULL;
+    cplus_llist list_3 = CPLUS_NULL, list_4 = CPLUS_NULL, list_5 = CPLUS_NULL;
 
-    UNITTEST_EXPECT_NE(true, (NULL != (list_0 = cplus_llist_get_set_if(list, find_num, &num0))));
+    UNITTEST_EXPECT_NE(true, (CPLUS_NULL != (list_0 = cplus_llist_get_set_if(list, find_num, &num0))));
     UNITTEST_EXPECT_EQ(ENOENT, errno);
-    UNITTEST_EXPECT_EQ(true, (NULL != (list_1 = cplus_llist_get_set_if(list, find_num, &num1))));
-    UNITTEST_EXPECT_EQ(true, (NULL != (list_2 = cplus_llist_get_set_if(list, find_num, &num2))));
-    UNITTEST_EXPECT_EQ(true, (NULL != (list_3 = cplus_llist_get_set_if(list, find_num, &num3))));
-    UNITTEST_EXPECT_EQ(true, (NULL != (list_4 = cplus_llist_get_set_if(list, find_num, &num4))));
-    UNITTEST_EXPECT_EQ(true, (NULL != (list_5 = cplus_llist_get_set_if(list, find_num, &num5))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (list_1 = cplus_llist_get_set_if(list, find_num, &num1))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (list_2 = cplus_llist_get_set_if(list, find_num, &num2))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (list_3 = cplus_llist_get_set_if(list, find_num, &num3))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (list_4 = cplus_llist_get_set_if(list, find_num, &num4))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (list_5 = cplus_llist_get_set_if(list, find_num, &num5))));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_delete(list));
     UNITTEST_EXPECT_EQ(1, cplus_llist_get_size(list_1));
     UNITTEST_EXPECT_EQ(2, cplus_llist_get_size(list_2));
@@ -1530,9 +1530,9 @@ CPLUS_UNIT_TEST(cplus_llist_get_set_if, functionity)
 
 CPLUS_UNIT_TEST(cplus_llist_pop_if, functionity)
 {
-    int32_t * data = NULL;
-    cplus_llist list = NULL;
-    UNITTEST_EXPECT_EQ(true, (NULL != (list = cplus_llist_new())));
+    int32_t * data = CPLUS_NULL;
+    cplus_llist list = CPLUS_NULL;
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (list = cplus_llist_new())));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_back(list, &num0));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_back(list, &num1));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_back(list, &num2));
@@ -1540,35 +1540,35 @@ CPLUS_UNIT_TEST(cplus_llist_pop_if, functionity)
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_back(list, &num4));
     UNITTEST_EXPECT_EQ(5, cplus_llist_get_size(list));
     UNITTEST_EXPECT_EQ(6, cplus_mgr_report());
-    UNITTEST_EXPECT_EQ(true, NULL != (data = (int32_t *)cplus_llist_pop_if(list, find_num, &num0)));
+    UNITTEST_EXPECT_EQ(true, CPLUS_NULL != (data = (int32_t *)cplus_llist_pop_if(list, find_num, &num0)));
     UNITTEST_EXPECT_EQ(0, (int32_t)(*data));
     UNITTEST_EXPECT_EQ(4, cplus_llist_get_size(list));
-    UNITTEST_EXPECT_EQ(false, NULL != (data = (int32_t *)cplus_llist_pop_if(list, find_num, &num0)));
-    UNITTEST_EXPECT_EQ(true, NULL != (data = (int32_t *)cplus_llist_pop_if(list, find_num, &num1)));
+    UNITTEST_EXPECT_EQ(false, CPLUS_NULL != (data = (int32_t *)cplus_llist_pop_if(list, find_num, &num0)));
+    UNITTEST_EXPECT_EQ(true, CPLUS_NULL != (data = (int32_t *)cplus_llist_pop_if(list, find_num, &num1)));
     UNITTEST_EXPECT_EQ(1, (int32_t)(*data));
     UNITTEST_EXPECT_EQ(3, cplus_llist_get_size(list));
-    UNITTEST_EXPECT_EQ(false, NULL != (data = (int32_t *)cplus_llist_pop_if(list, find_num, &num1)));
-    UNITTEST_EXPECT_EQ(true, NULL != (data = (int32_t *)cplus_llist_pop_if(list, find_num, &num2)));
+    UNITTEST_EXPECT_EQ(false, CPLUS_NULL != (data = (int32_t *)cplus_llist_pop_if(list, find_num, &num1)));
+    UNITTEST_EXPECT_EQ(true, CPLUS_NULL != (data = (int32_t *)cplus_llist_pop_if(list, find_num, &num2)));
     UNITTEST_EXPECT_EQ(2, (int32_t)(*data));
     UNITTEST_EXPECT_EQ(2, cplus_llist_get_size(list));
-    UNITTEST_EXPECT_EQ(false, NULL != (data = (int32_t *)cplus_llist_pop_if(list, find_num, &num2)));
-    UNITTEST_EXPECT_EQ(true, NULL != (data = (int32_t *)cplus_llist_pop_if(list, find_num, &num3)));
+    UNITTEST_EXPECT_EQ(false, CPLUS_NULL != (data = (int32_t *)cplus_llist_pop_if(list, find_num, &num2)));
+    UNITTEST_EXPECT_EQ(true, CPLUS_NULL != (data = (int32_t *)cplus_llist_pop_if(list, find_num, &num3)));
     UNITTEST_EXPECT_EQ(3, (int32_t)(*data));
     UNITTEST_EXPECT_EQ(1, cplus_llist_get_size(list));
-    UNITTEST_EXPECT_EQ(false, NULL != (data = (int32_t *)cplus_llist_pop_if(list, find_num, &num3)));
-    UNITTEST_EXPECT_EQ(true, NULL != (data = (int32_t *)cplus_llist_pop_if(list, find_num, &num4)));
+    UNITTEST_EXPECT_EQ(false, CPLUS_NULL != (data = (int32_t *)cplus_llist_pop_if(list, find_num, &num3)));
+    UNITTEST_EXPECT_EQ(true, CPLUS_NULL != (data = (int32_t *)cplus_llist_pop_if(list, find_num, &num4)));
     UNITTEST_EXPECT_EQ(4, (int32_t)(*data));
     UNITTEST_EXPECT_EQ(0, cplus_llist_get_size(list));
-    UNITTEST_EXPECT_EQ(false, NULL != (data = (int32_t *)cplus_llist_pop_if(list, find_num, &num4)));
+    UNITTEST_EXPECT_EQ(false, CPLUS_NULL != (data = (int32_t *)cplus_llist_pop_if(list, find_num, &num4)));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_delete(list));
     UNITTEST_EXPECT_EQ(0, cplus_mgr_report());
 }
 
 CPLUS_UNIT_TEST(cplus_llist_pop_if, bad_parameter)
 {
-    int32_t * data = NULL;
-    cplus_llist list = NULL;
-    UNITTEST_EXPECT_EQ(true, (NULL != (list = cplus_llist_new())));
+    int32_t * data = CPLUS_NULL;
+    cplus_llist list = CPLUS_NULL;
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (list = cplus_llist_new())));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_back(list, &num0));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_back(list, &num1));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_back(list, &num2));
@@ -1576,9 +1576,9 @@ CPLUS_UNIT_TEST(cplus_llist_pop_if, bad_parameter)
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_back(list, &num4));
     UNITTEST_EXPECT_EQ(5, cplus_llist_get_size(list));
     UNITTEST_EXPECT_EQ(6, cplus_mgr_report());
-    UNITTEST_EXPECT_EQ(true, (NULL == (data = (int32_t *)cplus_llist_pop_if(list, NULL, NULL))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL == (data = (int32_t *)cplus_llist_pop_if(list, CPLUS_NULL, CPLUS_NULL))));
     UNITTEST_EXPECT_EQ(EINVAL, errno);
-    UNITTEST_EXPECT_EQ(true, (NULL == (data = (int32_t *)cplus_llist_pop_if(list, find_num, &num5))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL == (data = (int32_t *)cplus_llist_pop_if(list, find_num, &num5))));
     UNITTEST_EXPECT_EQ(ENOENT, errno);
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_delete(list));
     UNITTEST_EXPECT_EQ(0, cplus_mgr_report());
@@ -1586,9 +1586,9 @@ CPLUS_UNIT_TEST(cplus_llist_pop_if, bad_parameter)
 
 CPLUS_UNIT_TEST(cplus_llist_get_if, functionity)
 {
-    int32_t * data = NULL;
-    cplus_llist list = NULL;
-    UNITTEST_EXPECT_EQ(true, (NULL != (list = cplus_llist_new())));
+    int32_t * data = CPLUS_NULL;
+    cplus_llist list = CPLUS_NULL;
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (list = cplus_llist_new())));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_back(list, &num0));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_back(list, &num1));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_back(list, &num2));
@@ -1596,15 +1596,15 @@ CPLUS_UNIT_TEST(cplus_llist_get_if, functionity)
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_back(list, &num4));
     UNITTEST_EXPECT_EQ(5, cplus_llist_get_size(list));
     UNITTEST_EXPECT_EQ(6, cplus_mgr_report());
-    UNITTEST_EXPECT_EQ(true, NULL != (data = ((int32_t *)cplus_llist_get_if(list, find_num, &num0))));
+    UNITTEST_EXPECT_EQ(true, CPLUS_NULL != (data = ((int32_t *)cplus_llist_get_if(list, find_num, &num0))));
     UNITTEST_EXPECT_EQ(0, *data);
-    UNITTEST_EXPECT_EQ(true, NULL != (data = ((int32_t *)cplus_llist_get_if(list, find_num, &num1))));
+    UNITTEST_EXPECT_EQ(true, CPLUS_NULL != (data = ((int32_t *)cplus_llist_get_if(list, find_num, &num1))));
     UNITTEST_EXPECT_EQ(1, *data);
-    UNITTEST_EXPECT_EQ(true, NULL != (data = ((int32_t *)cplus_llist_get_if(list, find_num, &num2))));
+    UNITTEST_EXPECT_EQ(true, CPLUS_NULL != (data = ((int32_t *)cplus_llist_get_if(list, find_num, &num2))));
     UNITTEST_EXPECT_EQ(2, *data);
-    UNITTEST_EXPECT_EQ(true, NULL != (data = ((int32_t *)cplus_llist_get_if(list, find_num, &num3))));
+    UNITTEST_EXPECT_EQ(true, CPLUS_NULL != (data = ((int32_t *)cplus_llist_get_if(list, find_num, &num3))));
     UNITTEST_EXPECT_EQ(3, *data);
-    UNITTEST_EXPECT_EQ(true, NULL != (data = ((int32_t *)cplus_llist_get_if(list, find_num, &num4))));
+    UNITTEST_EXPECT_EQ(true, CPLUS_NULL != (data = ((int32_t *)cplus_llist_get_if(list, find_num, &num4))));
     UNITTEST_EXPECT_EQ(4, *data);
     UNITTEST_EXPECT_EQ(5, cplus_llist_get_size(list));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_delete(list));
@@ -1613,10 +1613,10 @@ CPLUS_UNIT_TEST(cplus_llist_get_if, functionity)
 
 CPLUS_UNIT_TEST(cplus_llist_is_consist, functionity)
 {
-    cplus_llist list1 = NULL, list2 = NULL;
+    cplus_llist list1 = CPLUS_NULL, list2 = CPLUS_NULL;
 
-    UNITTEST_EXPECT_EQ(true, (NULL != (list1 = cplus_llist_new())));
-    UNITTEST_EXPECT_EQ(true, (NULL != (list2 = cplus_llist_new())));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (list1 = cplus_llist_new())));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (list2 = cplus_llist_new())));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_front(list1, &num0));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_front(list1, &num1));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_front(list1, &num2));
@@ -1626,8 +1626,8 @@ CPLUS_UNIT_TEST(cplus_llist_is_consist, functionity)
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_delete(list1));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_delete(list2));
 
-    UNITTEST_EXPECT_EQ(true, (NULL != (list1 = cplus_llist_new())));
-    UNITTEST_EXPECT_EQ(true, (NULL != (list2 = cplus_llist_new())));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (list1 = cplus_llist_new())));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (list2 = cplus_llist_new())));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_front(list2, &num0));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_front(list2, &num1));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_front(list2, &num2));
@@ -1638,8 +1638,8 @@ CPLUS_UNIT_TEST(cplus_llist_is_consist, functionity)
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_delete(list2));
 
 
-    UNITTEST_EXPECT_EQ(true, (NULL != (list1 = cplus_llist_new())));
-    UNITTEST_EXPECT_EQ(true, (NULL != (list2 = cplus_llist_new())));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (list1 = cplus_llist_new())));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (list2 = cplus_llist_new())));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_front(list1, &num0));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_front(list1, &num1));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_front(list1, &num1));
@@ -1655,8 +1655,8 @@ CPLUS_UNIT_TEST(cplus_llist_is_consist, functionity)
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_delete(list2));
 
 
-    UNITTEST_EXPECT_EQ(true, (NULL != (list1 = cplus_llist_new())));
-    UNITTEST_EXPECT_EQ(true, (NULL != (list2 = cplus_llist_new())));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (list1 = cplus_llist_new())));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (list2 = cplus_llist_new())));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_front(list1, &num0));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_front(list1, &num1));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_front(list1, &num2));
@@ -1676,8 +1676,8 @@ CPLUS_UNIT_TEST(cplus_llist_is_consist, functionity)
 
 CPLUS_UNIT_TEST(cplus_llist_push_front_s, sequence)
 {
-    cplus_llist list = NULL;
-    UNITTEST_EXPECT_EQ(true, (NULL != (list = cplus_llist_new_s())));
+    cplus_llist list = CPLUS_NULL;
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (list = cplus_llist_new_s())));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_front(list, &num0));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_front(list, &num1));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_front(list, &num2));
@@ -1721,9 +1721,9 @@ CPLUS_UNIT_TEST(cplus_llist_push_front_s, sequence)
 
 CPLUS_UNIT_TEST(cplus_llist_push_front_s, bad_parameter)
 {
-    cplus_llist list = NULL;
-    UNITTEST_EXPECT_EQ(true, (NULL != (list = cplus_llist_new_s())));
-    UNITTEST_EXPECT_EQ(CPLUS_FAIL, cplus_llist_push_front(list, NULL));
+    cplus_llist list = CPLUS_NULL;
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (list = cplus_llist_new_s())));
+    UNITTEST_EXPECT_EQ(CPLUS_FAIL, cplus_llist_push_front(list, CPLUS_NULL));
     UNITTEST_EXPECT_EQ(EINVAL, errno);
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_delete(list));
     UNITTEST_EXPECT_EQ(0, cplus_mgr_report());
@@ -1731,8 +1731,8 @@ CPLUS_UNIT_TEST(cplus_llist_push_front_s, bad_parameter)
 
 CPLUS_UNIT_TEST(cplus_llist_push_back_s, sequence)
 {
-    cplus_llist list = NULL;
-    UNITTEST_EXPECT_EQ(true, (NULL != (list = cplus_llist_new_s())));
+    cplus_llist list = CPLUS_NULL;
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (list = cplus_llist_new_s())));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_back(list, &num0));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_back(list, &num1));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_back(list, &num2));
@@ -1776,9 +1776,9 @@ CPLUS_UNIT_TEST(cplus_llist_push_back_s, sequence)
 
 CPLUS_UNIT_TEST(cplus_llist_push_back_s, bad_parameter)
 {
-    cplus_llist list = NULL;
-    UNITTEST_EXPECT_EQ(true, (NULL != (list = cplus_llist_new_s())));
-    UNITTEST_EXPECT_EQ(CPLUS_FAIL, cplus_llist_push_back(list, NULL));
+    cplus_llist list = CPLUS_NULL;
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (list = cplus_llist_new_s())));
+    UNITTEST_EXPECT_EQ(CPLUS_FAIL, cplus_llist_push_back(list, CPLUS_NULL));
     UNITTEST_EXPECT_EQ(EINVAL, errno);
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_delete(list));
     UNITTEST_EXPECT_EQ(0, cplus_mgr_report());
@@ -1786,8 +1786,8 @@ CPLUS_UNIT_TEST(cplus_llist_push_back_s, bad_parameter)
 
 CPLUS_UNIT_TEST(cplus_llist_push_at_s, push_randomly)
 {
-    cplus_llist list = NULL;
-    UNITTEST_EXPECT_EQ(true, (NULL != (list = cplus_llist_new_s())));
+    cplus_llist list = CPLUS_NULL;
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (list = cplus_llist_new_s())));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_at(list, 0, &num0));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_at(list, 0, &num1));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_at(list, 1, &num2));
@@ -1813,8 +1813,8 @@ CPLUS_UNIT_TEST(cplus_llist_push_at_s, push_randomly)
 
 CPLUS_UNIT_TEST(cplus_llist_pop_of_s, pop_randomly)
 {
-    cplus_llist list = NULL;
-    UNITTEST_EXPECT_EQ(true, (NULL != (list = cplus_llist_new_s())));
+    cplus_llist list = CPLUS_NULL;
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (list = cplus_llist_new_s())));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_back(list, &num0));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_back(list, &num1));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_back(list, &num2));
@@ -1835,8 +1835,8 @@ CPLUS_UNIT_TEST(cplus_llist_pop_of_s, pop_randomly)
 
 CPLUS_UNIT_TEST(cplus_llist_get_index_if_s, functionity)
 {
-    cplus_llist list = NULL;
-    UNITTEST_EXPECT_EQ(true, (NULL != (list = cplus_llist_new_s())));
+    cplus_llist list = CPLUS_NULL;
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (list = cplus_llist_new_s())));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_back(list, &num0));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_back(list, &num1));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_back(list, &num2));
@@ -1856,8 +1856,8 @@ CPLUS_UNIT_TEST(cplus_llist_get_index_if_s, functionity)
 
 CPLUS_UNIT_TEST(cplus_llist_get_index_if_s, bad_parameter)
 {
-    cplus_llist list = NULL;
-    UNITTEST_EXPECT_EQ(true, (NULL != (list = cplus_llist_new_s())));
+    cplus_llist list = CPLUS_NULL;
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (list = cplus_llist_new_s())));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_back(list, &num0));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_back(list, &num1));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_back(list, &num2));
@@ -1865,7 +1865,7 @@ CPLUS_UNIT_TEST(cplus_llist_get_index_if_s, bad_parameter)
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_back(list, &num4));
     UNITTEST_EXPECT_EQ(5, cplus_llist_get_size(list));
     UNITTEST_EXPECT_EQ(7, cplus_mgr_report());
-    UNITTEST_EXPECT_EQ(CPLUS_FAIL, cplus_llist_get_index_if(list, NULL, NULL));
+    UNITTEST_EXPECT_EQ(CPLUS_FAIL, cplus_llist_get_index_if(list, CPLUS_NULL, CPLUS_NULL));
     UNITTEST_EXPECT_EQ(EINVAL, errno);
     UNITTEST_EXPECT_EQ(CPLUS_FAIL, cplus_llist_get_index_if(list, find_num, &num5));
     UNITTEST_EXPECT_EQ(ENOENT, errno);
@@ -1875,8 +1875,8 @@ CPLUS_UNIT_TEST(cplus_llist_get_index_if_s, bad_parameter)
 
 CPLUS_UNIT_TEST(cplus_llist_push_front_s, sequence_with_mempool)
 {
-    cplus_llist list = NULL;
-    UNITTEST_EXPECT_EQ(true, (NULL != (list = cplus_llist_prev_new_s(1024))));
+    cplus_llist list = CPLUS_NULL;
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (list = cplus_llist_prev_new_s(1024))));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_front(list, &num0));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_front(list, &num1));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_front(list, &num2));
@@ -1918,9 +1918,9 @@ CPLUS_UNIT_TEST(cplus_llist_push_front_s, sequence_with_mempool)
 
 CPLUS_UNIT_TEST(cplus_llist_push_front_s, bad_parameter_with_mempool)
 {
-    cplus_llist list = NULL;
-    UNITTEST_EXPECT_EQ(true, (NULL != (list = cplus_llist_prev_new_s(1024))));
-    UNITTEST_EXPECT_EQ(CPLUS_FAIL, cplus_llist_push_front(list, NULL));
+    cplus_llist list = CPLUS_NULL;
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (list = cplus_llist_prev_new_s(1024))));
+    UNITTEST_EXPECT_EQ(CPLUS_FAIL, cplus_llist_push_front(list, CPLUS_NULL));
     UNITTEST_EXPECT_EQ(EINVAL, errno);
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_delete(list));
     UNITTEST_EXPECT_EQ(0, cplus_mgr_report());
@@ -1928,8 +1928,8 @@ CPLUS_UNIT_TEST(cplus_llist_push_front_s, bad_parameter_with_mempool)
 
 CPLUS_UNIT_TEST(CPLUS_LLIST_FOREACH_s, sequence)
 {
-    cplus_llist list = NULL;
-    UNITTEST_EXPECT_EQ(true, (NULL != (list = cplus_llist_new_s())));
+    cplus_llist list = CPLUS_NULL;
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (list = cplus_llist_new_s())));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_front(list, &num0));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_front(list, &num1));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_front(list, &num2));
@@ -1937,7 +1937,7 @@ CPLUS_UNIT_TEST(CPLUS_LLIST_FOREACH_s, sequence)
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_front(list, &num4));
     UNITTEST_EXPECT_EQ(5, cplus_llist_get_size(list));
 
-    int * data = NULL, value = 4;
+    int * data = CPLUS_NULL, value = 4;
     CPLUS_LLIST_FOREACH(list, data)
     {
         UNITTEST_EXPECT_EQ(value, *data);
@@ -1949,8 +1949,8 @@ CPLUS_UNIT_TEST(CPLUS_LLIST_FOREACH_s, sequence)
 
 CPLUS_UNIT_TEST(cplus_llist_get_set_if_s, functionity)
 {
-    cplus_llist list = NULL;
-    UNITTEST_EXPECT_EQ(true, (NULL != (list = cplus_llist_new_s())));
+    cplus_llist list = CPLUS_NULL;
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (list = cplus_llist_new_s())));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_back(list, &num1));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_back(list, &num2));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_back(list, &num4));
@@ -1969,16 +1969,16 @@ CPLUS_UNIT_TEST(cplus_llist_get_set_if_s, functionity)
     UNITTEST_EXPECT_EQ(15, cplus_llist_get_size(list));
     UNITTEST_EXPECT_EQ(17, cplus_mgr_report());
 
-    cplus_llist list_0 = NULL, list_1 = NULL, list_2 = NULL;
-    cplus_llist list_3 = NULL, list_4 = NULL, list_5 = NULL;
+    cplus_llist list_0 = CPLUS_NULL, list_1 = CPLUS_NULL, list_2 = CPLUS_NULL;
+    cplus_llist list_3 = CPLUS_NULL, list_4 = CPLUS_NULL, list_5 = CPLUS_NULL;
 
-    UNITTEST_EXPECT_NE(true, (NULL != (list_0 = cplus_llist_get_set_if(list, find_num, &num0))));
+    UNITTEST_EXPECT_NE(true, (CPLUS_NULL != (list_0 = cplus_llist_get_set_if(list, find_num, &num0))));
     UNITTEST_EXPECT_EQ(ENOENT, errno);
-    UNITTEST_EXPECT_EQ(true, (NULL != (list_1 = cplus_llist_get_set_if(list, find_num, &num1))));
-    UNITTEST_EXPECT_EQ(true, (NULL != (list_2 = cplus_llist_get_set_if(list, find_num, &num2))));
-    UNITTEST_EXPECT_EQ(true, (NULL != (list_3 = cplus_llist_get_set_if(list, find_num, &num3))));
-    UNITTEST_EXPECT_EQ(true, (NULL != (list_4 = cplus_llist_get_set_if(list, find_num, &num4))));
-    UNITTEST_EXPECT_EQ(true, (NULL != (list_5 = cplus_llist_get_set_if(list, find_num, &num5))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (list_1 = cplus_llist_get_set_if(list, find_num, &num1))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (list_2 = cplus_llist_get_set_if(list, find_num, &num2))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (list_3 = cplus_llist_get_set_if(list, find_num, &num3))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (list_4 = cplus_llist_get_set_if(list, find_num, &num4))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (list_5 = cplus_llist_get_set_if(list, find_num, &num5))));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_delete(list));
     UNITTEST_EXPECT_EQ(1, cplus_llist_get_size(list_1));
     UNITTEST_EXPECT_EQ(2, cplus_llist_get_size(list_2));
@@ -2025,9 +2025,9 @@ CPLUS_UNIT_TEST(cplus_llist_get_set_if_s, functionity)
 
 CPLUS_UNIT_TEST(cplus_llist_pop_if_s, functionity)
 {
-    int32_t * data = NULL;
-    cplus_llist list = NULL;
-    UNITTEST_EXPECT_EQ(true, (NULL != (list = cplus_llist_new_s())));
+    int32_t * data = CPLUS_NULL;
+    cplus_llist list = CPLUS_NULL;
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (list = cplus_llist_new_s())));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_back(list, &num0));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_back(list, &num1));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_back(list, &num2));
@@ -2035,35 +2035,35 @@ CPLUS_UNIT_TEST(cplus_llist_pop_if_s, functionity)
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_back(list, &num4));
     UNITTEST_EXPECT_EQ(5, cplus_llist_get_size(list));
     UNITTEST_EXPECT_EQ(7, cplus_mgr_report());
-    UNITTEST_EXPECT_EQ(true, NULL != (data = (int32_t *)cplus_llist_pop_if(list, find_num, &num0)));
+    UNITTEST_EXPECT_EQ(true, CPLUS_NULL != (data = (int32_t *)cplus_llist_pop_if(list, find_num, &num0)));
     UNITTEST_EXPECT_EQ(0, (int32_t)(*data));
     UNITTEST_EXPECT_EQ(4, cplus_llist_get_size(list));
-    UNITTEST_EXPECT_EQ(false, NULL != (data = (int32_t *)cplus_llist_pop_if(list, find_num, &num0)));
-    UNITTEST_EXPECT_EQ(true, NULL != (data = (int32_t *)cplus_llist_pop_if(list, find_num, &num1)));
+    UNITTEST_EXPECT_EQ(false, CPLUS_NULL != (data = (int32_t *)cplus_llist_pop_if(list, find_num, &num0)));
+    UNITTEST_EXPECT_EQ(true, CPLUS_NULL != (data = (int32_t *)cplus_llist_pop_if(list, find_num, &num1)));
     UNITTEST_EXPECT_EQ(1, (int32_t)(*data));
     UNITTEST_EXPECT_EQ(3, cplus_llist_get_size(list));
-    UNITTEST_EXPECT_EQ(false, NULL != (data = (int32_t *)cplus_llist_pop_if(list, find_num, &num1)));
-    UNITTEST_EXPECT_EQ(true, NULL != (data = (int32_t *)cplus_llist_pop_if(list, find_num, &num2)));
+    UNITTEST_EXPECT_EQ(false, CPLUS_NULL != (data = (int32_t *)cplus_llist_pop_if(list, find_num, &num1)));
+    UNITTEST_EXPECT_EQ(true, CPLUS_NULL != (data = (int32_t *)cplus_llist_pop_if(list, find_num, &num2)));
     UNITTEST_EXPECT_EQ(2, (int32_t)(*data));
     UNITTEST_EXPECT_EQ(2, cplus_llist_get_size(list));
-    UNITTEST_EXPECT_EQ(false, NULL != (data = (int32_t *)cplus_llist_pop_if(list, find_num, &num2)));
-    UNITTEST_EXPECT_EQ(true, NULL != (data = (int32_t *)cplus_llist_pop_if(list, find_num, &num3)));
+    UNITTEST_EXPECT_EQ(false, CPLUS_NULL != (data = (int32_t *)cplus_llist_pop_if(list, find_num, &num2)));
+    UNITTEST_EXPECT_EQ(true, CPLUS_NULL != (data = (int32_t *)cplus_llist_pop_if(list, find_num, &num3)));
     UNITTEST_EXPECT_EQ(3, (int32_t)(*data));
     UNITTEST_EXPECT_EQ(1, cplus_llist_get_size(list));
-    UNITTEST_EXPECT_EQ(false, NULL != (data = (int32_t *)cplus_llist_pop_if(list, find_num, &num3)));
-    UNITTEST_EXPECT_EQ(true, NULL != (data = (int32_t *)cplus_llist_pop_if(list, find_num, &num4)));
+    UNITTEST_EXPECT_EQ(false, CPLUS_NULL != (data = (int32_t *)cplus_llist_pop_if(list, find_num, &num3)));
+    UNITTEST_EXPECT_EQ(true, CPLUS_NULL != (data = (int32_t *)cplus_llist_pop_if(list, find_num, &num4)));
     UNITTEST_EXPECT_EQ(4, (int32_t)(*data));
     UNITTEST_EXPECT_EQ(0, cplus_llist_get_size(list));
-    UNITTEST_EXPECT_EQ(false, NULL != (data = (int32_t *)cplus_llist_pop_if(list, find_num, &num4)));
+    UNITTEST_EXPECT_EQ(false, CPLUS_NULL != (data = (int32_t *)cplus_llist_pop_if(list, find_num, &num4)));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_delete(list));
     UNITTEST_EXPECT_EQ(0, cplus_mgr_report());
 }
 
 CPLUS_UNIT_TEST(cplus_llist_pop_if_s, bad_parameter)
 {
-    int32_t * data = NULL;
-    cplus_llist list = NULL;
-    UNITTEST_EXPECT_EQ(true, (NULL != (list = cplus_llist_new_s())));
+    int32_t * data = CPLUS_NULL;
+    cplus_llist list = CPLUS_NULL;
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (list = cplus_llist_new_s())));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_back(list, &num0));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_back(list, &num1));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_back(list, &num2));
@@ -2071,9 +2071,9 @@ CPLUS_UNIT_TEST(cplus_llist_pop_if_s, bad_parameter)
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_back(list, &num4));
     UNITTEST_EXPECT_EQ(5, cplus_llist_get_size(list));
     UNITTEST_EXPECT_EQ(7, cplus_mgr_report());
-    UNITTEST_EXPECT_EQ(true, (NULL == (data = (int32_t *)cplus_llist_pop_if(list, NULL, NULL))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL == (data = (int32_t *)cplus_llist_pop_if(list, CPLUS_NULL, CPLUS_NULL))));
     UNITTEST_EXPECT_EQ(EINVAL, errno);
-    UNITTEST_EXPECT_EQ(true, (NULL == (data = (int32_t *)cplus_llist_pop_if(list, find_num, &num5))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL == (data = (int32_t *)cplus_llist_pop_if(list, find_num, &num5))));
     UNITTEST_EXPECT_EQ(ENOENT, errno);
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_delete(list));
     UNITTEST_EXPECT_EQ(0, cplus_mgr_report());
@@ -2081,9 +2081,9 @@ CPLUS_UNIT_TEST(cplus_llist_pop_if_s, bad_parameter)
 
 CPLUS_UNIT_TEST(cplus_llist_get_if_s, functionity)
 {
-    int32_t * data = NULL;
-    cplus_llist list = NULL;
-    UNITTEST_EXPECT_EQ(true, (NULL != (list = cplus_llist_new_s())));
+    int32_t * data = CPLUS_NULL;
+    cplus_llist list = CPLUS_NULL;
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (list = cplus_llist_new_s())));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_back(list, &num0));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_back(list, &num1));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_back(list, &num2));
@@ -2091,15 +2091,15 @@ CPLUS_UNIT_TEST(cplus_llist_get_if_s, functionity)
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_back(list, &num4));
     UNITTEST_EXPECT_EQ(5, cplus_llist_get_size(list));
     UNITTEST_EXPECT_EQ(7, cplus_mgr_report());
-    UNITTEST_EXPECT_EQ(true, NULL != (data = ((int32_t *)cplus_llist_get_if(list, find_num, &num0))));
+    UNITTEST_EXPECT_EQ(true, CPLUS_NULL != (data = ((int32_t *)cplus_llist_get_if(list, find_num, &num0))));
     UNITTEST_EXPECT_EQ(0, *data);
-    UNITTEST_EXPECT_EQ(true, NULL != (data = ((int32_t *)cplus_llist_get_if(list, find_num, &num1))));
+    UNITTEST_EXPECT_EQ(true, CPLUS_NULL != (data = ((int32_t *)cplus_llist_get_if(list, find_num, &num1))));
     UNITTEST_EXPECT_EQ(1, *data);
-    UNITTEST_EXPECT_EQ(true, NULL != (data = ((int32_t *)cplus_llist_get_if(list, find_num, &num2))));
+    UNITTEST_EXPECT_EQ(true, CPLUS_NULL != (data = ((int32_t *)cplus_llist_get_if(list, find_num, &num2))));
     UNITTEST_EXPECT_EQ(2, *data);
-    UNITTEST_EXPECT_EQ(true, NULL != (data = ((int32_t *)cplus_llist_get_if(list, find_num, &num3))));
+    UNITTEST_EXPECT_EQ(true, CPLUS_NULL != (data = ((int32_t *)cplus_llist_get_if(list, find_num, &num3))));
     UNITTEST_EXPECT_EQ(3, *data);
-    UNITTEST_EXPECT_EQ(true, NULL != (data = ((int32_t *)cplus_llist_get_if(list, find_num, &num4))));
+    UNITTEST_EXPECT_EQ(true, CPLUS_NULL != (data = ((int32_t *)cplus_llist_get_if(list, find_num, &num4))));
     UNITTEST_EXPECT_EQ(4, *data);
     UNITTEST_EXPECT_EQ(5, cplus_llist_get_size(list));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_delete(list));
@@ -2108,10 +2108,10 @@ CPLUS_UNIT_TEST(cplus_llist_get_if_s, functionity)
 
 CPLUS_UNIT_TEST(cplus_llist_is_consist_s, functionity)
 {
-    cplus_llist list1 = NULL, list2 = NULL;
+    cplus_llist list1 = CPLUS_NULL, list2 = CPLUS_NULL;
 
-    UNITTEST_EXPECT_EQ(true, (NULL != (list1 = cplus_llist_new_s())));
-    UNITTEST_EXPECT_EQ(true, (NULL != (list2 = cplus_llist_new_s())));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (list1 = cplus_llist_new_s())));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (list2 = cplus_llist_new_s())));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_front(list1, &num0));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_front(list1, &num1));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_front(list1, &num2));
@@ -2121,8 +2121,8 @@ CPLUS_UNIT_TEST(cplus_llist_is_consist_s, functionity)
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_delete(list1));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_delete(list2));
 
-    UNITTEST_EXPECT_EQ(true, (NULL != (list1 = cplus_llist_new_s())));
-    UNITTEST_EXPECT_EQ(true, (NULL != (list2 = cplus_llist_new_s())));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (list1 = cplus_llist_new_s())));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (list2 = cplus_llist_new_s())));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_front(list2, &num0));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_front(list2, &num1));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_front(list2, &num2));
@@ -2133,8 +2133,8 @@ CPLUS_UNIT_TEST(cplus_llist_is_consist_s, functionity)
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_delete(list2));
 
 
-    UNITTEST_EXPECT_EQ(true, (NULL != (list1 = cplus_llist_new_s())));
-    UNITTEST_EXPECT_EQ(true, (NULL != (list2 = cplus_llist_new_s())));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (list1 = cplus_llist_new_s())));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (list2 = cplus_llist_new_s())));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_front(list1, &num0));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_front(list1, &num1));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_front(list1, &num1));
@@ -2150,8 +2150,8 @@ CPLUS_UNIT_TEST(cplus_llist_is_consist_s, functionity)
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_delete(list2));
 
 
-    UNITTEST_EXPECT_EQ(true, (NULL != (list1 = cplus_llist_new_s())));
-    UNITTEST_EXPECT_EQ(true, (NULL != (list2 = cplus_llist_new_s())));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (list1 = cplus_llist_new_s())));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (list2 = cplus_llist_new_s())));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_front(list1, &num0));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_front(list1, &num1));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_front(list1, &num2));
@@ -2172,8 +2172,8 @@ CPLUS_UNIT_TEST(cplus_llist_is_consist_s, functionity)
 
 CPLUS_UNIT_TEST(cplus_llist_delete_data, functionity)
 {
-    cplus_llist list = NULL;
-    UNITTEST_EXPECT_EQ(true, (NULL != (list = cplus_llist_new())));
+    cplus_llist list = CPLUS_NULL;
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (list = cplus_llist_new())));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_back(list, &num0));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_back(list, &num1));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_back(list, &num2));
@@ -2224,8 +2224,8 @@ CPLUS_UNIT_TEST(cplus_llist_delete_data, functionity)
 
 CPLUS_UNIT_TEST(cplus_llist_delete_data_s, functionity)
 {
-    cplus_llist list = NULL;
-    UNITTEST_EXPECT_EQ(true, (NULL != (list = cplus_llist_new_s())));
+    cplus_llist list = CPLUS_NULL;
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (list = cplus_llist_new_s())));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_front(list, &num0));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_front(list, &num1));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_front(list, &num2));
@@ -2270,8 +2270,8 @@ int32_t deascendant(void * i1, void * i2)
 
 CPLUS_UNIT_TEST(cplus_llist_sort, ascending)
 {
-    cplus_llist list = NULL;
-    UNITTEST_EXPECT_EQ(true, (NULL != (list = cplus_llist_new())));
+    cplus_llist list = CPLUS_NULL;
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (list = cplus_llist_new())));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_front(list, &num3));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_front(list, &num2));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_front(list, &num4));
@@ -2290,8 +2290,8 @@ CPLUS_UNIT_TEST(cplus_llist_sort, ascending)
 
 CPLUS_UNIT_TEST(cplus_llist_sort, deascending)
 {
-    cplus_llist list = NULL;
-    UNITTEST_EXPECT_EQ(true, (NULL != (list = cplus_llist_new())));
+    cplus_llist list = CPLUS_NULL;
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (list = cplus_llist_new())));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_front(list, &num3));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_front(list, &num2));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_front(list, &num4));
@@ -2311,8 +2311,8 @@ CPLUS_UNIT_TEST(cplus_llist_sort, deascending)
 
 CPLUS_UNIT_TEST(cplus_llist_sort_s, ascending)
 {
-    cplus_llist list = NULL;
-    UNITTEST_EXPECT_EQ(true, (NULL != (list = cplus_llist_new())));
+    cplus_llist list = CPLUS_NULL;
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (list = cplus_llist_new())));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_front(list, &num3));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_front(list, &num2));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_front(list, &num4));
@@ -2332,8 +2332,8 @@ CPLUS_UNIT_TEST(cplus_llist_sort_s, ascending)
 
 CPLUS_UNIT_TEST(cplus_llist_sort_s, deascending)
 {
-    cplus_llist list = NULL;
-    UNITTEST_EXPECT_EQ(true, (NULL != (list = cplus_llist_new())));
+    cplus_llist list = CPLUS_NULL;
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (list = cplus_llist_new())));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_front(list, &num3));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_front(list, &num2));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_front(list, &num4));
@@ -2352,8 +2352,8 @@ CPLUS_UNIT_TEST(cplus_llist_sort_s, deascending)
 
 CPLUS_UNIT_TEST(cplus_llist_push_back, pop_then_push)
 {
-    cplus_llist list = NULL;
-    UNITTEST_EXPECT_EQ(true, (NULL != (list = cplus_llist_new())));
+    cplus_llist list = CPLUS_NULL;
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (list = cplus_llist_new())));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_back(list, &num0));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_back(list, &num1));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_back(list, &num2));
@@ -2390,105 +2390,105 @@ CPLUS_UNIT_TEST(cplus_llist_push_back, pop_then_push)
 
 CPLUS_UNIT_TEST(cplus_llist_add_data, functionity)
 {
-    cplus_llist list = NULL;
-    cplus_data data = NULL;
+    cplus_llist list = CPLUS_NULL;
+    cplus_data data = CPLUS_NULL;
     int32_t i32_5 = 5, i32_6 = 6, i32_7 = 7, i32_8 = 8, i32_9 = 9;
     char * str1 = (char *)("Hello world"), * str2 = (char *)("AaBbCcDd");
     uint32_t str1_len = strlen(str1);
 
-    UNITTEST_EXPECT_EQ(true, (NULL != (list = cplus_llist_new())));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (list = cplus_llist_new())));
     UNITTEST_EXPECT_EQ(
         true
-        , (NULL != (data = cplus_llist_add_data_int32(list, (char *)("int_0"), 0))));
+        , (CPLUS_NULL != (data = cplus_llist_add_data_int32(list, "int_0", 0))));
     UNITTEST_EXPECT_EQ(0, cplus_data_get_int32(data));
     UNITTEST_EXPECT_EQ(
         true
-        , (NULL != (data = cplus_llist_add_data_int32(list, (char *)("int_1"), 1))));
+        , (CPLUS_NULL != (data = cplus_llist_add_data_int32(list, "int_1", 1))));
     UNITTEST_EXPECT_EQ(1, cplus_data_get_int32(data));
     UNITTEST_EXPECT_EQ(
         true
-        , (NULL != (data = cplus_llist_add_data_int32(list, (char *)("int_2"), 2))));
+        , (CPLUS_NULL != (data = cplus_llist_add_data_int32(list, "int_2", 2))));
     UNITTEST_EXPECT_EQ(2, cplus_data_get_int32(data));
     UNITTEST_EXPECT_EQ(
         true
-        , (NULL != (data = cplus_llist_add_data_int32(list, (char *)("int_3"), 3))));
+        , (CPLUS_NULL != (data = cplus_llist_add_data_int32(list, "int_3", 3))));
     UNITTEST_EXPECT_EQ(3, cplus_data_get_int32(data));
     UNITTEST_EXPECT_EQ(
         true
-        , (NULL != (data = cplus_llist_add_data_int32(list, (char *)("int_4"), 4))));
+        , (CPLUS_NULL != (data = cplus_llist_add_data_int32(list, "int_4", 4))));
     UNITTEST_EXPECT_EQ(4, cplus_data_get_int32(data));
     UNITTEST_EXPECT_EQ(5, cplus_llist_get_size(list));
-    UNITTEST_EXPECT_EQ(0, cplus_data_get_int32(cplus_llist_find_data(list, (char *)("int_0"))));
-    UNITTEST_EXPECT_EQ(1, cplus_data_get_int32(cplus_llist_find_data(list, (char *)("int_1"))));
-    UNITTEST_EXPECT_EQ(2, cplus_data_get_int32(cplus_llist_find_data(list, (char *)("int_2"))));
-    UNITTEST_EXPECT_EQ(3, cplus_data_get_int32(cplus_llist_find_data(list, (char *)("int_3"))));
-    UNITTEST_EXPECT_EQ(4, cplus_data_get_int32(cplus_llist_find_data(list, (char *)("int_4"))));
+    UNITTEST_EXPECT_EQ(0, cplus_data_get_int32(cplus_llist_find_data(list, "int_0")));
+    UNITTEST_EXPECT_EQ(1, cplus_data_get_int32(cplus_llist_find_data(list, "int_1")));
+    UNITTEST_EXPECT_EQ(2, cplus_data_get_int32(cplus_llist_find_data(list, "int_2")));
+    UNITTEST_EXPECT_EQ(3, cplus_data_get_int32(cplus_llist_find_data(list, "int_3")));
+    UNITTEST_EXPECT_EQ(4, cplus_data_get_int32(cplus_llist_find_data(list, "int_4")));
     UNITTEST_EXPECT_EQ(
         true
-        , (NULL != (data = cplus_llist_add_data(
-            list, CPLUS_DATA_TYPE_INT32, (char *)("int_0"), &i32_5, NULL))));
+        , (CPLUS_NULL != (data = cplus_llist_add_data(
+            list, CPLUS_DATA_TYPE_INT32, "int_0", &i32_5, CPLUS_NULL))));
     UNITTEST_EXPECT_EQ(5, cplus_data_get_int32(data));
     UNITTEST_EXPECT_EQ(
         true
-        , (NULL != (data = cplus_llist_add_data(
-            list, CPLUS_DATA_TYPE_INT32, (char *)("int_1"), &i32_6, NULL))));
+        , (CPLUS_NULL != (data = cplus_llist_add_data(
+            list, CPLUS_DATA_TYPE_INT32, "int_1", &i32_6, CPLUS_NULL))));
     UNITTEST_EXPECT_EQ(6, cplus_data_get_int32(data));
     UNITTEST_EXPECT_EQ(
         true
-        , (NULL != (data = cplus_llist_add_data(
-            list, CPLUS_DATA_TYPE_INT32, (char *)("int_2"), &i32_7, NULL))));
+        , (CPLUS_NULL != (data = cplus_llist_add_data(
+            list, CPLUS_DATA_TYPE_INT32, "int_2", &i32_7, CPLUS_NULL))));
     UNITTEST_EXPECT_EQ(7, cplus_data_get_int32(data));
     UNITTEST_EXPECT_EQ(
         true
-        , (NULL != (data = cplus_llist_add_data(
-            list, CPLUS_DATA_TYPE_INT32, (char *)("int_3"), &i32_8, NULL))));
+        , (CPLUS_NULL != (data = cplus_llist_add_data(
+            list, CPLUS_DATA_TYPE_INT32, "int_3", &i32_8, CPLUS_NULL))));
     UNITTEST_EXPECT_EQ(8, cplus_data_get_int32(data));
     UNITTEST_EXPECT_EQ(
         true
-        , (NULL != (data = cplus_llist_add_data(
-            list, CPLUS_DATA_TYPE_INT32, (char *)("int_4"), &i32_9, NULL))));
+        , (CPLUS_NULL != (data = cplus_llist_add_data(
+            list, CPLUS_DATA_TYPE_INT32, "int_4", &i32_9, CPLUS_NULL))));
     UNITTEST_EXPECT_EQ(9, cplus_data_get_int32(data));
     UNITTEST_EXPECT_EQ(5, cplus_llist_get_size(list));
-    UNITTEST_EXPECT_EQ(5, cplus_data_get_int32(cplus_llist_find_data(list, (char *)("int_0"))));
-    UNITTEST_EXPECT_EQ(6, cplus_data_get_int32(cplus_llist_find_data(list, (char *)("int_1"))));
-    UNITTEST_EXPECT_EQ(7, cplus_data_get_int32(cplus_llist_find_data(list, (char *)("int_2"))));
-    UNITTEST_EXPECT_EQ(8, cplus_data_get_int32(cplus_llist_find_data(list, (char *)("int_3"))));
-    UNITTEST_EXPECT_EQ(9, cplus_data_get_int32(cplus_llist_find_data(list, (char *)("int_4"))));
-    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_remove_data(list, (char *)("int_1")));
-    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_remove_data(list, (char *)("int_3")));
-    UNITTEST_EXPECT_EQ(true, (NULL == cplus_llist_find_data(list, (char *)("int_1"))));
-    UNITTEST_EXPECT_EQ(true, (NULL == cplus_llist_find_data(list, (char *)("int_3"))));
+    UNITTEST_EXPECT_EQ(5, cplus_data_get_int32(cplus_llist_find_data(list, "int_0")));
+    UNITTEST_EXPECT_EQ(6, cplus_data_get_int32(cplus_llist_find_data(list, "int_1")));
+    UNITTEST_EXPECT_EQ(7, cplus_data_get_int32(cplus_llist_find_data(list, "int_2")));
+    UNITTEST_EXPECT_EQ(8, cplus_data_get_int32(cplus_llist_find_data(list, "int_3")));
+    UNITTEST_EXPECT_EQ(9, cplus_data_get_int32(cplus_llist_find_data(list, "int_4")));
+    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_remove_data(list, "int_1"));
+    UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_remove_data(list,"int_3"));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL == cplus_llist_find_data(list, "int_1")));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL == cplus_llist_find_data(list, "int_3")));
     UNITTEST_EXPECT_EQ(3, cplus_llist_get_size(list));
     UNITTEST_EXPECT_EQ(
         true
-        , (NULL != (data = cplus_llist_add_data(
-            list, CPLUS_DATA_TYPE_STRING, (char *)("str1"), &str1_len, (void *)str1))));
+        , (CPLUS_NULL != (data = cplus_llist_add_data(
+            list, CPLUS_DATA_TYPE_STRING, "str1", &str1_len, (void *)str1))));
     UNITTEST_EXPECT_EQ(0, strcmp(
         str1
         , cplus_data_get_string(data)));
     UNITTEST_EXPECT_EQ(
         true
-        , (NULL != (data = cplus_llist_add_data_string(
-            list, (char *)("str2"), str2, strlen(str2)))));
+        , (CPLUS_NULL != (data = cplus_llist_add_data_string(
+            list, "str2", str2, strlen(str2)))));
     UNITTEST_EXPECT_EQ(0, strcmp(
         str2
         , cplus_data_get_string(data)));
     UNITTEST_EXPECT_EQ(5, cplus_llist_get_size(list));
     UNITTEST_EXPECT_EQ(0, strcmp(
         str1
-        , cplus_data_get_string(cplus_llist_find_data(list, (char *)("str1")))));
+        , cplus_data_get_string(cplus_llist_find_data(list, "str1"))));
     UNITTEST_EXPECT_EQ(0, strcmp(
         str2
-        , cplus_data_get_string(cplus_llist_find_data(list, (char *)("str2")))));
-    UNITTEST_EXPECT_EQ(strlen(str1), strlen(cplus_data_get_string(cplus_llist_find_data(list, (char *)("str1")))));
-    UNITTEST_EXPECT_EQ(strlen(str2), strlen(cplus_data_get_string(cplus_llist_find_data(list, (char *)("str2")))));
-    UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_int32(0x1234)));
-    UNITTEST_EXPECT_EQ(true, NULL != cplus_llist_update_data(list, (char *)("int_0"), data));
-    UNITTEST_EXPECT_EQ(0x1234, cplus_data_get_int32(cplus_llist_find_data(list, (char *)("int_0"))));
-    UNITTEST_EXPECT_EQ(true, NULL != (data = cplus_data_new_int32(0x4321)));
+        , cplus_data_get_string(cplus_llist_find_data(list, "str2"))));
+    UNITTEST_EXPECT_EQ(strlen(str1), strlen(cplus_data_get_string(cplus_llist_find_data(list, "str1"))));
+    UNITTEST_EXPECT_EQ(strlen(str2), strlen(cplus_data_get_string(cplus_llist_find_data(list, "str2"))));
+    UNITTEST_EXPECT_EQ(true, CPLUS_NULL != (data = cplus_data_new_int32(0x1234)));
+    UNITTEST_EXPECT_EQ(true, CPLUS_NULL != cplus_llist_update_data(list, "int_0", data));
+    UNITTEST_EXPECT_EQ(0x1234, cplus_data_get_int32(cplus_llist_find_data(list, "int_0")));
+    UNITTEST_EXPECT_EQ(true, CPLUS_NULL != (data = cplus_data_new_int32(0x4321)));
     UNITTEST_EXPECT_EQ(0x4321, cplus_data_get_int32(data));
-    UNITTEST_EXPECT_EQ(true, NULL != cplus_llist_update_data(list, (char *)("int_5"), data));
-    UNITTEST_EXPECT_EQ(0x4321, cplus_data_get_int32(cplus_llist_find_data(list, (char *)("int_5"))));
+    UNITTEST_EXPECT_EQ(true, CPLUS_NULL != cplus_llist_update_data(list, "int_5", data));
+    UNITTEST_EXPECT_EQ(0x4321, cplus_data_get_int32(cplus_llist_find_data(list, "int_5")));
     CPLUS_LLIST_FOREACH(list, data)
     {
         UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_data_delete(data));
@@ -2499,8 +2499,8 @@ CPLUS_UNIT_TEST(cplus_llist_add_data, functionity)
 
 CPLUS_UNIT_TEST(cplus_llist_get_next, functionity)
 {
-    cplus_llist list = NULL;
-    UNITTEST_EXPECT_EQ(true, (NULL != (list = cplus_llist_new())));
+    cplus_llist list = CPLUS_NULL;
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (list = cplus_llist_new())));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_back(list, &num0));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_back(list, &num1));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_back(list, &num2));
@@ -2534,9 +2534,9 @@ CPLUS_UNIT_TEST(cplus_llist_get_next, functionity)
 
 CPLUS_UNIT_TEST(CPLUS_LLIST_FOREACH, functionity)
 {
-    cplus_llist list = NULL;
+    cplus_llist list = CPLUS_NULL;
     int32_t * target = 0, idx = 0;
-    UNITTEST_EXPECT_EQ(true, (NULL != (list = cplus_llist_new())));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (list = cplus_llist_new())));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_back(list, &num0));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_back(list, &num1));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_back(list, &num2));
@@ -2555,8 +2555,8 @@ CPLUS_UNIT_TEST(CPLUS_LLIST_FOREACH, functionity)
 
 CPLUS_UNIT_TEST(cplus_llist_get_cycling_next, functionity)
 {
-    cplus_llist list = NULL;
-    UNITTEST_EXPECT_EQ(true, (NULL != (list = cplus_llist_new())));
+    cplus_llist list = CPLUS_NULL;
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (list = cplus_llist_new())));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_back(list, &num0));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_back(list, &num1));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_llist_push_back(list, &num2));

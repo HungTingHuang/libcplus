@@ -189,7 +189,7 @@ static int32_t ipc_client_delete(struct ipc_client * ipc_clt)
 
 static int32_t ipc_server_delete(struct ipc_server * ipc_serv)
 {
-    struct ipc_conn * conn = NULL;
+    struct ipc_conn * conn = CPLUS_NULL;
 
     if (ipc_serv)
     {
@@ -251,7 +251,7 @@ int32_t ipc_recv_packet(
     int32_t res = CPLUS_FAIL, recv_count = 0;
     uint8_t begin_tag[3] = {0}, end_tag[3] = {0};
     uint32_t curr_tick = 0;
-    void * recv_data = NULL;
+    void * recv_data = CPLUS_NULL;
 
     CHECK_NOT_NULL(skt, CPLUS_FAIL);
     CHECK_NOT_NULL(packet, CPLUS_FAIL);
@@ -293,7 +293,7 @@ int32_t ipc_recv_packet(
         packet->data_len = ntohl(packet->data_len);
 
         curr_tick = cplus_systime_get_tick();
-        if (0 < packet->data_len AND NULL != output_bufs AND 0 < output_bufs_len)
+        if (0 < packet->data_len AND CPLUS_NULL != output_bufs AND 0 < output_bufs_len)
         {
             recv_data = (void *)cplus_malloc(packet->data_len * sizeof(uint8_t));
             if (recv_data)
@@ -370,7 +370,7 @@ int32_t ipc_send_packet(cplus_socket skt, IPC_CONN_PACKET packet)
             break;
         }
 
-        if (0 < packet->data_len AND NULL != packet->data)
+        if (0 < packet->data_len AND CPLUS_NULL != packet->data)
         {
             send_count = cplus_socket_send(skt, packet->data, packet->data_len);
             if (0 > send_count OR packet->data_len != ((uint32_t)send_count))
@@ -406,7 +406,7 @@ static int32_t packet_analyze_completed(struct ipc_conn * ipc_conn)
             response_packet.seqn = completed_packet->seqn;
             response_packet.cmd = IPC_CMD_ACK;
             response_packet.data_len = 0;
-            response_packet.data = NULL;
+            response_packet.data = CPLUS_NULL;
             res = ipc_send_packet(ipc_conn->sock, &response_packet);
         }
         break;
@@ -416,10 +416,10 @@ static int32_t packet_analyze_completed(struct ipc_conn * ipc_conn)
         {
             if (ipc_conn->on_received)
             {
-                if (NULL == ipc_conn->response_data)
+                if (CPLUS_NULL == ipc_conn->response_data)
                 {
                     ipc_conn->response_data = (void *)cplus_malloc(ipc_conn->response_data_size);
-                    if (NULL == ipc_conn->response_data)
+                    if (CPLUS_NULL == ipc_conn->response_data)
                     {
                         return CPLUS_FAIL;
                     }
@@ -445,7 +445,7 @@ static int32_t packet_analyze_completed(struct ipc_conn * ipc_conn)
                     ipc_conn->response_data = (void *)cplus_realloc(
                         ipc_conn->response_data
                         , dataout_size);
-                    if (NULL == ipc_conn->response_data)
+                    if (CPLUS_NULL == ipc_conn->response_data)
                     {
                         return CPLUS_FAIL;
                     }
@@ -484,7 +484,7 @@ static int32_t packet_analyze_completed(struct ipc_conn * ipc_conn)
                     response_packet.seqn = completed_packet->seqn;
                     response_packet.cmd = IPC_CMD_ACK;
                     response_packet.data_len = 0;
-                    response_packet.data = NULL;
+                    response_packet.data = CPLUS_NULL;
                     res = ipc_send_packet(ipc_conn->sock, &response_packet);
                 }
             }
@@ -586,7 +586,7 @@ static void ipc_packet_analyze(
             {
                 if (packet->data_len > ipc_conn->packet_databufs_size)
                 {
-                    if (NULL == ipc_conn->packet_databufs)
+                    if (CPLUS_NULL == ipc_conn->packet_databufs)
                     {
                         ipc_conn->packet_databufs = (void *)cplus_malloc(packet->data_len);
                     }
@@ -605,14 +605,14 @@ static void ipc_packet_analyze(
                 }
                 else
                 {
-                    if (NULL == ipc_conn->packet_databufs)
+                    if (CPLUS_NULL == ipc_conn->packet_databufs)
                     {
                         ipc_conn->packet_databufs = (void *)cplus_malloc(ipc_conn->packet_databufs_size);
                         cplus_mem_set(ipc_conn->packet_databufs, 0x00, ipc_conn->packet_databufs_size);
                     }
                 }
 
-                if (NULL == ipc_conn->packet_databufs)
+                if (CPLUS_NULL == ipc_conn->packet_databufs)
                 {
                     /* Cannot allocate memory
                     Drop this packet, re-pick a new one. */
@@ -717,7 +717,7 @@ static void ipc_conn_proc(void * param1, void * param2)
         }
 
         cplus_socket_delete(ipc_conn->sock);
-        ipc_conn->sock = NULL;
+        ipc_conn->sock = CPLUS_NULL;
         ipc_conn->status = IPC_CONN_STATUS_NOT_CONNECTED;
 
         if (ipc_conn->ipc_serv)
@@ -800,7 +800,7 @@ static struct ipc_conn * ipc_conn_create(
     , CPLUS_IPC_CB_ON_DISCONNECTED on_disconnected
     , CPLUS_IPC_CB_ON_ERROR on_error)
 {
-    struct ipc_conn * conn = NULL;
+    struct ipc_conn * conn = CPLUS_NULL;
 
     if ((conn = (struct ipc_conn *)((ipc_serv)
         ? (struct ipc_conn *)cplus_mempool_alloc(ipc_serv->ipc_conn_pool)
@@ -811,21 +811,21 @@ static struct ipc_conn * ipc_conn_create(
         conn->is_async = is_async;
         conn->recv_timeout = CPLUS_INFINITE_TIMEOUT;
         conn->sock = conn_sock;
-        conn->evt_packet_received = NULL;
+        conn->evt_packet_received = CPLUS_NULL;
         conn->status = IPC_CONN_STATUS_NOT_CONNECTED;
         conn->sock_error = 0;
         conn->recv_stage = IPC_CONN_STAGE_RECV_HEAD;
         conn->recv_count = 0;
-        conn->recv_bufs = NULL;
+        conn->recv_bufs = CPLUS_NULL;
         conn->recv_bufs_size = DEFAULT_RECEVICE_BUFFER_SIZE;
         conn->recv_bufs_offset = 0;
         conn->sub_offset = 0;
-        conn->packet_databufs = NULL;
+        conn->packet_databufs = CPLUS_NULL;
         conn->packet_databufs_size = DEFAULT_PACKET_DATA_SIZE;
         conn->packet_databufs_offset = 0;
         conn->response_data_size = DEFAULT_RESPONSE_BUFS_SIZE;
-        conn->response_data = NULL;
-        conn->conn_task = NULL;
+        conn->response_data = CPLUS_NULL;
+        conn->conn_task = CPLUS_NULL;
 
         if (on_received)
         {
@@ -840,10 +840,10 @@ static struct ipc_conn * ipc_conn_create(
             conn->on_error = on_error;
         }
 
-        if (NULL == conn->recv_bufs)
+        if (CPLUS_NULL == conn->recv_bufs)
         {
             conn->recv_bufs = (uint8_t *)cplus_malloc(conn->recv_bufs_size);
-            if (NULL == conn->recv_bufs)
+            if (CPLUS_NULL == conn->recv_bufs)
             {
                 goto error;
             }
@@ -855,9 +855,9 @@ static struct ipc_conn * ipc_conn_create(
             conn->conn_task = cplus_task_new(
                 ipc_conn_proc
                 , conn
-                , NULL
+                , CPLUS_NULL
                 , DURATION_FOR_IPC_CONN_TASK);
-            if (NULL == conn->conn_task)
+            if (CPLUS_NULL == conn->conn_task)
             {
                 goto error;
             }
@@ -865,10 +865,10 @@ static struct ipc_conn * ipc_conn_create(
         }
         else
         {
-            if (NULL == conn->evt_packet_received)
+            if (CPLUS_NULL == conn->evt_packet_received)
             {
                 conn->evt_packet_received = cplus_pevent_new(true, false);
-                if (NULL == conn->evt_packet_received)
+                if (CPLUS_NULL == conn->evt_packet_received)
                 {
                     goto error;
                 }
@@ -878,7 +878,7 @@ static struct ipc_conn * ipc_conn_create(
     }
 error:
     ipc_conn_delete(conn);
-    return NULL;
+    return CPLUS_NULL;
 }
 
 static inline int32_t find_disconnect_conn(void * data, void * arg)
@@ -891,15 +891,15 @@ void ipc_server_proc(void * param1, void * param2)
 {
     struct ipc_server * ipc_serv = (struct ipc_server *)(param1);
     bool can_accept = false;
-    struct ipc_conn * conn = NULL;
-    cplus_socket sock = NULL;
+    struct ipc_conn * conn = CPLUS_NULL;
+    cplus_socket sock = CPLUS_NULL;
     UNUSED_PARAM(param2);
 
     cplus_crit_sect_enter(ipc_serv->ipc_conn_sect);
     while ((conn = (struct ipc_conn *)cplus_llist_pop_if(
         ipc_serv->ipc_conn_list
         , find_disconnect_conn
-        , NULL)))
+        , CPLUS_NULL)))
     {
         ipc_conn_delete(conn);
     }
@@ -951,12 +951,12 @@ int32_t cplus_ipc_client_send_heartbeat(cplus_ipc_client obj, uint32_t timeout)
     request_packet.seqn = ACCUMULATE_SEQUENCE_NUMBER(clt->seqn);
     request_packet.cmd = IPC_CMD_HEARTBEAT;
     request_packet.data_len = 0;
-    request_packet.data = NULL;
+    request_packet.data = CPLUS_NULL;
 
     count = ipc_send_packet(clt->server_socket, &request_packet);
     if (0 <= count)
     {
-        count = ipc_recv_packet(clt->server_socket, &response_packet, 0, NULL, timeout);
+        count = ipc_recv_packet(clt->server_socket, &response_packet, 0, CPLUS_NULL, timeout);
         if (0 <= count)
         {
             if (request_packet.seqn == response_packet.seqn
@@ -1020,7 +1020,7 @@ int32_t cplus_ipc_client_send_request(
             while (true)
             {
                 timeout = cplus_systime_get_tick();
-                ipc_conn_proc(clt->ipc_conn, NULL);
+                ipc_conn_proc(clt->ipc_conn, CPLUS_NULL);
                 count = (clt->ipc_conn)->recv_count;
                 if (0 >= count)
                 {
@@ -1121,7 +1121,7 @@ static void * ipc_server_new(
     , uint32_t max_connection
     , CPLUS_IPC_CB_FUNCS cb_funcs)
 {
-    struct ipc_server * ipc_serv = NULL;
+    struct ipc_server * ipc_serv = CPLUS_NULL;
     if ((ipc_serv = (struct ipc_server *)cplus_malloc(sizeof(struct ipc_server))))
     {
         CPLUS_INITIALIZE_STRUCT_POINTER(ipc_serv);
@@ -1130,7 +1130,7 @@ static void * ipc_server_new(
         ipc_serv->max_conn = max_connection;
 
         ipc_serv->accept_socket = cplus_socket_new(CPLUS_SOCKET_TYPE_STREAM_LOCAL);
-        if (NULL == ipc_serv->accept_socket)
+        if (CPLUS_NULL == ipc_serv->accept_socket)
         {
             goto exit;
         }
@@ -1143,19 +1143,19 @@ static void * ipc_server_new(
         }
 
         ipc_serv->ipc_conn_list = cplus_llist_prev_new(ipc_serv->max_conn);
-        if (NULL == ipc_serv->ipc_conn_list)
+        if (CPLUS_NULL == ipc_serv->ipc_conn_list)
         {
             goto exit;
         }
 
         ipc_serv->ipc_conn_pool = cplus_mempool_new(ipc_serv->max_conn, sizeof(struct ipc_conn));
-        if (NULL == ipc_serv->ipc_conn_pool)
+        if (CPLUS_NULL == ipc_serv->ipc_conn_pool)
         {
             goto exit;
         }
 
         ipc_serv->ipc_conn_sect = cplus_mutex_new();
-        if (NULL == ipc_serv->ipc_conn_sect)
+        if (CPLUS_NULL == ipc_serv->ipc_conn_sect)
         {
             goto exit;
         }
@@ -1188,9 +1188,9 @@ static void * ipc_server_new(
         ipc_serv->accept_task = cplus_task_new(
             ipc_server_proc
             , ipc_serv
-            , NULL
+            , CPLUS_NULL
             , DURATION_FOR_IPC_SEVR_ACCEPT_TASK);
-        if (NULL == ipc_serv->accept_task)
+        if (CPLUS_NULL == ipc_serv->accept_task)
         {
             goto exit;
         }
@@ -1201,14 +1201,14 @@ static void * ipc_server_new(
     return ipc_serv;
 exit:
     ipc_server_delete(ipc_serv);
-    return NULL;
+    return CPLUS_NULL;
 }
 
 static void * ipc_client_new(
     const char * name
     , CPLUS_IPC_CB_FUNCS cb_funcs)
 {
-    struct ipc_client * ipc_clt = NULL;
+    struct ipc_client * ipc_clt = CPLUS_NULL;
 
     if ((ipc_clt = (struct ipc_client *)cplus_malloc(sizeof(struct ipc_client))))
     {
@@ -1216,11 +1216,11 @@ static void * ipc_client_new(
 
         ipc_clt->type = OBJ_TYPE_CLIENT;
         ipc_clt->is_async = false;
-        ipc_clt->ipc_conn = NULL;
+        ipc_clt->ipc_conn = CPLUS_NULL;
         ipc_clt->seqn = 0;
 
         ipc_clt->server_socket = cplus_socket_new(CPLUS_SOCKET_TYPE_STREAM_LOCAL);
-        if (NULL == ipc_clt->server_socket)
+        if (CPLUS_NULL == ipc_clt->server_socket)
         {
             goto error;
         }
@@ -1251,13 +1251,13 @@ static void * ipc_client_new(
             else
             {
                 ipc_clt->ipc_conn = ipc_conn_create(
-                    NULL
+                    CPLUS_NULL
                     , ipc_clt->server_socket
                     , ipc_clt->is_async
-                    , NULL
-                    , NULL
-                    , NULL);
-                if (NULL == ipc_clt->ipc_conn)
+                    , CPLUS_NULL
+                    , CPLUS_NULL
+                    , CPLUS_NULL);
+                if (CPLUS_NULL == ipc_clt->ipc_conn)
                 {
                     goto error;
                 }
@@ -1273,7 +1273,7 @@ static void * ipc_client_new(
     return ipc_clt;
 error:
     ipc_client_delete(ipc_clt);
-    return NULL;
+    return CPLUS_NULL;
 }
 
 cplus_ipc_server cplus_ipc_server_new(
@@ -1281,9 +1281,9 @@ cplus_ipc_server cplus_ipc_server_new(
     , uint32_t max_connection
     , CPLUS_IPC_CB_FUNCS cb_funcs)
 {
-    CHECK_NOT_NULL(name, NULL);
-    CHECK_GT_ZERO(max_connection, NULL);
-    CHECK_NOT_NULL(cb_funcs, NULL);
+    CHECK_NOT_NULL(name, CPLUS_NULL);
+    CHECK_GT_ZERO(max_connection, CPLUS_NULL);
+    CHECK_NOT_NULL(cb_funcs, CPLUS_NULL);
 
     return ipc_server_new(name, max_connection, cb_funcs);
 }
@@ -1292,7 +1292,7 @@ cplus_ipc_client cplus_ipc_client_new(
     const char * name
     , CPLUS_IPC_CB_FUNCS cb_funcs)
 {
-    CHECK_NOT_NULL(name, NULL);
+    CHECK_NOT_NULL(name, CPLUS_NULL);
 
     return ipc_client_new(name, cb_funcs);
 }
@@ -1640,7 +1640,7 @@ CPLUS_UNIT_TEST(CPLUS_IPC_CLIENT_SEND_REQUEST, functionity)
         verification_count[i] = 0;
     }
 
-    cplus_ipc_server ipc_server = NULL;
+    cplus_ipc_server ipc_server = CPLUS_NULL;
     cplus_ipc_client client[MAX_CLIENT_COUNT] = {0};
 
     char recv_bufs[65536] = {0};
@@ -1652,10 +1652,10 @@ CPLUS_UNIT_TEST(CPLUS_IPC_CLIENT_SEND_REQUEST, functionity)
     ipc_server_cb_funcs.on_received = serv_request_on_received;
     ipc_server_cb_funcs.on_disconnected = serv_on_disconnected;
 
-    UNITTEST_EXPECT_EQ(true, (NULL != (ipc_server = cplus_ipc_server_new(SERVER_NAME, MAX_CLIENT_COUNT, &ipc_server_cb_funcs))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (ipc_server = cplus_ipc_server_new(SERVER_NAME, MAX_CLIENT_COUNT, &ipc_server_cb_funcs))));
     for (int32_t idx = 0; idx < MAX_CLIENT_COUNT; idx++)
     {
-        UNITTEST_EXPECT_EQ(true, (NULL != (client[idx] = cplus_ipc_client_new(SERVER_NAME, NULL))));
+        UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (client[idx] = cplus_ipc_client_new(SERVER_NAME, CPLUS_NULL))));
         UNITTEST_EXPECT_EQ(
             true
             , (0 < (recv_count = cplus_ipc_client_send_request(
@@ -1771,7 +1771,7 @@ CPLUS_UNIT_TEST(CPLUS_IPC_CLIENT_SEND_ONEWAY, functionity)
         verification_count[i] = 0;
     }
 
-    cplus_ipc_server ipc_server = NULL;
+    cplus_ipc_server ipc_server = CPLUS_NULL;
     cplus_ipc_client client[MAX_CLIENT_COUNT] = {0};
 
     CPLUS_IPC_CB_FUNCS_T ipc_server_cb_funcs = {0};
@@ -1779,10 +1779,10 @@ CPLUS_UNIT_TEST(CPLUS_IPC_CLIENT_SEND_ONEWAY, functionity)
     ipc_server_cb_funcs.on_received = serv_oneway_on_received;
     ipc_server_cb_funcs.on_disconnected = serv_on_disconnected;
 
-    UNITTEST_EXPECT_EQ(true, (NULL != (ipc_server = cplus_ipc_server_new(SERVER_NAME, MAX_CLIENT_COUNT, &ipc_server_cb_funcs))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (ipc_server = cplus_ipc_server_new(SERVER_NAME, MAX_CLIENT_COUNT, &ipc_server_cb_funcs))));
     for (int32_t idx = 0; idx < MAX_CLIENT_COUNT; idx++)
     {
-        UNITTEST_EXPECT_EQ(true, (NULL != (client[idx] = cplus_ipc_client_new(SERVER_NAME, NULL))));
+        UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (client[idx] = cplus_ipc_client_new(SERVER_NAME, CPLUS_NULL))));
         UNITTEST_EXPECT_EQ(strlen(test_string0) + 1, cplus_ipc_client_send_oneway(client[idx], strlen(test_string0) + 1, test_string0));
         UNITTEST_EXPECT_EQ(strlen(test_string1) + 1, cplus_ipc_client_send_oneway(client[idx], strlen(test_string1) + 1, test_string1));
         UNITTEST_EXPECT_EQ(strlen(test_string2) + 1, cplus_ipc_client_send_oneway(client[idx], strlen(test_string2) + 1, test_string2));
@@ -1807,7 +1807,7 @@ CPLUS_UNIT_TEST(CPLUS_IPC_CLIENT_SEND_ONEWAY, functionity)
 
 CPLUS_UNIT_TEST(CPLUS_IPC_CLIENT_CONNECT, bad_case_over_connection_count)
 {
-    cplus_ipc_server ipc_server = NULL;
+    cplus_ipc_server ipc_server = CPLUS_NULL;
     cplus_ipc_client client[MAX_CLIENT_COUNT + 1] = {0};
 
     CPLUS_IPC_CB_FUNCS_T ipc_server_cb_funcs = {0};
@@ -1815,18 +1815,18 @@ CPLUS_UNIT_TEST(CPLUS_IPC_CLIENT_CONNECT, bad_case_over_connection_count)
     ipc_server_cb_funcs.on_received = serv_oneway_on_received;
     ipc_server_cb_funcs.on_disconnected = serv_on_disconnected;
 
-    UNITTEST_EXPECT_EQ(true, (NULL != (ipc_server = cplus_ipc_server_new(SERVER_NAME, MAX_CLIENT_COUNT, &ipc_server_cb_funcs))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (ipc_server = cplus_ipc_server_new(SERVER_NAME, MAX_CLIENT_COUNT, &ipc_server_cb_funcs))));
     for (int32_t i = 0; i < MAX_CLIENT_COUNT; i++)
     {
-        UNITTEST_EXPECT_EQ(true, (NULL != (client[i] = cplus_ipc_client_new(SERVER_NAME, NULL))));
+        UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (client[i] = cplus_ipc_client_new(SERVER_NAME, CPLUS_NULL))));
     }
-    UNITTEST_EXPECT_EQ(true, (NULL == (client[5] = cplus_ipc_client_new(SERVER_NAME, NULL))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL == (client[5] = cplus_ipc_client_new(SERVER_NAME, CPLUS_NULL))));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_ipc_client_delete(client[0]));
-    UNITTEST_EXPECT_EQ(true, (NULL != (client[5] = cplus_ipc_client_new(SERVER_NAME, NULL))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (client[5] = cplus_ipc_client_new(SERVER_NAME, CPLUS_NULL))));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_ipc_client_send_heartbeat(client[5], 3000));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_ipc_client_send_heartbeat(client[5], 3000));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_ipc_client_delete(client[2]));
-    UNITTEST_EXPECT_EQ(true, (NULL != (client[2] = cplus_ipc_client_new(SERVER_NAME, NULL))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (client[2] = cplus_ipc_client_new(SERVER_NAME, CPLUS_NULL))));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_ipc_client_send_heartbeat(client[2], 3000));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_ipc_client_delete(client[1]));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_ipc_client_delete(client[2]));
@@ -1839,8 +1839,8 @@ CPLUS_UNIT_TEST(CPLUS_IPC_CLIENT_CONNECT, bad_case_over_connection_count)
 
 CPLUS_UNIT_TEST(CPLUS_IPC_CLIENT_SEND_REQUEST, bad_case_timeout)
 {
-    cplus_ipc_server ipc_server = NULL;
-    cplus_ipc_client ipc_client = NULL;
+    cplus_ipc_server ipc_server = CPLUS_NULL;
+    cplus_ipc_client ipc_client = CPLUS_NULL;
 
     char recv_bufs[512] = {0};
     uint32_t recv_bufs_size = sizeof(recv_bufs);
@@ -1851,8 +1851,8 @@ CPLUS_UNIT_TEST(CPLUS_IPC_CLIENT_SEND_REQUEST, bad_case_timeout)
     ipc_server_cb_funcs.on_received = serv_request_on_received;
     ipc_server_cb_funcs.on_disconnected = serv_on_disconnected;
 
-    UNITTEST_EXPECT_EQ(true, (NULL != (ipc_server = cplus_ipc_server_new(SERVER_NAME, MAX_CLIENT_COUNT, &ipc_server_cb_funcs))));
-    UNITTEST_EXPECT_EQ(true, (NULL != (ipc_client = cplus_ipc_client_new(SERVER_NAME, NULL))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (ipc_server = cplus_ipc_server_new(SERVER_NAME, MAX_CLIENT_COUNT, &ipc_server_cb_funcs))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (ipc_client = cplus_ipc_client_new(SERVER_NAME, CPLUS_NULL))));
     UNITTEST_EXPECT_EQ(
             true
             , (0 < (recv_count = cplus_ipc_client_send_request(
@@ -1892,16 +1892,16 @@ CPLUS_UNIT_TEST(CPLUS_IPC_CLIENT_SEND_REQUEST, bad_case_timeout)
 
 CPLUS_UNIT_TEST(CPLUS_IPC_CLIENT_SEND_HEARTBEAT, bad_case_timeout)
 {
-    cplus_ipc_server ipc_server = NULL;
-    cplus_ipc_client ipc_client = NULL;
+    cplus_ipc_server ipc_server = CPLUS_NULL;
+    cplus_ipc_client ipc_client = CPLUS_NULL;
 
     CPLUS_IPC_CB_FUNCS_T ipc_server_cb_funcs = {0};
     ipc_server_cb_funcs.on_connected = serv_on_connected;
     ipc_server_cb_funcs.on_received = serv_oneway_on_received;
     ipc_server_cb_funcs.on_disconnected = serv_on_disconnected;
 
-    UNITTEST_EXPECT_EQ(true, (NULL != (ipc_server = cplus_ipc_server_new(SERVER_NAME, MAX_CLIENT_COUNT, &ipc_server_cb_funcs))));
-    UNITTEST_EXPECT_EQ(true, (NULL != (ipc_client = cplus_ipc_client_new(SERVER_NAME, NULL))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (ipc_server = cplus_ipc_server_new(SERVER_NAME, MAX_CLIENT_COUNT, &ipc_server_cb_funcs))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (ipc_client = cplus_ipc_client_new(SERVER_NAME, CPLUS_NULL))));
     UNITTEST_EXPECT_EQ(CPLUS_FAIL, cplus_ipc_client_send_heartbeat(ipc_client, 1));
     UNITTEST_EXPECT_EQ(ETIMEDOUT, errno);
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_ipc_client_delete(ipc_client));

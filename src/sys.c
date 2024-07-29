@@ -11,7 +11,7 @@
 
 const char * cplus_sys_skip_file_path(const char * filepath)
 {
-    const char * target = NULL;
+    const char * target = CPLUS_NULL;
     if ((target = strrchr(filepath, '\\')))
     {
         return target + 1;

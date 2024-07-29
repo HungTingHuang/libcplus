@@ -9,24 +9,15 @@ extern "C" {
 #ifdef __CPLUS_MEM_MANAGER__
 #define cplus_malloc(size) cplus_mgr_malloc(size, __FILE__, __FUNCTION__, __LINE__)
 #define cplus_realloc(ptr, size) cplus_mgr_realloc(ptr, size, __FILE__, __FUNCTION__, __LINE__)
-void * cplus_mgr_malloc(
-    uint32_t size
-    , const char * file
-    , const char * function
-    , uint32_t line);
-void * cplus_mgr_realloc(
-    void * ptr
-    , uint32_t size
-    , const char * file
-    , const char * function
-    , uint32_t line);
+void * cplus_mgr_malloc(uint32_t size, const char * file, const char * function, uint32_t line);
+void * cplus_mgr_realloc(void * ptr, uint32_t size, const char * file, const char * function, uint32_t line);
 #else // else __CPLUS_MEM_MANAGER__
 #define cplus_malloc(size) cplus_mgr_malloc(size)
 #define cplus_realloc(ptr, size) cplus_mgr_realloc(ptr, size)
 void * cplus_mgr_malloc(uint32_t size);
 void * cplus_mgr_realloc(void * ptr, uint32_t size);
 #endif // __CPLUS_MEM_MANAGER__
-#define cplus_free(addr) ({ int32_t res = cplus_mgr_free(addr); addr = NULL; res; })
+#define cplus_free(addr) ({ int32_t res = cplus_mgr_free(addr); addr = CPLUS_NULL; res; })
 int32_t cplus_mgr_report(void);
 int32_t cplus_mgr_report_in_file(void * stream);
 int32_t cplus_mgr_check_size(void * ptr, uint32_t size);

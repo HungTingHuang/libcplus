@@ -33,27 +33,16 @@ typedef struct cplus_event_server_config
     void * cb_param;
 } *CPLUS_EVENT_SERVER_CONFIG, CPLUS_EVENT_SERVER_CONFIG_T;
 
-cplus_event_server cplus_event_server_new(
-    uint32_t init_val
-    , CPLUS_EVENT_SERVER_FLAG flag
-    , CPLUS_EVENT_SERVER_CB_FUNCS cb_funcs);
-
-cplus_event_server cplus_event_server_new_config(
-    CPLUS_EVENT_SERVER_CONFIG config
-    , CPLUS_EVENT_SERVER_CB_FUNCS cb_funcs);
-
+cplus_event_server cplus_event_server_new(uint32_t init_val, CPLUS_EVENT_SERVER_FLAG flag, CPLUS_EVENT_SERVER_CB_FUNCS cb_funcs);
+cplus_event_server cplus_event_server_new_config(CPLUS_EVENT_SERVER_CONFIG config, CPLUS_EVENT_SERVER_CB_FUNCS cb_funcs);
 cplus_event_client cplus_event_client_attach(cplus_event_server obj);
 cplus_event_client cplus_event_client_connect(void);
-
 bool cplus_event_server_check(cplus_object obj);
 bool cplus_event_client_check(cplus_object obj);
-
 int32_t cplus_event_server_delete(cplus_event_server obj);
 int32_t cplus_event_client_delete(cplus_event_client obj);
-
 int32_t cplus_event_server_start(cplus_event_server obj);
 int32_t cplus_event_server_get_efd(cplus_event_server obj);
-
 int32_t cplus_event_client_add_count(cplus_event_client obj, uint64_t count);
 
 #ifdef __cplusplus

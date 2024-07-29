@@ -24,12 +24,12 @@ void * cplus_atomic_read_ptr(void ** ptr)
     #elif (40603 <= GCC_VERSION)
     {
         errno = ENOTSUP;
-        return NULL;
+        return CPLUS_NULL;
     }
     #else
     {
         errno = ENOTSUP;
-        return NULL;
+        return CPLUS_NULL;
     }
     #endif
 
@@ -61,12 +61,12 @@ void * cplus_atomic_exchange_ptr(void ** ptr, void * value)
     #elif (40603 <= GCC_VERSION)
     {
         errno = ENOTSUP;
-        return NULL;
+        return CPLUS_NULL;
     }
     #else
     {
         errno = ENOTSUP;
-        return NULL;
+        return CPLUS_NULL;
     }
     #endif
 }
@@ -92,11 +92,11 @@ static void TASK_RUNNING(void * (*test_func)(void *))
     test_value = 0;
     for (inx = 0; inx < TASK_COUNT; inx++)
     {
-        pthread_create(&tasks[inx], NULL, test_func, NULL);
+        pthread_create(&tasks[inx], CPLUS_NULL, test_func, CPLUS_NULL);
     }
     for (inx = 0; inx < TASK_COUNT; inx++)
     {
-        pthread_join(tasks[inx], NULL);
+        pthread_join(tasks[inx], CPLUS_NULL);
     }
 }
 
@@ -107,7 +107,7 @@ void * task_atomic_add(void * args)
         cplus_atomic_add(&test_value, 1);
         // test_value++;
     }
-    return NULL;
+    return CPLUS_NULL;
 }
 
 void * task_atomic_fetch_add(void * args)
@@ -117,7 +117,7 @@ void * task_atomic_fetch_add(void * args)
         cplus_atomic_fetch_add(&test_value, 1);
         // test_value++;
     }
-    return NULL;
+    return CPLUS_NULL;
 }
 
 CPLUS_UNIT_TEST(cplus_atomic_read, functionity)

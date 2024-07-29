@@ -115,18 +115,18 @@ int32_t cplus_mutex_delete(cplus_mutex obj)
 
 static void * mutex_initialize_object(const char * name, enum INIT_MODE mode)
 {
-    struct mutex * mtx = NULL;
+    struct mutex * mtx = CPLUS_NULL;
 
     if ((mtx = (struct mutex *)cplus_malloc(sizeof(struct mutex))))
     {
         CPLUS_INITIALIZE_STRUCT_POINTER(mtx);
         mtx->type = OBJ_TYPE;
-        mtx->mutex = NULL;
-        mtx->shared_mem = NULL;
+        mtx->mutex = CPLUS_NULL;
+        mtx->shared_mem = CPLUS_NULL;
 
-        if (NULL == name)
+        if (CPLUS_NULL == name)
         {
-            if (0 != pthread_mutex_init(&(mtx->nonamed_mutex), NULL))
+            if (0 != pthread_mutex_init(&(mtx->nonamed_mutex), CPLUS_NULL))
             {
                 goto exit;
             }
@@ -170,7 +170,7 @@ static void * mutex_initialize_object(const char * name, enum INIT_MODE mode)
                 goto exit;
             }
 
-            if (NULL == mtx->shared_mem)
+            if (CPLUS_NULL == mtx->shared_mem)
             {
                 goto exit;
             }
@@ -201,34 +201,34 @@ static void * mutex_initialize_object(const char * name, enum INIT_MODE mode)
     return mtx;
 exit:
     cplus_mutex_delete(mtx);
-    return NULL;
+    return CPLUS_NULL;
 }
 
 cplus_mutex cplus_mutex_new(void)
 {
-    return mutex_initialize_object(NULL, INIT_NONE);
+    return mutex_initialize_object(CPLUS_NULL, INIT_NONE);
 }
 
 cplus_mutex cplus_mutex_new_xp(const char * name)
 {
-    CHECK_NOT_NULL(name, NULL);
-    CHECK_IF(MUTEX_NAME_MAX_SIZE < (strlen(name) + MUTEX_NAME_PATTERN_SIZE), NULL);
+    CHECK_NOT_NULL(name, CPLUS_NULL);
+    CHECK_IF(MUTEX_NAME_MAX_SIZE < (strlen(name) + MUTEX_NAME_PATTERN_SIZE), CPLUS_NULL);
 
     return mutex_initialize_object(name, INIT_HYBRID);
 }
 
 cplus_mutex cplus_mutex_create_xp(const char * name)
 {
-    CHECK_NOT_NULL(name, NULL);
-    CHECK_IF(MUTEX_NAME_MAX_SIZE < (strlen(name) + MUTEX_NAME_PATTERN_SIZE), NULL);
+    CHECK_NOT_NULL(name, CPLUS_NULL);
+    CHECK_IF(MUTEX_NAME_MAX_SIZE < (strlen(name) + MUTEX_NAME_PATTERN_SIZE), CPLUS_NULL);
 
     return mutex_initialize_object(name, INIT_CREATE);
 }
 
 cplus_mutex cplus_mutex_open_xp(const char * name)
 {
-    CHECK_NOT_NULL(name, NULL);
-    CHECK_IF(MUTEX_NAME_MAX_SIZE < (strlen(name) + MUTEX_NAME_PATTERN_SIZE), NULL);
+    CHECK_NOT_NULL(name, CPLUS_NULL);
+    CHECK_IF(MUTEX_NAME_MAX_SIZE < (strlen(name) + MUTEX_NAME_PATTERN_SIZE), CPLUS_NULL);
 
     return mutex_initialize_object(name, INIT_OPEN);
 }
@@ -243,19 +243,19 @@ static char TEST_MUTEX_NAME[] = "test";
 
 CPLUS_UNIT_TEST(cplus_mutex_new, functionity)
 {
-    cplus_mutex mtx = NULL;
+    cplus_mutex mtx = CPLUS_NULL;
 
-    UNITTEST_EXPECT_EQ(true, (NULL != (mtx = cplus_mutex_new())));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (mtx = cplus_mutex_new())));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_mutex_delete(mtx));
     UNITTEST_EXPECT_EQ(0, cplus_mgr_report());
 }
 
 CPLUS_UNIT_TEST(cplus_mutex_lock, functionity)
 {
-    cplus_mutex mtx = NULL;
+    cplus_mutex mtx = CPLUS_NULL;
     uint32_t time;
 
-    UNITTEST_EXPECT_EQ(true, (NULL != (mtx = cplus_mutex_new())));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (mtx = cplus_mutex_new())));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_mutex_lock(mtx, CPLUS_INFINITE_TIMEOUT));
     UNITTEST_EXPECT_EQ(CPLUS_FAIL, cplus_mutex_lock(mtx, 0));
     UNITTEST_EXPECT_EQ(EBUSY, errno);
@@ -272,9 +272,9 @@ CPLUS_UNIT_TEST(cplus_mutex_lock, functionity)
 
 CPLUS_UNIT_TEST(cplus_mutex_new_xp, cross_process_test)
 {
-    cplus_mutex mtx_sv = NULL;
+    cplus_mutex mtx_sv = CPLUS_NULL;
 
-    UNITTEST_EXPECT_EQ(true, (NULL != (mtx_sv = cplus_mutex_new_xp(TEST_MUTEX_NAME))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (mtx_sv = cplus_mutex_new_xp(TEST_MUTEX_NAME))));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_mutex_lock(mtx_sv, CPLUS_INFINITE_TIMEOUT));
 
     if (0 != fork())
@@ -282,10 +282,10 @@ CPLUS_UNIT_TEST(cplus_mutex_new_xp, cross_process_test)
     }
     else
     {
-        cplus_mutex mtx_ch = NULL;
+        cplus_mutex mtx_ch = CPLUS_NULL;
         uint32_t time;
 
-        UNITTEST_EXPECT_EQ(true, (NULL != (mtx_ch = cplus_mutex_new_xp(TEST_MUTEX_NAME))));
+        UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (mtx_ch = cplus_mutex_new_xp(TEST_MUTEX_NAME))));
         UNITTEST_EXPECT_EQ(CPLUS_FAIL, cplus_mutex_lock(mtx_ch, 0));
         UNITTEST_EXPECT_EQ(EBUSY, errno);
         time = cplus_systime_get_tick();
@@ -307,9 +307,9 @@ CPLUS_UNIT_TEST(cplus_mutex_new_xp, cross_process_test)
 
 CPLUS_UNIT_TEST(cplus_mutex_create_xp, cross_process_test)
 {
-    cplus_mutex mtx_sv = NULL;
+    cplus_mutex mtx_sv = CPLUS_NULL;
 
-    UNITTEST_EXPECT_EQ(true, (NULL != (mtx_sv = cplus_mutex_create_xp(TEST_MUTEX_NAME))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (mtx_sv = cplus_mutex_create_xp(TEST_MUTEX_NAME))));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_mutex_lock(mtx_sv, CPLUS_INFINITE_TIMEOUT));
 
     if (0 != fork())
@@ -317,10 +317,10 @@ CPLUS_UNIT_TEST(cplus_mutex_create_xp, cross_process_test)
     }
     else
     {
-        cplus_mutex mtx_ch = NULL;
+        cplus_mutex mtx_ch = CPLUS_NULL;
         uint32_t time;
 
-        UNITTEST_EXPECT_EQ(true, (NULL != (mtx_ch = cplus_mutex_new_xp(TEST_MUTEX_NAME))));
+        UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (mtx_ch = cplus_mutex_new_xp(TEST_MUTEX_NAME))));
         UNITTEST_EXPECT_EQ(CPLUS_FAIL, cplus_mutex_lock(mtx_ch, 0));
         UNITTEST_EXPECT_EQ(EBUSY, errno);
         time = cplus_systime_get_tick();
@@ -342,45 +342,45 @@ CPLUS_UNIT_TEST(cplus_mutex_create_xp, cross_process_test)
 
 CPLUS_UNIT_TEST(cplus_mutex_new_xp, bad_parameter)
 {
-    cplus_mutex mtx = NULL;
+    cplus_mutex mtx = CPLUS_NULL;
     char bad_name[27] = "0123456789abcdef0123456789";
 
-    UNITTEST_EXPECT_EQ(true, (NULL == (mtx = cplus_mutex_new_xp(bad_name))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL == (mtx = cplus_mutex_new_xp(bad_name))));
     UNITTEST_EXPECT_EQ(EINVAL, errno);
-    UNITTEST_EXPECT_EQ(true, (NULL != (mtx = cplus_mutex_new_xp(&bad_name[1]))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (mtx = cplus_mutex_new_xp(&bad_name[1]))));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_mutex_delete(mtx));
     UNITTEST_EXPECT_EQ(0, cplus_mgr_report());
 }
 
 CPLUS_UNIT_TEST(cplus_mutex_create_xp, bad_parameter)
 {
-    cplus_mutex mtx = NULL;
+    cplus_mutex mtx = CPLUS_NULL;
     char bad_name[27] = "0123456789abcdef0123456789";
 
-    UNITTEST_EXPECT_EQ(true, (NULL == (mtx = cplus_mutex_create_xp(bad_name))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL == (mtx = cplus_mutex_create_xp(bad_name))));
     UNITTEST_EXPECT_EQ(EINVAL, errno);
-    UNITTEST_EXPECT_EQ(true, (NULL != (mtx = cplus_mutex_create_xp(&bad_name[1]))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (mtx = cplus_mutex_create_xp(&bad_name[1]))));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_mutex_delete(mtx));
     UNITTEST_EXPECT_EQ(0, cplus_mgr_report());
 }
 
 CPLUS_UNIT_TEST(cplus_mutex_open_xp, bad_parameter)
 {
-    cplus_mutex mtx = NULL;
+    cplus_mutex mtx = CPLUS_NULL;
     char bad_name[27] = "0123456789abcdef0123456789";
 
-    UNITTEST_EXPECT_EQ(true, (NULL == (mtx = cplus_mutex_open_xp(bad_name))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL == (mtx = cplus_mutex_open_xp(bad_name))));
     UNITTEST_EXPECT_EQ(EINVAL, errno);
-    UNITTEST_EXPECT_EQ(true, (NULL == (mtx = cplus_mutex_open_xp(&bad_name[1]))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL == (mtx = cplus_mutex_open_xp(&bad_name[1]))));
     UNITTEST_EXPECT_EQ(ENOENT, errno);
     UNITTEST_EXPECT_EQ(0, cplus_mgr_report());
 }
 
 CPLUS_UNIT_TEST(cplus_crit_sect_enter, functionity)
 {
-    cplus_mutex mtx = NULL;
+    cplus_mutex mtx = CPLUS_NULL;
 
-    UNITTEST_EXPECT_EQ(true, (NULL != (mtx = cplus_mutex_new())));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (mtx = cplus_mutex_new())));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_crit_sect_enter(mtx));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_crit_sect_exit(mtx));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_crit_sect_enter(mtx));
@@ -391,9 +391,9 @@ CPLUS_UNIT_TEST(cplus_crit_sect_enter, functionity)
 
 CPLUS_UNIT_TEST(cplus_crit_sect_enter, cross_process_test)
 {
-    cplus_mutex mtx_sv = NULL;
+    cplus_mutex mtx_sv = CPLUS_NULL;
 
-    UNITTEST_EXPECT_EQ(true, (NULL != (mtx_sv = cplus_mutex_new_xp(TEST_MUTEX_NAME))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (mtx_sv = cplus_mutex_new_xp(TEST_MUTEX_NAME))));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_crit_sect_enter(mtx_sv));
 
     if (0 != fork())
@@ -401,9 +401,9 @@ CPLUS_UNIT_TEST(cplus_crit_sect_enter, cross_process_test)
     }
     else
     {
-        cplus_mutex mtx_ch = NULL;
+        cplus_mutex mtx_ch = CPLUS_NULL;
 
-        UNITTEST_EXPECT_EQ(true, (NULL != (mtx_ch = cplus_mutex_new_xp(TEST_MUTEX_NAME))));
+        UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (mtx_ch = cplus_mutex_new_xp(TEST_MUTEX_NAME))));
         UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_crit_sect_exit(mtx_ch));
         UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_crit_sect_enter(mtx_ch));
         UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_crit_sect_exit(mtx_ch));

@@ -35,11 +35,11 @@
 #endif
 
 #ifdef __arm__
-    #define REG_LD "%lld"
-    #define REG_LU "%llu"
+#   define REG_LD "%lld"
+#   define REG_LU "%llu"
 #else
-    #define REG_LD "%ld"
-    #define REG_LU "%lu"
+#   define REG_LD "%ld"
+#   define REG_LU "%lu"
 #endif
 
 /* constant variable */
@@ -55,9 +55,6 @@
 #define AND &&
 #define OR ||
 #define NOT !
-#ifdef __cplusplus
-    // #define NULL nullptr
-#endif
 
 /* color font */
 #define RED(str) "\x1B[31m" str "\033[0m"
@@ -79,16 +76,16 @@
 #define CHECK_IF(CONDITION, VALUE) IF_THEN_RETURN(CONDITION, VALUE)
 #define CHECK_IF_NOT(CONDITION, VALUE) IF_THEN_RETURN(!(CONDITION), VALUE)
 #define CHECK_GT_ZERO(PARAMETER, VALUE) IF_THEN_RETURN(0 >= PARAMETER, VALUE)
-#define CHECK_NOT_NULL(PARAMETER, VALUE) IF_THEN_RETURN(NULL == PARAMETER, VALUE)
+#define CHECK_NOT_NULL(PARAMETER, VALUE) IF_THEN_RETURN(CPLUS_NULL == PARAMETER, VALUE)
 #define CHECK_IN_INTERVAL(PARAMETER, MIN, MAX, VALUE) IF_THEN_RETURN((MIN > PARAMETER || PARAMETER > MAX), VALUE)
-#define CHECK_OBJECT_NOT_NULL(OBJECT) assert((NULL != OBJECT))
-#define CHECK_OBJECT_TYPE(OBJECT) assert((NULL != OBJECT) && (OBJ_TYPE == ((uint16_t *)OBJECT)[0]))
-#define CHECK_OBJECT_TYPE_EX(OBJECT, TYPE) assert((NULL != OBJECT) && ((TYPE) == ((uint16_t *)OBJECT)[0]))
-#define CHECK_OBJECT_TYPE_BOTH(OBJECT, TYPE1, TYPE2) assert((NULL != OBJECT) && (((TYPE1) == ((uint16_t *)OBJECT)[0]) || ((TYPE2) == ((uint16_t *)OBJECT)[0])))
+#define CHECK_OBJECT_NOT_NULL(OBJECT) assert((CPLUS_NULL != OBJECT))
+#define CHECK_OBJECT_TYPE(OBJECT) assert((CPLUS_NULL != OBJECT) && (OBJ_TYPE == ((uint16_t *)(OBJECT))[0]))
+#define CHECK_OBJECT_TYPE_EX(OBJECT, TYPE) assert((CPLUS_NULL != OBJECT) && ((TYPE) == ((uint16_t *)(OBJECT))[0]))
+#define CHECK_OBJECT_TYPE_BOTH(OBJECT, TYPE1, TYPE2) assert((CPLUS_NULL != OBJECT) && (((TYPE1) == ((uint16_t *)(OBJECT))[0]) || ((TYPE2) == ((uint16_t *)(OBJECT))[0])))
 #define GET_OBJECT_TYPE(OBJECT) (((uint16_t *)OBJECT)[0])
 
 /* Helper */
-#define SAFE_FREE(PTR, RELEASE_FN) if (NULL != PTR) { RELEASE_FN(PTR); PTR = NULL; }
+#define SAFE_FREE(PTR, RELEASE_FN) if (CPLUS_NULL != PTR) { RELEASE_FN(PTR); PTR = CPLUS_NULL; }
 #define TRACE_CODE() printf("[%s](%d)\n", __FUNCTION__, __LINE__)
 
 enum HDLR_CLASS

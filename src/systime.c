@@ -19,7 +19,7 @@ int32_t cplus_systime_get_abstime_after_msec(
     struct timeval tv = {0, 0};
     CHECK_NOT_NULL(abstime, CPLUS_FAIL);
 
-    if (0 != gettimeofday(&tv, NULL))
+    if (0 != gettimeofday(&tv, CPLUS_NULL))
     {
         return CPLUS_FAIL;
     }
@@ -201,12 +201,12 @@ int32_t cplus_systime_get_local_time(cplus_systime * stime)
 
     tzset();
 
-    if (0 != gettimeofday(&tv, NULL))
+    if (0 != gettimeofday(&tv, CPLUS_NULL))
 	{
 		return CPLUS_FAIL;
 	}
 
-    if (NULL == localtime_r(&tv.tv_sec, &timeinfo))
+    if (CPLUS_NULL == localtime_r(&tv.tv_sec, &timeinfo))
     {
         return CPLUS_FAIL;
     }

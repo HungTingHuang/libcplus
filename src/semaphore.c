@@ -115,13 +115,13 @@ int32_t cplus_semaphore_delete(cplus_semaphore obj)
 
 static void * semaphore_xp_create(const char * name, int32_t initial_count)
 {
-    struct semaphore * sema = NULL;
+    struct semaphore * sema = CPLUS_NULL;
 
     if ((sema = (struct semaphore *)cplus_malloc(sizeof(struct semaphore))))
     {
         CPLUS_INITIALIZE_STRUCT_POINTER(sema);
         sema->type = OBJ_TYPE;
-        sema->psem = NULL;
+        sema->psem = CPLUS_NULL;
         sema->is_named = false;
         sema->is_owner = false;
 
@@ -154,18 +154,18 @@ static void * semaphore_xp_create(const char * name, int32_t initial_count)
     }
 exit:
     cplus_semaphore_delete(sema);
-    return NULL;
+    return CPLUS_NULL;
 }
 
 static void * semaphore_xp_open(const char * name)
 {
-    struct semaphore * sema = NULL;
+    struct semaphore * sema = CPLUS_NULL;
 
     if ((sema = (struct semaphore *)cplus_malloc(sizeof(struct semaphore))))
     {
         CPLUS_INITIALIZE_STRUCT_POINTER(sema);
         sema->type = OBJ_TYPE;
-        sema->psem = NULL;
+        sema->psem = CPLUS_NULL;
         sema->is_named = false;
         sema->is_owner = false;
 
@@ -192,12 +192,12 @@ static void * semaphore_xp_open(const char * name)
     }
 exit:
     cplus_semaphore_delete(sema);
-    return NULL;
+    return CPLUS_NULL;
 }
 
 static void * semaphore_xp_new(const char * name, int32_t initial_count)
 {
-    struct semaphore * sema = NULL;
+    struct semaphore * sema = CPLUS_NULL;
 
     if (!(sema = (struct semaphore *)semaphore_xp_open(name)))
     {
@@ -212,14 +212,14 @@ static void * semaphore_xp_new(const char * name, int32_t initial_count)
 
 cplus_semaphore cplus_semaphore_new(int32_t initial_count)
 {
-    struct semaphore * sema = NULL;
-    CHECK_IN_INTERVAL(initial_count, 0, SEMAPHORE_MAX_VALUE, NULL);
+    struct semaphore * sema = CPLUS_NULL;
+    CHECK_IN_INTERVAL(initial_count, 0, SEMAPHORE_MAX_VALUE, CPLUS_NULL);
 
     if ((sema = (struct semaphore *)cplus_malloc(sizeof(struct semaphore))))
     {
         CPLUS_INITIALIZE_STRUCT_POINTER(sema);
         sema->type = OBJ_TYPE;
-        sema->psem = NULL;
+        sema->psem = CPLUS_NULL;
         sema->is_named = false;
         sema->is_owner = false;
 
@@ -233,17 +233,17 @@ cplus_semaphore cplus_semaphore_new(int32_t initial_count)
     }
 exit:
     cplus_semaphore_delete(sema);
-    return NULL;
+    return CPLUS_NULL;
 }
 
 cplus_semaphore cplus_semaphore_new_xp(
     const char * name
     , int32_t initial_count)
 {
-    CHECK_NOT_NULL(name, NULL);
+    CHECK_NOT_NULL(name, CPLUS_NULL);
     CHECK_IF(SEMAPHORE_NAME_SIZE < (strlen(name) + SEMAPHORE_NAME_PATTERN_SIZE)
-        , NULL);
-    CHECK_IN_INTERVAL(initial_count, 0, SEMAPHORE_MAX_VALUE, NULL);
+        , CPLUS_NULL);
+    CHECK_IN_INTERVAL(initial_count, 0, SEMAPHORE_MAX_VALUE, CPLUS_NULL);
     return semaphore_xp_new(name, initial_count);
 }
 
@@ -251,21 +251,21 @@ cplus_semaphore cplus_semaphore_create_xp(
     const char * name
     , int32_t initial_count)
 {
-    CHECK_NOT_NULL(name, NULL);
+    CHECK_NOT_NULL(name, CPLUS_NULL);
     CHECK_IF(SEMAPHORE_NAME_SIZE < (strlen(name) + SEMAPHORE_NAME_PATTERN_SIZE)
-        , NULL);
+        , CPLUS_NULL);
     CHECK_IN_INTERVAL(initial_count
         , 0
         , SEMAPHORE_MAX_VALUE
-        , NULL);
+        , CPLUS_NULL);
     return semaphore_xp_create(name, initial_count);
 }
 
 cplus_semaphore cplus_semaphore_open_xp(const char * name)
 {
-    CHECK_NOT_NULL(name, NULL);
+    CHECK_NOT_NULL(name, CPLUS_NULL);
     CHECK_IF(SEMAPHORE_NAME_SIZE < (strlen(name) + SEMAPHORE_NAME_PATTERN_SIZE)
-        , NULL);
+        , CPLUS_NULL);
     return semaphore_xp_open(name);
 }
 
@@ -279,8 +279,8 @@ static char TEST_SEMAPHORE_NAME[] = "test";
 
 CPLUS_UNIT_TEST(cplus_semaphore_new, functionity)
 {
-    cplus_semaphore semp = NULL;
-    UNITTEST_EXPECT_EQ(true, (NULL != (semp = cplus_semaphore_new(10))));
+    cplus_semaphore semp = CPLUS_NULL;
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (semp = cplus_semaphore_new(10))));
     UNITTEST_EXPECT_EQ(10, cplus_semaphore_get_value(semp));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_semaphore_delete(semp));
     UNITTEST_EXPECT_EQ(0, cplus_mgr_report());
@@ -288,8 +288,8 @@ CPLUS_UNIT_TEST(cplus_semaphore_new, functionity)
 
 CPLUS_UNIT_TEST(cplus_semaphore_push, functionity)
 {
-    cplus_semaphore semp = NULL;
-    UNITTEST_EXPECT_EQ(true, (NULL != (semp = cplus_semaphore_new(10))));
+    cplus_semaphore semp = CPLUS_NULL;
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (semp = cplus_semaphore_new(10))));
     UNITTEST_EXPECT_EQ(10, cplus_semaphore_get_value(semp));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_semaphore_push(semp, 10));
     UNITTEST_EXPECT_EQ(20, cplus_semaphore_get_value(semp));
@@ -301,10 +301,10 @@ CPLUS_UNIT_TEST(cplus_semaphore_push, functionity)
 
 CPLUS_UNIT_TEST(cplus_semaphore_wait_poll, functionity)
 {
-    cplus_semaphore semp = NULL;
+    cplus_semaphore semp = CPLUS_NULL;
     uint32_t time;
 
-    UNITTEST_EXPECT_EQ(true, (NULL != (semp = cplus_semaphore_new(10))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (semp = cplus_semaphore_new(10))));
     for (int32_t i = 10; i > 0; i--)
     {
         UNITTEST_EXPECT_EQ(i, cplus_semaphore_get_value(semp));
@@ -325,18 +325,18 @@ CPLUS_UNIT_TEST(cplus_semaphore_wait_poll, functionity)
 
 CPLUS_UNIT_TEST(cplus_semaphore_new, bad_parameter)
 {
-    cplus_semaphore semp = NULL;
-    UNITTEST_EXPECT_EQ(true, (NULL == (semp = cplus_semaphore_new(SEMAPHORE_MAX_VALUE + 1))));
+    cplus_semaphore semp = CPLUS_NULL;
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL == (semp = cplus_semaphore_new(SEMAPHORE_MAX_VALUE + 1))));
     UNITTEST_EXPECT_EQ(EINVAL, errno);
-    UNITTEST_EXPECT_EQ(true, (NULL == (semp = cplus_semaphore_new(-111))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL == (semp = cplus_semaphore_new(-111))));
     UNITTEST_EXPECT_EQ(EINVAL, errno);
     UNITTEST_EXPECT_EQ(0, cplus_mgr_report());
 }
 
 CPLUS_UNIT_TEST(cplus_semaphore_push, bad_parameter)
 {
-    cplus_semaphore semp = NULL;
-    UNITTEST_EXPECT_EQ(true, (NULL != (semp = cplus_semaphore_new(10))));
+    cplus_semaphore semp = CPLUS_NULL;
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (semp = cplus_semaphore_new(10))));
     UNITTEST_EXPECT_EQ(CPLUS_FAIL, cplus_semaphore_push(semp, SEMAPHORE_MAX_VALUE - 9));
     UNITTEST_EXPECT_EQ(EINVAL, errno);
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_semaphore_push(semp, SEMAPHORE_MAX_VALUE - 10));
@@ -347,17 +347,17 @@ CPLUS_UNIT_TEST(cplus_semaphore_push, bad_parameter)
 
 CPLUS_UNIT_TEST(cplus_semaphore_wait_poll, bad_parameter)
 {
-    cplus_semaphore semp = NULL;
-    UNITTEST_EXPECT_EQ(true, (NULL != (semp = cplus_semaphore_new(10))));
+    cplus_semaphore semp = CPLUS_NULL;
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (semp = cplus_semaphore_new(10))));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_semaphore_delete(semp));
     UNITTEST_EXPECT_EQ(0, cplus_mgr_report());
 }
 
 CPLUS_UNIT_TEST(cplus_semaphore_new_xp, cross_process_test)
 {
-    cplus_semaphore semp_sv = NULL, semp_ch = NULL;
+    cplus_semaphore semp_sv = CPLUS_NULL, semp_ch = CPLUS_NULL;
 
-    UNITTEST_EXPECT_EQ(true, (NULL != (semp_sv = cplus_semaphore_new_xp(TEST_SEMAPHORE_NAME, 10))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (semp_sv = cplus_semaphore_new_xp(TEST_SEMAPHORE_NAME, 10))));
     UNITTEST_EXPECT_EQ(10, cplus_semaphore_get_value(semp_sv));
 
     if (0 != fork())
@@ -365,7 +365,7 @@ CPLUS_UNIT_TEST(cplus_semaphore_new_xp, cross_process_test)
     }
     else
     {
-        UNITTEST_EXPECT_EQ(true, (NULL != (semp_ch = cplus_semaphore_new_xp(TEST_SEMAPHORE_NAME, 1))));
+        UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (semp_ch = cplus_semaphore_new_xp(TEST_SEMAPHORE_NAME, 1))));
         UNITTEST_EXPECT_EQ(10, cplus_semaphore_get_value(semp_ch));
         for (int32_t i = 10; i > 0; i--)
         {
@@ -387,9 +387,9 @@ CPLUS_UNIT_TEST(cplus_semaphore_new_xp, cross_process_test)
 
 CPLUS_UNIT_TEST(cplus_semaphore_create_xp, cross_process_test)
 {
-    cplus_semaphore semp_sv = NULL, semp_ch = NULL;
+    cplus_semaphore semp_sv = CPLUS_NULL, semp_ch = CPLUS_NULL;
 
-    UNITTEST_EXPECT_EQ(true, (NULL != (semp_sv = cplus_semaphore_create_xp(TEST_SEMAPHORE_NAME, 10))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (semp_sv = cplus_semaphore_create_xp(TEST_SEMAPHORE_NAME, 10))));
     UNITTEST_EXPECT_EQ(10, cplus_semaphore_get_value(semp_sv));
 
     for (int32_t i = 10; i > 0; i--)
@@ -406,7 +406,7 @@ CPLUS_UNIT_TEST(cplus_semaphore_create_xp, cross_process_test)
     }
     else
     {
-        UNITTEST_EXPECT_EQ(true, (NULL != (semp_ch = cplus_semaphore_open_xp(TEST_SEMAPHORE_NAME))));
+        UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (semp_ch = cplus_semaphore_open_xp(TEST_SEMAPHORE_NAME))));
         UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_semaphore_wait_poll(semp_ch, CPLUS_INFINITE_TIMEOUT));
         UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_semaphore_delete(semp_ch));
         UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_semaphore_delete(semp_sv));
@@ -421,38 +421,38 @@ CPLUS_UNIT_TEST(cplus_semaphore_create_xp, cross_process_test)
 
 CPLUS_UNIT_TEST(cplus_semaphore_new_xp, bad_parameter)
 {
-    cplus_semaphore semp_sv = NULL;
+    cplus_semaphore semp_sv = CPLUS_NULL;
     char bad_name[23] = "0123456789abcdef012345";
 
-    UNITTEST_EXPECT_EQ(true, (NULL == (semp_sv = cplus_semaphore_new_xp(NULL, 10))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL == (semp_sv = cplus_semaphore_new_xp(CPLUS_NULL, 10))));
     UNITTEST_EXPECT_EQ(EINVAL, errno);
-    UNITTEST_EXPECT_EQ(true, (NULL == (semp_sv = cplus_semaphore_new_xp(bad_name, 10))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL == (semp_sv = cplus_semaphore_new_xp(bad_name, 10))));
     UNITTEST_EXPECT_EQ(EINVAL, errno);
-    UNITTEST_EXPECT_EQ(true, (NULL != (semp_sv = cplus_semaphore_new_xp(&bad_name[1], 10))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (semp_sv = cplus_semaphore_new_xp(&bad_name[1], 10))));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_semaphore_delete(semp_sv));
-    UNITTEST_EXPECT_EQ(true, (NULL == (semp_sv = cplus_semaphore_new_xp(TEST_SEMAPHORE_NAME, SEMAPHORE_MAX_VALUE + 1))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL == (semp_sv = cplus_semaphore_new_xp(TEST_SEMAPHORE_NAME, SEMAPHORE_MAX_VALUE + 1))));
     UNITTEST_EXPECT_EQ(EINVAL, errno);
-    UNITTEST_EXPECT_EQ(true, (NULL == (semp_sv = cplus_semaphore_new_xp(TEST_SEMAPHORE_NAME, -45465))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL == (semp_sv = cplus_semaphore_new_xp(TEST_SEMAPHORE_NAME, -45465))));
     UNITTEST_EXPECT_EQ(EINVAL, errno);
     UNITTEST_EXPECT_EQ(0, cplus_mgr_report());
 }
 
 CPLUS_UNIT_TEST(cplus_semaphore_create_xp, bad_parameter)
 {
-    cplus_semaphore semp_sv = NULL, semp_ch = NULL;
+    cplus_semaphore semp_sv = CPLUS_NULL, semp_ch = CPLUS_NULL;
     char bad_name[23] = "0123456789abcdef012345";
 
-    UNITTEST_EXPECT_EQ(true, (NULL == (semp_sv = cplus_semaphore_create_xp(NULL, 10))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL == (semp_sv = cplus_semaphore_create_xp(CPLUS_NULL, 10))));
     UNITTEST_EXPECT_EQ(EINVAL, errno);
-    UNITTEST_EXPECT_EQ(true, (NULL == (semp_sv = cplus_semaphore_create_xp(bad_name, 10))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL == (semp_sv = cplus_semaphore_create_xp(bad_name, 10))));
     UNITTEST_EXPECT_EQ(EINVAL, errno);
-    UNITTEST_EXPECT_EQ(true, (NULL != (semp_sv = cplus_semaphore_create_xp(&bad_name[3], 10))));
-    UNITTEST_EXPECT_EQ(true, (NULL == (semp_ch = cplus_semaphore_create_xp(&bad_name[3], 10))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (semp_sv = cplus_semaphore_create_xp(&bad_name[3], 10))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL == (semp_ch = cplus_semaphore_create_xp(&bad_name[3], 10))));
     UNITTEST_EXPECT_EQ(EEXIST, errno);
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_semaphore_delete(semp_sv));
-    UNITTEST_EXPECT_EQ(true, (NULL == (semp_sv = cplus_semaphore_create_xp(TEST_SEMAPHORE_NAME, SEMAPHORE_MAX_VALUE + 1))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL == (semp_sv = cplus_semaphore_create_xp(TEST_SEMAPHORE_NAME, SEMAPHORE_MAX_VALUE + 1))));
     UNITTEST_EXPECT_EQ(EINVAL, errno);
-    UNITTEST_EXPECT_EQ(true, (NULL == (semp_sv = cplus_semaphore_create_xp(TEST_SEMAPHORE_NAME, -45465))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL == (semp_sv = cplus_semaphore_create_xp(TEST_SEMAPHORE_NAME, -45465))));
     UNITTEST_EXPECT_EQ(EINVAL, errno);
 
     UNITTEST_EXPECT_EQ(0, cplus_mgr_report());
@@ -460,14 +460,14 @@ CPLUS_UNIT_TEST(cplus_semaphore_create_xp, bad_parameter)
 
 CPLUS_UNIT_TEST(cplus_semaphore_open_xp, bad_parameter)
 {
-    cplus_semaphore semp_sv = NULL;
+    cplus_semaphore semp_sv = CPLUS_NULL;
     char bad_name[23] = "0123456789abcdef012345";
 
-    UNITTEST_EXPECT_EQ(true, (NULL == (semp_sv = cplus_semaphore_open_xp(NULL))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL == (semp_sv = cplus_semaphore_open_xp(CPLUS_NULL))));
     UNITTEST_EXPECT_EQ(EINVAL, errno);
-    UNITTEST_EXPECT_EQ(true, (NULL == (semp_sv = cplus_semaphore_open_xp(bad_name))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL == (semp_sv = cplus_semaphore_open_xp(bad_name))));
     UNITTEST_EXPECT_EQ(EINVAL, errno);
-    UNITTEST_EXPECT_EQ(true, (NULL == (semp_sv = cplus_semaphore_open_xp(&bad_name[3]))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL == (semp_sv = cplus_semaphore_open_xp(&bad_name[3]))));
     UNITTEST_EXPECT_EQ(ENOENT, errno);
     UNITTEST_EXPECT_EQ(0, cplus_mgr_report());
 }

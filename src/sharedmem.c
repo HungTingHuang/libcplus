@@ -86,7 +86,7 @@ int32_t cplus_sharedmem_delete(cplus_sharedmem obj)
 
 static void * sharedmem_create(const char * name, uint32_t size)
 {
-    struct shared_mem * shmem = NULL;
+    struct shared_mem * shmem = CPLUS_NULL;
 
     if ((shmem = (struct shared_mem *)cplus_malloc(sizeof(struct shared_mem))))
     {
@@ -129,7 +129,7 @@ static void * sharedmem_create(const char * name, uint32_t size)
         }
 
         shmem->addr = mmap(
-            NULL
+            CPLUS_NULL
             , shmem->size
             , PROT_READ | PROT_WRITE
             , MAP_SHARED
@@ -153,13 +153,13 @@ static void * sharedmem_create(const char * name, uint32_t size)
     return shmem;
 exit:
     cplus_sharedmem_delete(shmem);
-    return NULL;
+    return CPLUS_NULL;
 }
 
 static void * sharedmem_open(const char * name)
 {
     struct stat sm_stat;
-    struct shared_mem * shmem = NULL;
+    struct shared_mem * shmem = CPLUS_NULL;
 
     if ((shmem = (struct shared_mem *)cplus_malloc(sizeof(struct shared_mem))))
     {
@@ -196,7 +196,7 @@ static void * sharedmem_open(const char * name)
         }
 
         shmem->addr = mmap(
-            NULL
+            CPLUS_NULL
             , shmem->size
             , PROT_READ | PROT_WRITE
             , MAP_SHARED
@@ -220,13 +220,13 @@ static void * sharedmem_open(const char * name)
     return shmem;
 exit:
     cplus_sharedmem_delete(shmem);
-    return NULL;
+    return CPLUS_NULL;
 }
 
 static void * sharedmem_new(const char * name, uint32_t size)
 {
     struct stat sm_stat;
-    struct shared_mem * shmem = NULL;
+    struct shared_mem * shmem = CPLUS_NULL;
 
     if ((shmem = (struct shared_mem *)cplus_malloc(sizeof(struct shared_mem))))
     {
@@ -289,7 +289,7 @@ static void * sharedmem_new(const char * name, uint32_t size)
         }
 
         shmem->addr = mmap(
-            NULL
+            CPLUS_NULL
             , shmem->size
             , PROT_READ | PROT_WRITE
             , MAP_SHARED
@@ -313,32 +313,32 @@ static void * sharedmem_new(const char * name, uint32_t size)
     return shmem;
 exit:
     cplus_sharedmem_delete(shmem);
-    return NULL;
+    return CPLUS_NULL;
 }
 
 cplus_sharedmem cplus_sharedmem_create(const char * name, uint32_t size)
 {
-    CHECK_NOT_NULL(name, NULL);
+    CHECK_NOT_NULL(name, CPLUS_NULL);
     CHECK_IF(SHAREDMEM_NAME_MAX_SIZE < (strlen(name) + SHAREDMEM_NAMED_PATTERN_SIZE)
-        , NULL);
-    CHECK_IN_INTERVAL(size, 1, SHAREDMEM_MAX_SIZE, NULL);
+        , CPLUS_NULL);
+    CHECK_IN_INTERVAL(size, 1, SHAREDMEM_MAX_SIZE, CPLUS_NULL);
     return sharedmem_create(name, size);
 }
 
 cplus_sharedmem cplus_sharedmem_open(const char * name)
 {
-    CHECK_NOT_NULL(name, NULL);
+    CHECK_NOT_NULL(name, CPLUS_NULL);
     CHECK_IF(SHAREDMEM_NAME_MAX_SIZE < (strlen(name) + SHAREDMEM_NAMED_PATTERN_SIZE)
-        , NULL);
+        , CPLUS_NULL);
     return sharedmem_open(name);
 }
 
 cplus_sharedmem cplus_sharedmem_new(const char * name, uint32_t size)
 {
-    CHECK_NOT_NULL(name, NULL);
+    CHECK_NOT_NULL(name, CPLUS_NULL);
     CHECK_IF(SHAREDMEM_NAME_MAX_SIZE < (strlen(name) + SHAREDMEM_NAMED_PATTERN_SIZE)
-        , NULL);
-    CHECK_IN_INTERVAL(size, 1, SHAREDMEM_MAX_SIZE, NULL);
+        , CPLUS_NULL);
+    CHECK_IN_INTERVAL(size, 1, SHAREDMEM_MAX_SIZE, CPLUS_NULL);
     return sharedmem_new(name, size);
 }
 
@@ -363,12 +363,12 @@ struct test_area
 
 CPLUS_UNIT_TEST(cplus_sharedmem_new, functionity)
 {
-    cplus_sharedmem server = NULL, client = NULL;
-    UNITTEST_EXPECT_EQ(true, (NULL != (server = cplus_sharedmem_new(TEST_SHMEM_NAME, sizeof(struct test_area)))));
+    cplus_sharedmem server = CPLUS_NULL, client = CPLUS_NULL;
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (server = cplus_sharedmem_new(TEST_SHMEM_NAME, sizeof(struct test_area)))));
     UNITTEST_EXPECT_EQ(true, cplus_sharedmem_is_owner(server));
     UNITTEST_EXPECT_EQ(sizeof(struct test_area), cplus_sharedmem_get_size(server));
     UNITTEST_EXPECT_EQ(0, strcmp(TEST_SHMEM_NAME, cplus_sharedmem_get_name(server)));
-    UNITTEST_EXPECT_EQ(true, (NULL != (client = cplus_sharedmem_new(TEST_SHMEM_NAME, sizeof(struct test_area)))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (client = cplus_sharedmem_new(TEST_SHMEM_NAME, sizeof(struct test_area)))));
     UNITTEST_EXPECT_EQ(2, cplus_mgr_report());
     UNITTEST_EXPECT_EQ(false, cplus_sharedmem_is_owner(client));
     UNITTEST_EXPECT_EQ(sizeof(struct test_area), cplus_sharedmem_get_size(client));
@@ -380,17 +380,17 @@ CPLUS_UNIT_TEST(cplus_sharedmem_new, functionity)
 
 CPLUS_UNIT_TEST(cplus_sharedmem_alloc, cross_process_communication)
 {
-    cplus_sharedmem server = NULL, client = NULL;
-    struct test_area *server_data = NULL, *client_data = NULL;
+    cplus_sharedmem server = CPLUS_NULL, client = CPLUS_NULL;
+    struct test_area *server_data = CPLUS_NULL, *client_data = CPLUS_NULL;
 
 
-    UNITTEST_EXPECT_EQ(false, (NULL == (server = cplus_sharedmem_create(TEST_SHMEM_NAME, sizeof(struct test_area)))));
+    UNITTEST_EXPECT_EQ(false, (CPLUS_NULL == (server = cplus_sharedmem_create(TEST_SHMEM_NAME, sizeof(struct test_area)))));
 
     UNITTEST_EXPECT_EQ(true, cplus_sharedmem_is_owner(server));
     UNITTEST_EXPECT_EQ(sizeof(struct test_area), cplus_sharedmem_get_size(server));
     UNITTEST_EXPECT_EQ(0, strcmp(TEST_SHMEM_NAME, cplus_sharedmem_get_name(server)));
 
-    UNITTEST_EXPECT_EQ(true, NULL != (server_data = (struct test_area *)cplus_sharedmem_alloc(server)));
+    UNITTEST_EXPECT_EQ(true, CPLUS_NULL != (server_data = (struct test_area *)cplus_sharedmem_alloc(server)));
 
     UNITTEST_EXPECT_EQ(true, (0x01 == (server_data->a = 0x01)));
     UNITTEST_EXPECT_EQ(true, (0x2345 == (server_data->b = 0x2345)));
@@ -404,13 +404,13 @@ CPLUS_UNIT_TEST(cplus_sharedmem_alloc, cross_process_communication)
     }
     else
     {
-        UNITTEST_EXPECT_EQ(false, (NULL == (client = cplus_sharedmem_open(TEST_SHMEM_NAME))));
+        UNITTEST_EXPECT_EQ(false, (CPLUS_NULL == (client = cplus_sharedmem_open(TEST_SHMEM_NAME))));
 
         UNITTEST_EXPECT_EQ(false, cplus_sharedmem_is_owner(client));
         UNITTEST_EXPECT_EQ(sizeof(struct test_area), cplus_sharedmem_get_size(client));
         UNITTEST_EXPECT_EQ(0, strcmp(TEST_SHMEM_NAME, cplus_sharedmem_get_name(client)));
 
-        UNITTEST_EXPECT_EQ(false, (NULL == (client_data = (struct test_area *)cplus_sharedmem_alloc(client))));
+        UNITTEST_EXPECT_EQ(false, (CPLUS_NULL == (client_data = (struct test_area *)cplus_sharedmem_alloc(client))));
 
         UNITTEST_EXPECT_EQ(true, (0x01 == client_data->a));
         UNITTEST_EXPECT_EQ(true, (0x2345 == client_data->b));
@@ -445,52 +445,52 @@ CPLUS_UNIT_TEST(cplus_sharedmem_alloc, cross_process_communication)
 
 CPLUS_UNIT_TEST(cplus_sharedmem_new, bad_parameter)
 {
-    cplus_sharedmem server = NULL;
+    cplus_sharedmem server = CPLUS_NULL;
     char bad_name[53] = "0123456789abcd0123456789abcd0123456789abcd0123456789";
 
-    UNITTEST_EXPECT_EQ(true, NULL == (server = cplus_sharedmem_new(NULL, 100)));
+    UNITTEST_EXPECT_EQ(true, CPLUS_NULL == (server = cplus_sharedmem_new(CPLUS_NULL, 100)));
     UNITTEST_EXPECT_EQ(EINVAL, errno);
-    UNITTEST_EXPECT_EQ(true, NULL == (server = cplus_sharedmem_new("Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World", 100)));
+    UNITTEST_EXPECT_EQ(true, CPLUS_NULL == (server = cplus_sharedmem_new("Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World", 100)));
     UNITTEST_EXPECT_EQ(EINVAL, errno);
-    UNITTEST_EXPECT_EQ(true, NULL == (server = cplus_sharedmem_new(bad_name, 100)));
+    UNITTEST_EXPECT_EQ(true, CPLUS_NULL == (server = cplus_sharedmem_new(bad_name, 100)));
     UNITTEST_EXPECT_EQ(EINVAL, errno);
-    UNITTEST_EXPECT_EQ(true, NULL == (server = cplus_sharedmem_new(TEST_SHMEM_NAME, 0)));
+    UNITTEST_EXPECT_EQ(true, CPLUS_NULL == (server = cplus_sharedmem_new(TEST_SHMEM_NAME, 0)));
     UNITTEST_EXPECT_EQ(EINVAL, errno);
-    UNITTEST_EXPECT_EQ(true, NULL == (server = cplus_sharedmem_new(TEST_SHMEM_NAME, -9999)));
+    UNITTEST_EXPECT_EQ(true, CPLUS_NULL == (server = cplus_sharedmem_new(TEST_SHMEM_NAME, -9999)));
     UNITTEST_EXPECT_EQ(EINVAL, errno);
-    UNITTEST_EXPECT_EQ(true, NULL == (server = cplus_sharedmem_new(TEST_SHMEM_NAME, SHAREDMEM_MAX_SIZE + 1)));
+    UNITTEST_EXPECT_EQ(true, CPLUS_NULL == (server = cplus_sharedmem_new(TEST_SHMEM_NAME, SHAREDMEM_MAX_SIZE + 1)));
     UNITTEST_EXPECT_EQ(EINVAL, errno);
 }
 
 CPLUS_UNIT_TEST(cplus_sharedmem_open, bad_parameter)
 {
-    cplus_sharedmem client = NULL;
+    cplus_sharedmem client = CPLUS_NULL;
 
-    UNITTEST_EXPECT_EQ(true, NULL == (client = cplus_sharedmem_open(NULL)));
+    UNITTEST_EXPECT_EQ(true, CPLUS_NULL == (client = cplus_sharedmem_open(CPLUS_NULL)));
     UNITTEST_EXPECT_EQ(EINVAL, errno);
-    UNITTEST_EXPECT_EQ(true, NULL == (client = cplus_sharedmem_open(TEST_SHMEM_NAME)));
+    UNITTEST_EXPECT_EQ(true, CPLUS_NULL == (client = cplus_sharedmem_open(TEST_SHMEM_NAME)));
     UNITTEST_EXPECT_EQ(ENOENT, errno);
 }
 
 CPLUS_UNIT_TEST(cplus_sharedmem_create, bad_parameter)
 {
-    cplus_sharedmem server = NULL, client = NULL;
+    cplus_sharedmem server = CPLUS_NULL, client = CPLUS_NULL;
     char bad_name[53] = "0123456789abcd0123456789abcd0123456789abcd0123456789";
 
-    UNITTEST_EXPECT_EQ(true, NULL == (server = cplus_sharedmem_create(NULL, 100)));
+    UNITTEST_EXPECT_EQ(true, CPLUS_NULL == (server = cplus_sharedmem_create(CPLUS_NULL, 100)));
     UNITTEST_EXPECT_EQ(EINVAL, errno);
-    UNITTEST_EXPECT_EQ(true, NULL == (server = cplus_sharedmem_create("Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World", 100)));
+    UNITTEST_EXPECT_EQ(true, CPLUS_NULL == (server = cplus_sharedmem_create("Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World Hello World", 100)));
     UNITTEST_EXPECT_EQ(EINVAL, errno);
-    UNITTEST_EXPECT_EQ(true, NULL == (server = cplus_sharedmem_create(bad_name, 100)));
+    UNITTEST_EXPECT_EQ(true, CPLUS_NULL == (server = cplus_sharedmem_create(bad_name, 100)));
     UNITTEST_EXPECT_EQ(EINVAL, errno);
-    UNITTEST_EXPECT_EQ(true, NULL == (server = cplus_sharedmem_create(TEST_SHMEM_NAME, 0)));
+    UNITTEST_EXPECT_EQ(true, CPLUS_NULL == (server = cplus_sharedmem_create(TEST_SHMEM_NAME, 0)));
     UNITTEST_EXPECT_EQ(EINVAL, errno);
-    UNITTEST_EXPECT_EQ(true, NULL == (server = cplus_sharedmem_create(TEST_SHMEM_NAME, -9999)));
+    UNITTEST_EXPECT_EQ(true, CPLUS_NULL == (server = cplus_sharedmem_create(TEST_SHMEM_NAME, -9999)));
     UNITTEST_EXPECT_EQ(EINVAL, errno);
-    UNITTEST_EXPECT_EQ(true, NULL == (server = cplus_sharedmem_create(TEST_SHMEM_NAME, SHAREDMEM_MAX_SIZE + 1)));
+    UNITTEST_EXPECT_EQ(true, CPLUS_NULL == (server = cplus_sharedmem_create(TEST_SHMEM_NAME, SHAREDMEM_MAX_SIZE + 1)));
     UNITTEST_EXPECT_EQ(EINVAL, errno);
-    UNITTEST_EXPECT_EQ(true, NULL != (server = cplus_sharedmem_new(TEST_SHMEM_NAME, 100)));
-    UNITTEST_EXPECT_EQ(true, NULL == (client = cplus_sharedmem_create(TEST_SHMEM_NAME, 100)));
+    UNITTEST_EXPECT_EQ(true, CPLUS_NULL != (server = cplus_sharedmem_new(TEST_SHMEM_NAME, 100)));
+    UNITTEST_EXPECT_EQ(true, CPLUS_NULL == (client = cplus_sharedmem_create(TEST_SHMEM_NAME, 100)));
     UNITTEST_EXPECT_EQ(EEXIST, errno);
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_sharedmem_delete(server));
     UNITTEST_EXPECT_EQ(0, cplus_mgr_report());

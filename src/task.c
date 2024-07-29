@@ -46,14 +46,14 @@ static pthread_key_t key_for_last_timestamp;
 
 static void cplus_task_once_init(void)
 {
-    pthread_key_create(&key_for_evt_finish, NULL);
-    pthread_key_create(&key_for_duration, NULL);
-    pthread_key_create(&key_for_last_timestamp, NULL);
+    pthread_key_create(&key_for_evt_finish, CPLUS_NULL);
+    pthread_key_create(&key_for_duration, CPLUS_NULL);
+    pthread_key_create(&key_for_last_timestamp, CPLUS_NULL);
 }
 
 uint32_t cplus_task_get_loop_last_timestamp(void)
 {
-    int32_t * ptr = NULL;
+    int32_t * ptr = CPLUS_NULL;
     if ((ptr = (int32_t *)pthread_getspecific(key_for_last_timestamp)))
     {
         return cplus_atomic_read(ptr);
@@ -64,7 +64,7 @@ uint32_t cplus_task_get_loop_last_timestamp(void)
 int32_t cplus_task_set_loop_finish(void)
 {
     uint32_t res = CPLUS_SUCCESS;
-    cplus_task evet_finish = NULL;
+    cplus_task evet_finish = CPLUS_NULL;
 
     if ((evet_finish = (cplus_task)pthread_getspecific(key_for_evt_finish)))
     {
@@ -77,7 +77,7 @@ int32_t cplus_task_set_loop_finish(void)
 int32_t cplus_task_reset_loop_finish(void)
 {
     uint32_t res = CPLUS_SUCCESS;
-    cplus_task evet_finish = NULL;
+    cplus_task evet_finish = CPLUS_NULL;
 
     if ((evet_finish = (cplus_task)pthread_getspecific(key_for_evt_finish)))
     {
@@ -89,7 +89,7 @@ int32_t cplus_task_reset_loop_finish(void)
 
 int32_t cplus_task_set_loop_duration(uint32_t duration)
 {
-    uint32_t * ptr = NULL;
+    uint32_t * ptr = CPLUS_NULL;
 
     if ((ptr = (uint32_t *)pthread_getspecific(key_for_duration)))
     {
@@ -101,7 +101,7 @@ int32_t cplus_task_set_loop_duration(uint32_t duration)
 
 uint32_t cplus_task_get_loop_duration(void)
 {
-    uint32_t * ptr = NULL;
+    uint32_t * ptr = CPLUS_NULL;
 
     if ((ptr = (uint32_t *)pthread_getspecific(key_for_duration)))
     {
@@ -193,13 +193,13 @@ int32_t cplus_task_stop(cplus_task obj, uint32_t timeout)
 #if SUPPORT_NON_PORTABLE
         if (0 == timeout)
         {
-            res = pthread_tryjoin_np(task->thread, NULL);
+            res = pthread_tryjoin_np(task->thread, CPLUS_NULL);
         }
         else
         {
             struct timespec ts = {0};
             cplus_systime_get_abstime_after_msec(&ts, tout);
-            res = pthread_timedjoin_np(task->thread, NULL, &ts);
+            res = pthread_timedjoin_np(task->thread, CPLUS_NULL, &ts);
         }
 
         if (0 != res)
@@ -220,7 +220,7 @@ int32_t cplus_task_stop(cplus_task obj, uint32_t timeout)
         }
         else
         {
-            pthread_join(task->thread, NULL);
+            pthread_join(task->thread, CPLUS_NULL);
         }
 #endif // SUPPORT_NON_PORTABLE
         cplus_task_delete(task);
@@ -266,7 +266,7 @@ void * task_executor(void * param)
     pthread_once(&(once_init), cplus_task_once_init);
     (void)pthread_setspecific(key_for_evt_finish, task->evt_finish);
     (void)pthread_setspecific(key_for_duration, &task->duration);
-    pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
+    pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, CPLUS_NULL);
     pthread_cleanup_push(cancel_in_routine, task);
 
     int32_t start_working = cplus_pevent_wait(
@@ -314,8 +314,8 @@ void * task_executor(void * param)
 static void * task_initialize_object(CPLUS_TASK_CONFIG config)
 {
     int32_t res = 0;
-    pthread_attr_t * attr = NULL;
-    struct task * task = NULL;
+    pthread_attr_t * attr = CPLUS_NULL;
+    struct task * task = CPLUS_NULL;
 
     if ((task = (struct task *)cplus_malloc(sizeof(struct task))))
     {
@@ -329,20 +329,20 @@ static void * task_initialize_object(CPLUS_TASK_CONFIG config)
         task->duration = config->duration;
         task->is_suspended = config->suspend;
 
-        if (NULL == (task->evt_start = cplus_pevent_new(
+        if (CPLUS_NULL == (task->evt_start = cplus_pevent_new(
             true, !task->is_suspended)))
         {
             goto exit;
         }
-        if (NULL == (task->evt_stop = cplus_pevent_new(true, false)))
+        if (CPLUS_NULL == (task->evt_stop = cplus_pevent_new(true, false)))
         {
             goto exit;
         }
-        if (NULL == (task->evt_finish = cplus_pevent_new(false, false)))
+        if (CPLUS_NULL == (task->evt_finish = cplus_pevent_new(false, false)))
         {
             goto exit;
         }
-        if (NULL == (task->evt_pause = cplus_pevent_new(true, true)))
+        if (CPLUS_NULL == (task->evt_pause = cplus_pevent_new(true, true)))
         {
             goto exit;
         }
@@ -379,7 +379,7 @@ static void * task_initialize_object(CPLUS_TASK_CONFIG config)
     return task;
 exit:
     cplus_task_delete(task);
-    return NULL;
+    return CPLUS_NULL;
 }
 
 bool cplus_task_check(cplus_object obj)
@@ -393,10 +393,10 @@ cplus_task cplus_task_oneshot(
     , void * param2)
 {
     CPLUS_TASK_CONFIG_T config = {0};
-    CHECK_NOT_NULL(proc, NULL);
+    CHECK_NOT_NULL(proc, CPLUS_NULL);
 
     config.proc = proc;
-    config.callback = NULL;
+    config.callback = CPLUS_NULL;
     config.param1 = param1;
     config.param2 = param2;
     config.duration = CPLUS_INFINITE_TIMEOUT;
@@ -412,7 +412,7 @@ cplus_task cplus_task_oneshot_ex(
     , CPLUS_TASK_PROC callback)
 {
     CPLUS_TASK_CONFIG_T config = {0};
-    CHECK_NOT_NULL(proc, NULL);
+    CHECK_NOT_NULL(proc, CPLUS_NULL);
 
     config.proc = proc;
     config.callback = callback;
@@ -431,10 +431,10 @@ cplus_task cplus_task_new(
     , uint32_t duration)
 {
     CPLUS_TASK_CONFIG_T config = {0};
-    CHECK_NOT_NULL(proc, NULL);
+    CHECK_NOT_NULL(proc, CPLUS_NULL);
 
     config.proc = proc;
-    config.callback = NULL;
+    config.callback = CPLUS_NULL;
     config.param1 = param1;
     config.param2 = param2;
     config.duration = duration;
@@ -445,15 +445,15 @@ cplus_task cplus_task_new(
 
 cplus_task cplus_task_new_ex(CPLUS_TASK_CONFIG config)
 {
-    CHECK_NOT_NULL(config, NULL);
-    CHECK_NOT_NULL(config->proc, NULL);
+    CHECK_NOT_NULL(config, CPLUS_NULL);
+    CHECK_NOT_NULL(config->proc, CPLUS_NULL);
 
     if (0 != config->stacksize)
     {
         struct rlimit rlim;
         getrlimit(RLIMIT_STACK, &rlim);
 
-        CHECK_IN_INTERVAL(config->stacksize, PTHREAD_STACK_MIN, rlim.rlim_cur, NULL);
+        CHECK_IN_INTERVAL(config->stacksize, PTHREAD_STACK_MIN, rlim.rlim_cur, CPLUS_NULL);
     }
 
     return task_initialize_object(config);
@@ -486,21 +486,21 @@ void test_proc(void * param1, void * param2)
 
 CPLUS_UNIT_TEST(cplus_task_oneshot_ex, functionity)
 {
-    cplus_task task = NULL;
+    cplus_task task = CPLUS_NULL;
     int32_t repect = 1;
 
-    UNITTEST_EXPECT_EQ(true, NULL != (task = cplus_task_oneshot_ex(test_proc, &repect, failed, test_back)));
+    UNITTEST_EXPECT_EQ(true, CPLUS_NULL != (task = cplus_task_oneshot_ex(test_proc, &repect, failed, test_back)));
     cplus_systime_sleep_msec(1500);
     UNITTEST_EXPECT_EQ(0, cplus_mgr_report());
 }
 
 CPLUS_UNIT_TEST(cplus_task_new, functionity)
 {
-    cplus_task task = NULL;
+    cplus_task task = CPLUS_NULL;
     uint32_t time, total_spent;
     int32_t repect = 5; // run 5 second
 
-    UNITTEST_EXPECT_EQ(true, NULL != (task = cplus_task_new(test_proc, &repect, failed, 100)));
+    UNITTEST_EXPECT_EQ(true, CPLUS_NULL != (task = cplus_task_new(test_proc, &repect, failed, 100)));
     UNITTEST_EXPECT_EQ(CPLUS_FAIL, cplus_task_wait_start(task, 0));
     UNITTEST_EXPECT_EQ(EAGAIN, errno);
     UNITTEST_EXPECT_EQ(CPLUS_FAIL, cplus_task_wait_start(task, 500));
@@ -518,10 +518,10 @@ CPLUS_UNIT_TEST(cplus_task_new, functionity)
 
 CPLUS_UNIT_TEST(cplus_task_set_duration, functionity)
 {
-    cplus_task task = NULL;
+    cplus_task task = CPLUS_NULL;
     int32_t repect = 5; // run 5 second
 
-    UNITTEST_EXPECT_EQ(true, NULL != (task = cplus_task_new(test_proc, &repect, failed, 100)));
+    UNITTEST_EXPECT_EQ(true, CPLUS_NULL != (task = cplus_task_new(test_proc, &repect, failed, 100)));
     UNITTEST_EXPECT_EQ(100, cplus_task_get_duration(task));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_task_start(task, 500));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_task_set_duration(task, 500));
@@ -541,9 +541,9 @@ void test_set_loop_duration_proc(void * param1, void * param2)
 
 CPLUS_UNIT_TEST(cplus_task_set_loop_duration, functionity)
 {
-    cplus_task task = NULL;
+    cplus_task task = CPLUS_NULL;
 
-    UNITTEST_EXPECT_EQ(true, NULL != (task = cplus_task_new(test_set_loop_duration_proc, NULL, failed, 100)));
+    UNITTEST_EXPECT_EQ(true, CPLUS_NULL != (task = cplus_task_new(test_set_loop_duration_proc, CPLUS_NULL, failed, 100)));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_task_start(task, 0));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_task_wait_finish(task, CPLUS_INFINITE_TIMEOUT));
     UNITTEST_EXPECT_EQ(500, cplus_task_get_duration(task));
@@ -561,10 +561,10 @@ void test_set_loop_finish_proc(void * param1, void * param2)
 
 CPLUS_UNIT_TEST(cplus_task_set_loop_finish, functionity)
 {
-    cplus_task task = NULL;
+    cplus_task task = CPLUS_NULL;
     uint32_t time;
 
-    UNITTEST_EXPECT_EQ(true, NULL != (task = cplus_task_new(test_set_loop_finish_proc, NULL, failed, 100)));
+    UNITTEST_EXPECT_EQ(true, CPLUS_NULL != (task = cplus_task_new(test_set_loop_finish_proc, CPLUS_NULL, failed, 100)));
     UNITTEST_EXPECT_EQ(CPLUS_FAIL, cplus_task_wait_finish(task, 0));
     UNITTEST_EXPECT_EQ(EAGAIN, errno);
     time = cplus_systime_get_tick();
@@ -591,9 +591,9 @@ void test_get_loop_last_timestamp_proc(void * param1, void * param2)
 
 CPLUS_UNIT_TEST(cplus_task_get_loop_last_timestamp, functionity)
 {
-    cplus_task task = NULL;
+    cplus_task task = CPLUS_NULL;
 
-    UNITTEST_EXPECT_EQ(true, NULL != (task = cplus_task_new(test_get_loop_last_timestamp_proc, NULL, failed, 100)));
+    UNITTEST_EXPECT_EQ(true, CPLUS_NULL != (task = cplus_task_new(test_get_loop_last_timestamp_proc, CPLUS_NULL, failed, 100)));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_task_start(task, 0));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_task_wait_start(task, CPLUS_INFINITE_TIMEOUT));
     cplus_systime_sleep_msec(1000);
@@ -613,11 +613,11 @@ void test_task_stop_and_wait_proc(void * param1, void * param2)
 
 CPLUS_UNIT_TEST(cplus_task_stop, functionity)
 {
-    cplus_task task = NULL;
+    cplus_task task = CPLUS_NULL;
     int32_t repect = 3;
     uint32_t time;
 
-    UNITTEST_EXPECT_EQ(true, NULL != (task = cplus_task_new(test_task_stop_and_wait_proc, &repect, failed, 100)));
+    UNITTEST_EXPECT_EQ(true, CPLUS_NULL != (task = cplus_task_new(test_task_stop_and_wait_proc, &repect, failed, 100)));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_task_start(task, 0));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_task_wait_start(task, CPLUS_INFINITE_TIMEOUT));
     time = cplus_systime_get_tick();
@@ -626,7 +626,7 @@ CPLUS_UNIT_TEST(cplus_task_stop, functionity)
     time = cplus_systime_elapsed_tick(time);
     UNITTEST_EXPECT_EQ(true, time >= 3000 && time < 3050);
 
-    UNITTEST_EXPECT_EQ(true, NULL != (task = cplus_task_new(test_task_stop_and_wait_proc, &repect, failed, 100)));
+    UNITTEST_EXPECT_EQ(true, CPLUS_NULL != (task = cplus_task_new(test_task_stop_and_wait_proc, &repect, failed, 100)));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_task_start(task, 0));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_task_wait_start(task, CPLUS_INFINITE_TIMEOUT));
     time = cplus_systime_get_tick();
@@ -637,7 +637,7 @@ CPLUS_UNIT_TEST(cplus_task_stop, functionity)
     UNITTEST_EXPECT_EQ(true, time >= 1000 && time < 1050);
 
     repect = 90;
-    UNITTEST_EXPECT_EQ(true, NULL != (task = cplus_task_new(test_task_stop_and_wait_proc, &repect, failed, 100)));
+    UNITTEST_EXPECT_EQ(true, CPLUS_NULL != (task = cplus_task_new(test_task_stop_and_wait_proc, &repect, failed, 100)));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_task_start(task, 0));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_task_wait_start(task, CPLUS_INFINITE_TIMEOUT));
     time = cplus_systime_get_tick();
@@ -659,9 +659,9 @@ void test_pause_proc(void * param1, void * param2)
 
 CPLUS_UNIT_TEST(cplus_task_pause, functionity)
 {
-    cplus_task task = NULL;
+    cplus_task task = CPLUS_NULL;
     int32_t count = 0;
-    UNITTEST_EXPECT_EQ(true, NULL != (task = cplus_task_new(test_pause_proc, &count, NULL, 100)));
+    UNITTEST_EXPECT_EQ(true, CPLUS_NULL != (task = cplus_task_new(test_pause_proc, &count, CPLUS_NULL, 100)));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_task_start(task, 0));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_task_wait_start(task, CPLUS_INFINITE_TIMEOUT));
     while (1)

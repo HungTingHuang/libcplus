@@ -10,7 +10,6 @@ cplus_sharedmem cplus_sharedmem_new(const char * name, uint32_t size);
 cplus_sharedmem cplus_sharedmem_create(const char * name, uint32_t size);
 cplus_sharedmem cplus_sharedmem_open(const char * name);
 int32_t cplus_sharedmem_delete(cplus_sharedmem obj);
-
 bool cplus_sharedmem_check(cplus_object obj);
 void * cplus_sharedmem_alloc(cplus_sharedmem obj);
 int32_t cplus_sharedmem_get_size(cplus_sharedmem obj);

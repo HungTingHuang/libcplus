@@ -7,14 +7,20 @@
 #define CPLUS_SUCCESS 0
 
 #ifndef UINT32_MAX
-    #define UINT32_MAX (0U - 1)
+#   define UINT32_MAX (0U - 1)
 #endif
 
 #ifndef RSIZE_MAX_MEM
-    #define RSIZE_MAX_MEM (256UL << 20) /* 256MB */
+#   define RSIZE_MAX_MEM (256UL << 20) /* 256MB */
 #endif
 
 #define CPLUS_INFINITE_TIMEOUT (0U - 1)
+
+#ifndef __cplusplus
+#   define CPLUS_NULL NULL
+#else
+#   define CPLUS_NULL nullptr
+#endif
 
 typedef void* cplus_object;
 typedef void* cplus_data;

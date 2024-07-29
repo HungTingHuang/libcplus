@@ -5,21 +5,24 @@ INSTALL_HDR_DIR			= /usr/local/include
 
 CROSS_COMPILER			= /usr/bin/
 # CROSS_COMPILER			= /opt/build_env/bullseye/crosscc/bin/arm-hard-linux-gnueabihf-
-CC 						= $(CROSS_COMPILER)gcc
-# CC 						= $(CROSS_COMPILER)g++
+# CC 						= $(CROSS_COMPILER)gcc
+CC 						= $(CROSS_COMPILER)g++
 AR						= $(CROSS_COMPILER)ar
 LD						= $(CROSS_COMPILER)ld
 
 include cplusdef.mk
 LIB_OBJS				:= $(addprefix $(SRC_DIR)/,$(SOURCES:=.o))
 
-CFLAGS					+= -g
-CFLAGS					+= -Wall
 # CFLAGS					+= -std=gnu99 # C99
 # CFLAGS					+= -std=gnu17 # C17
-CFLAGS					+= -std=gnu2x # C23
-# CFLAGS					+= -std=gnu++17 # C++23
-# CFLAGS					+= -std=gnu++2b # C++23
+# CFLAGS					+= -std=gnu2x # C23
+# CFLAGS					+= -std=gnu++17 # C++17
+CFLAGS					+= -std=gnu++2b # C++23
+
+ifeq ($(DEBUG), y)
+CFLAGS					+= -g
+endif
+CFLAGS					+= -Wall
 
 ifeq ($(UNITTEST), y)
 CFLAGS					+= -D__CPLUS_UNITTEST__

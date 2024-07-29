@@ -238,7 +238,7 @@ static void * pevent_initialize_object(
     , bool status
     , enum INIT_MODE mode)
 {
-    struct pevent * evt = NULL;
+    struct pevent * evt = CPLUS_NULL;
     pthread_mutexattr_t mutex_attr;
     pthread_condattr_t cond_attr;
 
@@ -246,16 +246,16 @@ static void * pevent_initialize_object(
     {
         CPLUS_INITIALIZE_STRUCT_POINTER(evt);
         evt->type = OBJ_TYPE;
-        evt->ptr_setted = NULL;
-        evt->ptr_broadcast = NULL;
-        evt->ptr_status = NULL;
-        evt->ptr_mutex = NULL;
-        evt->ptr_cond = NULL;
-        evt->shared_mem = NULL;
+        evt->ptr_setted = CPLUS_NULL;
+        evt->ptr_broadcast = CPLUS_NULL;
+        evt->ptr_status = CPLUS_NULL;
+        evt->ptr_mutex = CPLUS_NULL;
+        evt->ptr_cond = CPLUS_NULL;
+        evt->shared_mem = CPLUS_NULL;
 
-        if (NULL == name)
+        if (CPLUS_NULL == name)
         {
-            if (0 != pthread_mutex_init(&(evt->mutex), NULL))
+            if (0 != pthread_mutex_init(&(evt->mutex), CPLUS_NULL))
             {
                 goto exit;
             }
@@ -321,7 +321,7 @@ static void * pevent_initialize_object(
                 goto exit;
             }
 
-            if (NULL == evt->shared_mem)
+            if (CPLUS_NULL == evt->shared_mem)
             {
                 goto exit;
             }
@@ -379,32 +379,32 @@ static void * pevent_initialize_object(
     return evt;
 exit:
     cplus_pevent_delete(evt);
-    return NULL;
+    return CPLUS_NULL;
 }
 
 cplus_pevent cplus_pevent_new(bool broadcast, bool status)
 {
-    return pevent_initialize_object(NULL, !!broadcast, !!status, INIT_NONE);
+    return pevent_initialize_object(CPLUS_NULL, !!broadcast, !!status, INIT_NONE);
 }
 
 cplus_pevent cplus_pevent_new_xp(const char * name, bool broadcast, bool status)
 {
-    CHECK_IF(NULL == name, NULL);
-    CHECK_IF(PEVENT_NAME_MAX_SIZE < (strlen(name) + PEVENT_NAME_PATTERN_SIZE), NULL);
+    CHECK_IF(CPLUS_NULL == name, CPLUS_NULL);
+    CHECK_IF(PEVENT_NAME_MAX_SIZE < (strlen(name) + PEVENT_NAME_PATTERN_SIZE), CPLUS_NULL);
     return pevent_initialize_object(name, !!broadcast, !!status, INIT_HYBRID);
 }
 
 cplus_pevent cplus_pevent_create_xp(const char * name, bool broadcast, bool status)
 {
-    CHECK_IF(NULL == name, NULL);
-    CHECK_IF(PEVENT_NAME_MAX_SIZE < (strlen(name) + PEVENT_NAME_PATTERN_SIZE), NULL);
+    CHECK_IF(CPLUS_NULL == name, CPLUS_NULL);
+    CHECK_IF(PEVENT_NAME_MAX_SIZE < (strlen(name) + PEVENT_NAME_PATTERN_SIZE), CPLUS_NULL);
     return pevent_initialize_object(name, !!broadcast, !!status, INIT_CREATE);
 }
 
 cplus_pevent cplus_pevent_open_xp(const char * name)
 {
-    CHECK_IF(NULL == name, NULL);
-    CHECK_IF(PEVENT_NAME_MAX_SIZE < (strlen(name) + PEVENT_NAME_PATTERN_SIZE), NULL);
+    CHECK_IF(CPLUS_NULL == name, CPLUS_NULL);
+    CHECK_IF(PEVENT_NAME_MAX_SIZE < (strlen(name) + PEVENT_NAME_PATTERN_SIZE), CPLUS_NULL);
     return pevent_initialize_object(name, 0, 0, INIT_OPEN);
 }
 
@@ -418,8 +418,8 @@ static char TEST_PEVENT_NAME[] = "test";
 
 CPLUS_UNIT_TEST(cplus_pevent_new, functionity)
 {
-    cplus_pevent event_sv = NULL;
-    UNITTEST_EXPECT_EQ(true, (NULL != (event_sv = cplus_pevent_new(false, false))));
+    cplus_pevent event_sv = CPLUS_NULL;
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (event_sv = cplus_pevent_new(false, false))));
     UNITTEST_EXPECT_EQ(CPLUS_FAIL, cplus_pevent_wait(event_sv, 0));
     UNITTEST_EXPECT_EQ(EAGAIN, errno);
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_pevent_set(event_sv));
@@ -428,13 +428,13 @@ CPLUS_UNIT_TEST(cplus_pevent_new, functionity)
     UNITTEST_EXPECT_EQ(EAGAIN, errno);
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_pevent_delete(event_sv));
 
-    UNITTEST_EXPECT_EQ(true, (NULL != (event_sv = cplus_pevent_new(false, true))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (event_sv = cplus_pevent_new(false, true))));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_pevent_wait(event_sv, 0));
     UNITTEST_EXPECT_EQ(CPLUS_FAIL, cplus_pevent_wait(event_sv, 0));
     UNITTEST_EXPECT_EQ(EAGAIN, errno);
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_pevent_delete(event_sv));
 
-    UNITTEST_EXPECT_EQ(true, (NULL != (event_sv = cplus_pevent_new(true, false))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (event_sv = cplus_pevent_new(true, false))));
     UNITTEST_EXPECT_EQ(CPLUS_FAIL, cplus_pevent_wait(event_sv, 0));
     UNITTEST_EXPECT_EQ(EAGAIN, errno);
     UNITTEST_EXPECT_EQ(CPLUS_FAIL, cplus_pevent_wait(event_sv, 0));
@@ -444,7 +444,7 @@ CPLUS_UNIT_TEST(cplus_pevent_new, functionity)
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_pevent_wait(event_sv, 0));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_pevent_delete(event_sv));
 
-    UNITTEST_EXPECT_EQ(true, (NULL != (event_sv = cplus_pevent_new(true, true))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (event_sv = cplus_pevent_new(true, true))));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_pevent_wait(event_sv, 0));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_pevent_wait(event_sv, 0));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_pevent_delete(event_sv));
@@ -454,10 +454,10 @@ CPLUS_UNIT_TEST(cplus_pevent_new, functionity)
 
 CPLUS_UNIT_TEST(cplus_pevent_wait, functionity)
 {
-    cplus_pevent event_sv = NULL;
+    cplus_pevent event_sv = CPLUS_NULL;
     uint32_t time;
 
-    UNITTEST_EXPECT_EQ(true, (NULL != (event_sv = cplus_pevent_new(false, false))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (event_sv = cplus_pevent_new(false, false))));
     time = cplus_systime_get_tick();
     UNITTEST_EXPECT_EQ(CPLUS_FAIL, cplus_pevent_wait(event_sv, 1500));
     UNITTEST_EXPECT_EQ(ETIMEDOUT, errno);
@@ -465,14 +465,14 @@ CPLUS_UNIT_TEST(cplus_pevent_wait, functionity)
     UNITTEST_EXPECT_EQ(true, time >= 1500 AND time < 1550);
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_pevent_delete(event_sv));
 
-    UNITTEST_EXPECT_EQ(true, (NULL != (event_sv = cplus_pevent_new(false, true))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (event_sv = cplus_pevent_new(false, true))));
     time = cplus_systime_get_tick();
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_pevent_wait(event_sv, 1500));
     time = cplus_systime_elapsed_tick(time);
     UNITTEST_EXPECT_EQ(true, time < 1550);
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_pevent_delete(event_sv));
 
-    UNITTEST_EXPECT_EQ(true, (NULL != (event_sv = cplus_pevent_new(true, false))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (event_sv = cplus_pevent_new(true, false))));
     time = cplus_systime_get_tick();
     UNITTEST_EXPECT_EQ(CPLUS_FAIL, cplus_pevent_wait(event_sv, 1500));
     UNITTEST_EXPECT_EQ(ETIMEDOUT, errno);
@@ -496,7 +496,7 @@ CPLUS_UNIT_TEST(cplus_pevent_wait, functionity)
     UNITTEST_EXPECT_EQ(true, time < 1550);
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_pevent_delete(event_sv));
 
-    UNITTEST_EXPECT_EQ(true, (NULL != (event_sv = cplus_pevent_new(true, true))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (event_sv = cplus_pevent_new(true, true))));
     time = cplus_systime_get_tick();
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_pevent_wait(event_sv, 1500));
     time = cplus_systime_elapsed_tick(time);
@@ -512,8 +512,8 @@ CPLUS_UNIT_TEST(cplus_pevent_wait, functionity)
 
 CPLUS_UNIT_TEST(cplus_pevent_reset, functionity)
 {
-    cplus_pevent event = NULL;
-    UNITTEST_EXPECT_EQ(true, (NULL != (event = cplus_pevent_new(false, true))));
+    cplus_pevent event = CPLUS_NULL;
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (event = cplus_pevent_new(false, true))));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_pevent_wait(event, 0));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_pevent_reset(event));
     UNITTEST_EXPECT_EQ(CPLUS_FAIL, cplus_pevent_wait(event, 0));
@@ -526,18 +526,18 @@ CPLUS_UNIT_TEST(cplus_pevent_reset, functionity)
 
 CPLUS_UNIT_TEST(cplus_pevent_new_xp, cross_process_test)
 {
-    cplus_pevent event_sv = NULL;
+    cplus_pevent event_sv = CPLUS_NULL;
 
-    UNITTEST_EXPECT_EQ(true, (NULL != (event_sv = cplus_pevent_new_xp(TEST_PEVENT_NAME, false, false))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (event_sv = cplus_pevent_new_xp(TEST_PEVENT_NAME, false, false))));
 
     if (0 != fork())
     {
     }
     else
     {
-        cplus_pevent event_ch = NULL;
+        cplus_pevent event_ch = CPLUS_NULL;
 
-        UNITTEST_EXPECT_EQ(true, (NULL != (event_ch = cplus_pevent_new_xp(TEST_PEVENT_NAME, false, false))));
+        UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (event_ch = cplus_pevent_new_xp(TEST_PEVENT_NAME, false, false))));
         UNITTEST_EXPECT_EQ(CPLUS_FAIL, cplus_pevent_wait(event_ch, 0));
         UNITTEST_EXPECT_EQ(EAGAIN, errno);
         UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_pevent_set(event_ch));
@@ -553,15 +553,15 @@ CPLUS_UNIT_TEST(cplus_pevent_new_xp, cross_process_test)
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, unittest_wait_child_proc_end(5000));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_pevent_delete(event_sv));
 
-    UNITTEST_EXPECT_EQ(true, (NULL != (event_sv = cplus_pevent_new_xp(TEST_PEVENT_NAME, false, true))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (event_sv = cplus_pevent_new_xp(TEST_PEVENT_NAME, false, true))));
     if (0 != fork())
     {
     }
     else
     {
-        cplus_pevent event_ch = NULL;
+        cplus_pevent event_ch = CPLUS_NULL;
 
-        UNITTEST_EXPECT_EQ(true, (NULL != (event_ch = cplus_pevent_new_xp(TEST_PEVENT_NAME, false, false))));
+        UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (event_ch = cplus_pevent_new_xp(TEST_PEVENT_NAME, false, false))));
         UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_pevent_wait(event_ch, 0));
         UNITTEST_EXPECT_EQ(CPLUS_FAIL, cplus_pevent_wait(event_ch, 0));
         UNITTEST_EXPECT_EQ(EAGAIN, errno);
@@ -574,16 +574,16 @@ CPLUS_UNIT_TEST(cplus_pevent_new_xp, cross_process_test)
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, unittest_wait_child_proc_end(5000));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_pevent_delete(event_sv));
 
-    UNITTEST_EXPECT_EQ(true, (NULL != (event_sv = cplus_pevent_new_xp(TEST_PEVENT_NAME, true, false))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (event_sv = cplus_pevent_new_xp(TEST_PEVENT_NAME, true, false))));
 
     if (0 != fork())
     {
     }
     else
     {
-        cplus_pevent event_ch = NULL;
+        cplus_pevent event_ch = CPLUS_NULL;
 
-        UNITTEST_EXPECT_EQ(true, (NULL != (event_ch = cplus_pevent_new_xp(TEST_PEVENT_NAME, false, false))));
+        UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (event_ch = cplus_pevent_new_xp(TEST_PEVENT_NAME, false, false))));
         UNITTEST_EXPECT_EQ(CPLUS_FAIL, cplus_pevent_wait(event_ch, 0));
         UNITTEST_EXPECT_EQ(EAGAIN, errno);
         UNITTEST_EXPECT_EQ(CPLUS_FAIL, cplus_pevent_wait(event_ch, 0));
@@ -600,16 +600,16 @@ CPLUS_UNIT_TEST(cplus_pevent_new_xp, cross_process_test)
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, unittest_wait_child_proc_end(5000));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_pevent_delete(event_sv));
 
-    UNITTEST_EXPECT_EQ(true, (NULL != (event_sv = cplus_pevent_new_xp(TEST_PEVENT_NAME, true, true))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (event_sv = cplus_pevent_new_xp(TEST_PEVENT_NAME, true, true))));
 
     if (0 != fork())
     {
     }
     else
     {
-        cplus_pevent event_ch = NULL;
+        cplus_pevent event_ch = CPLUS_NULL;
 
-        UNITTEST_EXPECT_EQ(true, (NULL != (event_ch = cplus_pevent_new_xp(TEST_PEVENT_NAME, false, false))));
+        UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (event_ch = cplus_pevent_new_xp(TEST_PEVENT_NAME, false, false))));
         UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_pevent_wait(event_ch, 0));
         UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_pevent_wait(event_ch, 0));
         UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_pevent_delete(event_ch));
@@ -625,19 +625,19 @@ CPLUS_UNIT_TEST(cplus_pevent_new_xp, cross_process_test)
 
 CPLUS_UNIT_TEST(cplus_pevent_wait, cross_process_test)
 {
-    cplus_pevent event_sv = NULL;
+    cplus_pevent event_sv = CPLUS_NULL;
     uint32_t time;
 
-    UNITTEST_EXPECT_EQ(true, (NULL != (event_sv = cplus_pevent_create_xp(TEST_PEVENT_NAME, false, false))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (event_sv = cplus_pevent_create_xp(TEST_PEVENT_NAME, false, false))));
 
     if (0 != fork())
     {
     }
     else
     {
-        cplus_pevent event_ch = NULL;
+        cplus_pevent event_ch = CPLUS_NULL;
 
-        UNITTEST_EXPECT_EQ(true, (NULL != (event_ch = cplus_pevent_open_xp(TEST_PEVENT_NAME))));
+        UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (event_ch = cplus_pevent_open_xp(TEST_PEVENT_NAME))));
         time = cplus_systime_get_tick();
         UNITTEST_EXPECT_EQ(CPLUS_FAIL, cplus_pevent_wait(event_ch, 1500));
         UNITTEST_EXPECT_EQ(ETIMEDOUT, errno);
@@ -653,15 +653,15 @@ CPLUS_UNIT_TEST(cplus_pevent_wait, cross_process_test)
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_pevent_delete(event_sv));
     UNITTEST_EXPECT_EQ(0, cplus_mgr_report());
 
-    UNITTEST_EXPECT_EQ(true, (NULL != (event_sv = cplus_pevent_create_xp(TEST_PEVENT_NAME, false, true))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (event_sv = cplus_pevent_create_xp(TEST_PEVENT_NAME, false, true))));
 
     if (0 != fork())
     {
     }
     else
     {
-        cplus_pevent event_ch = NULL;
-        UNITTEST_EXPECT_EQ(true, (NULL != (event_ch = cplus_pevent_open_xp(TEST_PEVENT_NAME))));
+        cplus_pevent event_ch = CPLUS_NULL;
+        UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (event_ch = cplus_pevent_open_xp(TEST_PEVENT_NAME))));
         time = cplus_systime_get_tick();
         UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_pevent_wait(event_ch, 1500));
         time = cplus_systime_elapsed_tick(time);
@@ -676,16 +676,16 @@ CPLUS_UNIT_TEST(cplus_pevent_wait, cross_process_test)
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_pevent_delete(event_sv));
     UNITTEST_EXPECT_EQ(0, cplus_mgr_report());
 
-    UNITTEST_EXPECT_EQ(true, (NULL != (event_sv = cplus_pevent_create_xp(TEST_PEVENT_NAME, true, false))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (event_sv = cplus_pevent_create_xp(TEST_PEVENT_NAME, true, false))));
 
     if (0 != fork())
     {
     }
     else
     {
-        cplus_pevent event_ch = NULL;
+        cplus_pevent event_ch = CPLUS_NULL;
 
-        UNITTEST_EXPECT_EQ(true, (NULL != (event_ch = cplus_pevent_open_xp(TEST_PEVENT_NAME))));
+        UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (event_ch = cplus_pevent_open_xp(TEST_PEVENT_NAME))));
         time = cplus_systime_get_tick();
         UNITTEST_EXPECT_EQ(CPLUS_FAIL, cplus_pevent_wait(event_ch, 1500));
         UNITTEST_EXPECT_EQ(ETIMEDOUT, errno);
@@ -710,9 +710,9 @@ CPLUS_UNIT_TEST(cplus_pevent_wait, cross_process_test)
     }
     else
     {
-        cplus_pevent event_ch = NULL;
+        cplus_pevent event_ch = CPLUS_NULL;
 
-        UNITTEST_EXPECT_EQ(true, (NULL != (event_ch = cplus_pevent_open_xp(TEST_PEVENT_NAME))));
+        UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (event_ch = cplus_pevent_open_xp(TEST_PEVENT_NAME))));
         time = cplus_systime_get_tick();
         UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_pevent_wait(event_ch, 1500));
         time = cplus_systime_elapsed_tick(time);
@@ -731,16 +731,16 @@ CPLUS_UNIT_TEST(cplus_pevent_wait, cross_process_test)
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_pevent_delete(event_sv));
     UNITTEST_EXPECT_EQ(0, cplus_mgr_report());
 
-    UNITTEST_EXPECT_EQ(true, (NULL != (event_sv = cplus_pevent_create_xp(TEST_PEVENT_NAME, true, true))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (event_sv = cplus_pevent_create_xp(TEST_PEVENT_NAME, true, true))));
 
     if (0 != fork())
     {
     }
     else
     {
-        cplus_pevent event_ch = NULL;
+        cplus_pevent event_ch = CPLUS_NULL;
 
-        UNITTEST_EXPECT_EQ(true, (NULL != (event_ch = cplus_pevent_open_xp(TEST_PEVENT_NAME))));
+        UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (event_ch = cplus_pevent_open_xp(TEST_PEVENT_NAME))));
         time = cplus_systime_get_tick();
         UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_pevent_wait(event_ch, 1500));
         time = cplus_systime_elapsed_tick(time);
@@ -762,18 +762,18 @@ CPLUS_UNIT_TEST(cplus_pevent_wait, cross_process_test)
 
 CPLUS_UNIT_TEST(cplus_pevent_reset, cross_process_test)
 {
-    cplus_pevent event_sv = NULL;
+    cplus_pevent event_sv = CPLUS_NULL;
 
-    UNITTEST_EXPECT_EQ(true, (NULL != (event_sv = cplus_pevent_create_xp(TEST_PEVENT_NAME, false, true))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (event_sv = cplus_pevent_create_xp(TEST_PEVENT_NAME, false, true))));
 
     if (0 != fork())
     {
     }
     else
     {
-        cplus_pevent event_ch = NULL;
+        cplus_pevent event_ch = CPLUS_NULL;
 
-        UNITTEST_EXPECT_EQ(true, (NULL != (event_ch = cplus_pevent_open_xp(TEST_PEVENT_NAME))));
+        UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (event_ch = cplus_pevent_open_xp(TEST_PEVENT_NAME))));
         UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_pevent_wait(event_ch, 0));
         UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_pevent_delete(event_ch));
         UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_pevent_delete(event_sv));
@@ -790,9 +790,9 @@ CPLUS_UNIT_TEST(cplus_pevent_reset, cross_process_test)
     }
     else
     {
-        cplus_pevent event_ch = NULL;
+        cplus_pevent event_ch = CPLUS_NULL;
 
-        UNITTEST_EXPECT_EQ(true, (NULL != (event_ch = cplus_pevent_open_xp(TEST_PEVENT_NAME))));
+        UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (event_ch = cplus_pevent_open_xp(TEST_PEVENT_NAME))));
         UNITTEST_EXPECT_EQ(CPLUS_FAIL, cplus_pevent_wait(event_ch, 0));
         UNITTEST_EXPECT_EQ(EAGAIN, errno);
         UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_pevent_delete(event_ch));
@@ -808,26 +808,26 @@ CPLUS_UNIT_TEST(cplus_pevent_reset, cross_process_test)
 
 CPLUS_UNIT_TEST(cplus_pevent_new_xp, bad_parameter)
 {
-    cplus_pevent event_sv = NULL;
+    cplus_pevent event_sv = CPLUS_NULL;
     char bad_name[26] = "0123456789abcdef012345678";
 
-    UNITTEST_EXPECT_EQ(true, (NULL == (event_sv = cplus_pevent_new_xp(bad_name, false, true))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL == (event_sv = cplus_pevent_new_xp(bad_name, false, true))));
     UNITTEST_EXPECT_EQ(EINVAL, errno);
 
-    UNITTEST_EXPECT_EQ(true, (NULL != (event_sv = cplus_pevent_new_xp(&bad_name[1], false, true))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (event_sv = cplus_pevent_new_xp(&bad_name[1], false, true))));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_pevent_delete(event_sv));
     UNITTEST_EXPECT_EQ(0, cplus_mgr_report());
 }
 
 CPLUS_UNIT_TEST(cplus_pevent_create_xp, bad_parameter)
 {
-    cplus_pevent event_sv = NULL, event_ch = NULL;
+    cplus_pevent event_sv = CPLUS_NULL, event_ch = CPLUS_NULL;
     char bad_name[26] = "0123456789abcdef012345678";
 
-    UNITTEST_EXPECT_EQ(true, (NULL == (event_sv = cplus_pevent_create_xp(bad_name, false, true))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL == (event_sv = cplus_pevent_create_xp(bad_name, false, true))));
     UNITTEST_EXPECT_EQ(EINVAL, errno);
-    UNITTEST_EXPECT_EQ(true, (NULL != (event_sv = cplus_pevent_create_xp(&bad_name[1], false, true))));
-    UNITTEST_EXPECT_EQ(true, (NULL == (event_ch = cplus_pevent_create_xp(&bad_name[1], false, true))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (event_sv = cplus_pevent_create_xp(&bad_name[1], false, true))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL == (event_ch = cplus_pevent_create_xp(&bad_name[1], false, true))));
     UNITTEST_EXPECT_EQ(EEXIST, errno);
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_pevent_delete(event_sv));
     UNITTEST_EXPECT_EQ(0, cplus_mgr_report());
@@ -835,15 +835,15 @@ CPLUS_UNIT_TEST(cplus_pevent_create_xp, bad_parameter)
 
 CPLUS_UNIT_TEST(cplus_pevent_open_xp, bad_parameter)
 {
-    cplus_pevent event_sv = NULL, event_ch = NULL;
+    cplus_pevent event_sv = CPLUS_NULL, event_ch = CPLUS_NULL;
     char bad_name[26] = "0123456789abcdef012345678";
 
-    UNITTEST_EXPECT_EQ(true, (NULL == (event_sv = cplus_pevent_open_xp(bad_name))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL == (event_sv = cplus_pevent_open_xp(bad_name))));
     UNITTEST_EXPECT_EQ(EINVAL, errno);
-    UNITTEST_EXPECT_EQ(true, (NULL == (event_ch = cplus_pevent_open_xp(TEST_PEVENT_NAME))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL == (event_ch = cplus_pevent_open_xp(TEST_PEVENT_NAME))));
     UNITTEST_EXPECT_EQ(ENOENT, errno);
-    UNITTEST_EXPECT_EQ(true, (NULL != (event_sv = cplus_pevent_create_xp(&bad_name[1], false, true))));
-    UNITTEST_EXPECT_EQ(true, (NULL != (event_ch = cplus_pevent_open_xp(&bad_name[1]))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (event_sv = cplus_pevent_create_xp(&bad_name[1], false, true))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (event_ch = cplus_pevent_open_xp(&bad_name[1]))));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_pevent_delete(event_sv));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_pevent_delete(event_ch));
     UNITTEST_EXPECT_EQ(0, cplus_mgr_report());
@@ -851,8 +851,8 @@ CPLUS_UNIT_TEST(cplus_pevent_open_xp, bad_parameter)
 
 CPLUS_UNIT_TEST(cplus_pevent_get_status, functionity)
 {
-    cplus_pevent event = NULL;
-    UNITTEST_EXPECT_EQ(true, (NULL != (event = cplus_pevent_new(false, false))));
+    cplus_pevent event = CPLUS_NULL;
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (event = cplus_pevent_new(false, false))));
     UNITTEST_EXPECT_EQ(false, cplus_pevent_get_status(event));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_pevent_set(event));
     UNITTEST_EXPECT_EQ(true, cplus_pevent_get_status(event));
@@ -864,8 +864,8 @@ CPLUS_UNIT_TEST(cplus_pevent_get_status, functionity)
 
 CPLUS_UNIT_TEST(cplus_pevent_get_status, cross_process_test)
 {
-    cplus_pevent event = NULL;
-    UNITTEST_EXPECT_EQ(true, (NULL != (event = cplus_pevent_new_xp(TEST_PEVENT_NAME, false, true))));
+    cplus_pevent event = CPLUS_NULL;
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (event = cplus_pevent_new_xp(TEST_PEVENT_NAME, false, true))));
     UNITTEST_EXPECT_EQ(true, cplus_pevent_get_status(event));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_pevent_reset(event));
     UNITTEST_EXPECT_EQ(false, cplus_pevent_get_status(event));

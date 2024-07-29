@@ -181,13 +181,13 @@ static void event_poll_proc(void * param1, void * param2)
 static void accept_proc(void * param1, void * param2)
 {
     struct event_server * server = (struct event_server *)(param1);
-    cplus_socket sock = NULL;
+    cplus_socket sock = CPLUS_NULL;
     uint8_t recv_bufs[32] = {0};
     UNUSED_PARAM(param2);
 
     if ((sock = cplus_socket_accept(server->skt_server, CPLUS_INFINITE_TIMEOUT)))
     {
-        cplus_socket_send_fd(sock, server->efd, NULL, 0);
+        cplus_socket_send_fd(sock, server->efd, CPLUS_NULL, 0);
         if (strlen(CHECK_RECV_FD) == cplus_socket_recv(sock
             , recv_bufs
             , sizeof(recv_bufs)
@@ -207,14 +207,14 @@ static void * event_server_initialize_object(
     struct cplus_event_server_config * config
     , CPLUS_EVENT_SERVER_CB_FUNCS cb_funcs)
 {
-    struct event_server * server = NULL;
+    struct event_server * server = CPLUS_NULL;
     if ((server = (struct event_server *)cplus_malloc(sizeof(struct event_server))))
     {
         CPLUS_INITIALIZE_STRUCT_POINTER(server);
         server->type = OBJ_TYPE_SERVER;
         server->enable_ipc = config->enable_ipc;
-        server->skt_server = NULL;
-        server->accept_proc = NULL;
+        server->skt_server = CPLUS_NULL;
+        server->accept_proc = CPLUS_NULL;
         server->init_val = config->init_val;
         server->flag = config->flag;
         server->start = !!(config->start);
@@ -244,14 +244,14 @@ static void * event_server_initialize_object(
             , server
             , cb_funcs
             , DURATION_FOR_POLL_PROC);
-        if (NULL == server->poll_proc)
+        if (CPLUS_NULL == server->poll_proc)
         {
             goto error;
         }
         if (server->enable_ipc)
         {
             server->skt_server = cplus_socket_new(CPLUS_SOCKET_TYPE_STREAM_LOCAL);
-            if (NULL == server->skt_server)
+            if (CPLUS_NULL == server->skt_server)
             {
                 goto error;
             }
@@ -267,9 +267,9 @@ static void * event_server_initialize_object(
             server->accept_proc = cplus_task_new(
                 accept_proc
                 , server
-                , NULL
+                , CPLUS_NULL
                 , DURATION_FOR_ACCEPT_TASK);
-            if (NULL == server->accept_proc)
+            if (CPLUS_NULL == server->accept_proc)
             {
                 goto error;
             }
@@ -289,7 +289,7 @@ static void * event_server_initialize_object(
     return server;
 error:
     cplus_event_server_delete(server);
-    return NULL;
+    return CPLUS_NULL;
 }
 
 cplus_event_server cplus_event_server_new(
@@ -301,7 +301,7 @@ cplus_event_server cplus_event_server_new(
     config.init_val = init_val;
     config.flag = flag;
     config.start = false;
-    config.cb_param = NULL;
+    config.cb_param = CPLUS_NULL;
 
     return event_server_initialize_object(&config, cb_funcs);
 }
@@ -315,7 +315,7 @@ cplus_event_server cplus_event_server_new_config(
 
 cplus_event_client cplus_event_client_attach(cplus_event_server obj)
 {
-    struct event_client * client = NULL;
+    struct event_client * client = CPLUS_NULL;
     struct event_server * server = (struct event_server *)(obj);
     CHECK_OBJECT_TYPE_EX(obj, OBJ_TYPE_SERVER);
 
@@ -328,17 +328,17 @@ cplus_event_client cplus_event_client_attach(cplus_event_server obj)
         {
             goto error;
         }
-        client->skt_client = NULL;
+        client->skt_client = CPLUS_NULL;
     }
     return client;
 error:
     cplus_event_client_delete(client);
-    return NULL;
+    return CPLUS_NULL;
 }
 
 cplus_event_client cplus_event_client_connect(void)
 {
-    struct event_client * client = NULL;
+    struct event_client * client = CPLUS_NULL;
     int32_t recv_fd = INVALID_FD;
     if ((client = (struct event_client *)cplus_malloc(sizeof(struct event_client))))
     {
@@ -346,7 +346,7 @@ cplus_event_client cplus_event_client_connect(void)
         client->type = OBJ_TYPE_CLIENT;
         client->server_efd = INVALID_FD;
         client->skt_client = cplus_socket_new(CPLUS_SOCKET_TYPE_STREAM_LOCAL);
-        if (NULL == client->skt_client)
+        if (CPLUS_NULL == client->skt_client)
         {
             goto error;
         }
@@ -369,13 +369,13 @@ cplus_event_client cplus_event_client_connect(void)
         }
         if (CPLUS_SUCCESS == cplus_socket_delete(client->skt_client))
         {
-            client->skt_client = NULL;
+            client->skt_client = CPLUS_NULL;
         }
     }
     return client;
 error:
     cplus_event_client_delete(client);
-    return NULL;
+    return CPLUS_NULL;
 }
 
 int32_t cplus_event_server_start(cplus_event_server obj)
@@ -453,18 +453,18 @@ int32_t on_read_ex(int32_t fd, int32_t value, void * cb_param)
 
 CPLUS_UNIT_TEST(cplus_event_server_new, functionity)
 {
-    cplus_event_server server = NULL;
-    cplus_event_client client = NULL;
+    cplus_event_server server = CPLUS_NULL;
+    cplus_event_client client = CPLUS_NULL;
     CPLUS_EVENT_SERVER_CB_FUNCS_T on_funcs = {0};
     verification_count = 0;
 
     on_funcs.on_read = on_read;
-    UNITTEST_EXPECT_EQ(true, (NULL != (server = cplus_event_server_new(
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (server = cplus_event_server_new(
         0
         , CPLUS_EVENT_SERVER_FLAG_NONBLOCK
         , &on_funcs))));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_event_server_start(server));
-    UNITTEST_EXPECT_EQ(true, (NULL != (client = cplus_event_client_attach(server))));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (client = cplus_event_client_attach(server))));
     for (int32_t i = 0; i < RUN_COUNT; i++)
     {
         UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_event_client_add_count(client, WRITTEN_COUNT));
@@ -478,8 +478,8 @@ CPLUS_UNIT_TEST(cplus_event_server_new, functionity)
 
 CPLUS_UNIT_TEST(cplus_event_server_new, CPLUS_SOCKET_TYPE_STREAM_LOCAL)
 {
-    cplus_event_server server = NULL;
-    cplus_event_client client = NULL;
+    cplus_event_server server = CPLUS_NULL;
+    cplus_event_client client = CPLUS_NULL;
     struct cplus_event_server_config config = {0};
     CPLUS_EVENT_SERVER_CB_FUNCS_T on_funcs = {0};
     verification_count = 0;
@@ -491,11 +491,11 @@ CPLUS_UNIT_TEST(cplus_event_server_new, CPLUS_SOCKET_TYPE_STREAM_LOCAL)
 
     on_funcs.on_read = on_read_ex;
 
-    UNITTEST_EXPECT_EQ(true, (NULL != (server = cplus_event_server_new_config(
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (server = cplus_event_server_new_config(
         &config
         , &on_funcs))));
     UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_event_server_start(server));
-    UNITTEST_EXPECT_EQ(true, (NULL != (client = cplus_event_client_connect())));
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (client = cplus_event_client_connect())));
     for (int32_t i = 0; i < RUN_COUNT; i++)
     {
         UNITTEST_EXPECT_EQ(CPLUS_SUCCESS, cplus_event_client_add_count(client, WRITTEN_COUNT));

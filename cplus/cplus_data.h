@@ -126,25 +126,22 @@ cplus_data cplus_data_new_double(double value);
 cplus_data cplus_data_new_pointer(void * value);
 cplus_data cplus_data_new_string(uint32_t str_len, char * str_bufs);
 cplus_data cplus_data_new_byte_array(uint32_t array_len, uint8_t * array_bufs);
-
-cplus_data cplus_data_new_ex(CPLUS_DATA_TYPE type, void * value1, void * value2, uint32_t key_len, char * key);
-cplus_data cplus_data_new_bool_ex(bool value, uint32_t key_len, char * key);
-cplus_data cplus_data_new_int8_ex(int8_t value, uint32_t key_len, char * key);
-cplus_data cplus_data_new_int16_ex(int16_t value, uint32_t key_len, char * key);
-cplus_data cplus_data_new_int32_ex(int32_t value, uint32_t key_len, char * key);
-cplus_data cplus_data_new_int64_ex(int64_t value, uint32_t key_len, char * key);
-cplus_data cplus_data_new_uint8_ex(uint8_t value, uint32_t key_len, char * key);
-cplus_data cplus_data_new_uint16_ex(uint16_t value, uint32_t key_len, char * key);
-cplus_data cplus_data_new_uint32_ex(uint32_t value, uint32_t key_len, char * key);
-cplus_data cplus_data_new_uint64_ex(uint64_t value, uint32_t key_len, char * key);
-cplus_data cplus_data_new_float_ex(float value, uint32_t key_len, char * key);
-cplus_data cplus_data_new_double_ex(double value, uint32_t key_len, char * key);
-cplus_data cplus_data_new_pointer_ex(void * value, uint32_t key_len, char * key);
-cplus_data cplus_data_new_string_ex(uint32_t str_len, char * str_bufs, uint32_t key_len, char * key);
-cplus_data cplus_data_new_byte_array_ex(uint32_t array_len, uint8_t * array_bufs, uint32_t key_len, char * key);
-
+cplus_data cplus_data_new_ex(CPLUS_DATA_TYPE type, void * value1, void * value2, uint32_t key_len, const char * key);
+cplus_data cplus_data_new_bool_ex(bool value, uint32_t key_len, const char * key);
+cplus_data cplus_data_new_int8_ex(int8_t value, uint32_t key_len, const char * key);
+cplus_data cplus_data_new_int16_ex(int16_t value, uint32_t key_len, const char * key);
+cplus_data cplus_data_new_int32_ex(int32_t value, uint32_t key_len, const char * key);
+cplus_data cplus_data_new_int64_ex(int64_t value, uint32_t key_len, const char * key);
+cplus_data cplus_data_new_uint8_ex(uint8_t value, uint32_t key_len, const char * key);
+cplus_data cplus_data_new_uint16_ex(uint16_t value, uint32_t key_len, const char * key);
+cplus_data cplus_data_new_uint32_ex(uint32_t value, uint32_t key_len, const char * key);
+cplus_data cplus_data_new_uint64_ex(uint64_t value, uint32_t key_len, const char * key);
+cplus_data cplus_data_new_float_ex(float value, uint32_t key_len, const char * key);
+cplus_data cplus_data_new_double_ex(double value, uint32_t key_len, const char * key);
+cplus_data cplus_data_new_pointer_ex(void * value, uint32_t key_len, const char * key);
+cplus_data cplus_data_new_string_ex(uint32_t str_len, char * str_bufs, uint32_t key_len, const char * key);
+cplus_data cplus_data_new_byte_array_ex(uint32_t array_len, uint8_t * array_bufs, uint32_t key_len, const char * key);
 int32_t cplus_data_delete(cplus_data obj);
-
 bool cplus_data_check(cplus_object obj);
 int32_t cplus_data_get_type(cplus_data obj);
 char * cplus_data_get_type_str(CPLUS_DATA_TYPE type);
@@ -152,21 +149,17 @@ uint32_t cplus_data_get_data_size(cplus_data obj);
 int32_t cplus_data_get_value(cplus_data obj, void * value1, void * value2);
 int32_t cplus_data_set_value(cplus_data obj, void * value1, void * value2);
 bool cplus_data_is_valid(cplus_data obj);
-char * cplus_data_get_key(cplus_data obj);
+const char * cplus_data_get_key(cplus_data obj);
 int32_t cplus_data_set_key(cplus_data obj, uint32_t key_len, const char * key);
 int32_t cplus_data_clone_value(cplus_data dest, cplus_data src);
-
 uint16_t cplus_data_swap16(uint16_t value);
 uint32_t cplus_data_swap32(uint32_t value);
 uint64_t cplus_data_swap64(uint64_t value);
-
 void cplus_data_reverse16(uint16_t * value);
 void cplus_data_reverse32(uint32_t * value);
 void cplus_data_reverse64(uint64_t * value);
-
 int32_t cplus_data_set_action_mode(cplus_data obj, uint32_t mode);
 uint32_t cplus_data_get_action_mode(cplus_data obj);
-
 int32_t cplus_data_set_bool(cplus_data obj, bool value);
 int32_t cplus_data_set_int8(cplus_data obj, int8_t value);
 int32_t cplus_data_set_int16(cplus_data obj, int16_t value);
@@ -182,7 +175,6 @@ int32_t cplus_data_set_pointer(cplus_data obj, void * value);
 int32_t cplus_data_set_string(cplus_data obj, uint32_t str_len, char * str_bufs);
 int32_t cplus_data_set_byte_array(cplus_data obj, uint32_t array_len, uint8_t * array_bufs);
 int32_t cplus_data_set_string_code(cplus_data obj, uint32_t code);
-
 bool cplus_data_get_bool(cplus_data obj);
 int8_t cplus_data_get_int8(cplus_data obj);
 int16_t cplus_data_get_int16(cplus_data obj);
@@ -198,11 +190,9 @@ void * cplus_data_get_pointer(cplus_data obj);
 uint8_t * cplus_data_get_byte_array(cplus_data obj);
 char * cplus_data_get_string(cplus_data obj);
 uint32_t cplus_data_get_string_code(cplus_data obj);
-
 cplus_data cplus_data_create_group_node(char * data_group_name);
 cplus_llist cplus_data_get_group(cplus_data data_group_node);
 int32_t cplus_data_delete_group_node(cplus_data data_group_node);
-
 int32_t cplus_data_get_as_bool(cplus_data obj, bool * value);
 int32_t cplus_data_get_as_int8(cplus_data obj, int8_t * value);
 int32_t cplus_data_get_as_int16(cplus_data obj, int16_t * value);
@@ -217,7 +207,6 @@ int32_t cplus_data_get_as_double(cplus_data obj, double * value);
 /* int32_t cplus_data_get_as_pointer(cplus_data obj, void * value); */
 int32_t cplus_data_get_as_byte_array(cplus_data obj, uint32_t array_len, uint8_t * array_bufs);
 int32_t cplus_data_get_as_string(cplus_data obj, uint32_t str_len, char * str_bufs);
-
 int32_t cplus_data_set_as_bool(cplus_data obj, bool value);
 int32_t cplus_data_set_as_int8(cplus_data obj, int8_t value);
 int32_t cplus_data_set_as_int16(cplus_data obj, int16_t value);

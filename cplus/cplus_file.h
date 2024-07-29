@@ -69,7 +69,6 @@ bool cplus_file_is_exist(char * file);
 bool cplus_file_is_readable(char * file);
 bool cplus_file_is_writable(char * file);
 bool cplus_file_is_executable(char * file);
-
 cplus_file cplus_file_new(char * file, CPLUS_FILE_ACCESS access);
 cplus_file cplus_file_new_ex(char * file, CPLUS_FILE_ACCESS access, CPLUS_FILE_FLAG flag, CPLUS_FILE_MODE mode);
 int32_t cplus_file_delete(cplus_file obj);
@@ -77,11 +76,9 @@ int32_t cplus_file_open(cplus_file obj);
 int32_t cplus_file_close(cplus_file obj);
 int32_t cplus_file_remove(char * file);
 bool cplus_file_check(cplus_object obj);
-
 int32_t cplus_file_write(cplus_file obj, uint32_t size, void * buffer);
 int32_t cplus_file_read(cplus_file obj, uint32_t size, void * buffer);
 int32_t cplus_file_sync(cplus_file obj);
-
 int32_t cplus_file_get_fd(cplus_file obj);
 int32_t cplus_file_get_data_size(cplus_file obj);
 void * cplus_file_get_data(cplus_file obj);

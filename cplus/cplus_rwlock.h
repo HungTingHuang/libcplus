@@ -37,7 +37,6 @@ cplus_rwlock cplus_rwlock_open_xp(const char * name);
 cplus_rwlock cplus_rwlock_new_config(CPLUS_RWLOCK_CONFIG config);
 cplus_rwlock cplus_rwlock_new(void);
 int32_t cplus_rwlock_delete(cplus_rwlock obj);
-
 bool cplus_rwlock_check(cplus_object obj);
 int32_t cplus_rwlock_rdlock(cplus_rwlock obj, uint32_t timeout);
 int32_t cplus_rwlock_wrlock(cplus_rwlock obj, uint32_t timeout);

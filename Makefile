@@ -1,7 +1,7 @@
 # Comment/uncomment the following line to enable/disable debugging
-DEBUG 				= y
+DEBUG 				= n
 UNITTEST			= n
-DEVELOP				= y
+DEVELOP				= n
 #
 LIBRARY_NAME 			= libcplus
 # Change according to your files
@@ -12,8 +12,8 @@ SRC 				:= $(addprefix $(SRC_DIR)/,$(SOURCES:=.c))
 LIBS   				+= -lrt -pthread -latomic
 LIBS				+= -Wl,-rpath=/usr/lib/arm-linux-gnueabihf
 
-# include ${TOOLDIR}/rules/Rules.make.libs
-
-ifeq (${DEVELOP}, y)
+ifneq (${DEVELOP}, y)
+include ${TOOLDIR}/rules/Rules.make.libs
+else
 include unittest.mk
 endif

@@ -149,8 +149,8 @@ void custom_logger_executer(void * param1, void * param2)
                 int fd = open(slog->file_path, DEFAULT_FILE_MODE, 0666);
                 if (0 <= fd)
                 {
-                    char * msg_buf = NULL;
-                    while (NULL != (msg_buf = (char *)cplus_llist_pop_back(slog->message_list)))
+                    char * msg_buf = CPLUS_NULL;
+                    while (CPLUS_NULL != (msg_buf = (char *)cplus_llist_pop_back(slog->message_list)))
                     {
                         write(fd, msg_buf, strlen(msg_buf));
                         if ('\n' != msg_buf[strlen(msg_buf) - 1])
@@ -170,7 +170,7 @@ void custom_logger_executer(void * param1, void * param2)
 
 static void * syslog_initialize_object(const char * custom_program_name)
 {
-    struct syslog * slog = NULL;
+    struct syslog * slog = CPLUS_NULL;
 
     if ((slog = (struct syslog *)cplus_malloc(sizeof(struct syslog))))
     {
@@ -180,16 +180,16 @@ static void * syslog_initialize_object(const char * custom_program_name)
         slog->debug_level = atoi(DEFAULT_DEBUG_LEVEL);
         slog->logger_level = atoi(DEFAULT_LOGGER_LEVEL);
         slog->enable_color = DEFAULT_ENABEL_COLOR;
-        slog->message_buffer_pool = NULL;
-        slog->message_logger_wroker = NULL;
-        slog->message_list = NULL;
-        slog->message_sect = NULL;
+        slog->message_buffer_pool = CPLUS_NULL;
+        slog->message_logger_wroker = CPLUS_NULL;
+        slog->message_list = CPLUS_NULL;
+        slog->message_sect = CPLUS_NULL;
 
         if (0 > cplus_str_printf(
             slog->program_name
             , MAX_PROGRAM_NAME_SIZE + 1
             , "%s"
-            , (NULL == custom_program_name)? program_invocation_short_name: custom_program_name))
+            , (CPLUS_NULL == custom_program_name)? program_invocation_short_name: custom_program_name))
         {
             goto exit;
         }
@@ -211,7 +211,7 @@ static void * syslog_initialize_object(const char * custom_program_name)
             goto exit;
         }
 
-        if (NULL == (slog->message_sect = cplus_mutex_new()))
+        if (CPLUS_NULL == (slog->message_sect = cplus_mutex_new()))
         {
             goto exit;
         }
@@ -226,12 +226,12 @@ static void * syslog_initialize_object(const char * custom_program_name)
         //     goto exit;
         // }
 
-        if (NULL != getenv(slog->debug_level_envname))
+        if (CPLUS_NULL != getenv(slog->debug_level_envname))
         {
             slog->debug_level = atoi(getenv(slog->debug_level_envname));
         }
 
-        if (NULL != getenv(slog->logger_level_envname))
+        if (CPLUS_NULL != getenv(slog->logger_level_envname))
         {
             slog->logger_level = atoi(getenv(slog->logger_level_envname));
         }
@@ -246,7 +246,7 @@ static void * syslog_initialize_object(const char * custom_program_name)
                 slog->message_buffer_pool = cplus_mempool_new(
                     10
                     , MAX_MESSAGE_BUFFER_SIZE + 1);
-                if (NULL == slog->message_buffer_pool)
+                if (CPLUS_NULL == slog->message_buffer_pool)
                 {
                     goto exit;
                 }
@@ -273,13 +273,13 @@ static void * syslog_initialize_object(const char * custom_program_name)
                 slog->message_buffer_pool = cplus_mempool_new(
                     MAX_MESSAGE_COUNT
                     , MAX_MESSAGE_BUFFER_SIZE + 1);
-                if (NULL == slog->message_buffer_pool)
+                if (CPLUS_NULL == slog->message_buffer_pool)
                 {
                     goto exit;
                 }
 
                 slog->message_list = cplus_llist_prev_new(MAX_MESSAGE_COUNT);
-                if (NULL == slog->message_list)
+                if (CPLUS_NULL == slog->message_list)
                 {
                     goto exit;
                 }
@@ -287,9 +287,9 @@ static void * syslog_initialize_object(const char * custom_program_name)
                 slog->message_logger_wroker = cplus_task_new(
                     custom_logger_executer
                     , slog
-                    , NULL
+                    , CPLUS_NULL
                     , 1000);
-                if (NULL == slog->message_logger_wroker)
+                if (CPLUS_NULL == slog->message_logger_wroker)
                 {
                     goto exit;
                 }
@@ -301,12 +301,12 @@ static void * syslog_initialize_object(const char * custom_program_name)
     return slog;
 exit:
     cplus_syslog_delete(slog);
-    return NULL;
+    return CPLUS_NULL;
 }
 
 cplus_syslog cplus_syslog_new(void)
 {
-    return syslog_initialize_object(NULL);
+    return syslog_initialize_object(CPLUS_NULL);
 }
 
 cplus_syslog cplus_syslog_new_ex(const char * custom_program_name)
@@ -349,7 +349,7 @@ static int32_t syslog_logger_print(
     char * msg)
 {
     int32_t len = 0;
-    char * msg_buf = NULL;
+    char * msg_buf = CPLUS_NULL;
 #if SUPPORT_SYSLOG
     if (CPLUS_SYSLOG_LEVEL_INFO >= slog->logger_level)
     {
@@ -396,7 +396,7 @@ static int32_t syslog_logger_print(
         errno = ENOTSUP; return -1; \
     } \
     do { \
-        char * msg_buf = NULL; \
+        char * msg_buf = CPLUS_NULL; \
         va_list args; va_start(args, format); \
         cplus_crit_sect_enter(slog->message_sect); \
         { \
@@ -506,8 +506,8 @@ CPLUS_DEBUG_LEVEL cplus_syslog_get_logger_level(cplus_syslog obj)
 
 CPLUS_UNIT_TEST(sys_log, functionity)
 {
-    cplus_syslog slog = NULL;
-    UNITTEST_EXPECT_EQ(true, (NULL != (slog = cplus_syslog_new())));
+    cplus_syslog slog = CPLUS_NULL;
+    UNITTEST_EXPECT_EQ(true, (CPLUS_NULL != (slog = cplus_syslog_new())));
     cplus_syslog_fatal(slog, "This is %s", "fatal");
     cplus_syslog_error(slog, "This is %s\n", "error");
     cplus_syslog_warn(slog, "This is %s\n", "warni");
