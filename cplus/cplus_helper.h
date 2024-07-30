@@ -16,11 +16,7 @@ extern "C" {
         (TYPE *)((char *)(memptr) - (char *)(CPLUS_OFFSETOF(TYPE, MEMBER))); \
     })
 
-#define CPLUS_INITIALIZE_STRUCT_POINTER(PTR) \
-    do { \
-        typeof(*(PTR)) temp = {0}; *(PTR) = temp; \
-    } while (0)
-
+#define CPLUS_INITIALIZE_STRUCT_POINTER(PTR) cplus_mem_set(PTR, 0x00, sizeof(typeof(* (PTR))))
 
 #define CPLUS_MAX(A, B) \
     ({ typeof(A) _A = (A); typeof(B) _B = (B); _A > _B ? _A : _B; })
