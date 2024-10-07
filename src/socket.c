@@ -800,7 +800,6 @@ int32_t cplus_socket_send_fd(cplus_socket obj
     }
 
     #ifdef HAVE_MSGHDR_MSG_CONTROL
-    {
         struct cmsghdr * cmptr = CPLUS_NULL;
         union
         {
@@ -816,13 +815,9 @@ int32_t cplus_socket_send_fd(cplus_socket obj
         cmptr->cmsg_level = SOL_SOCKET;
         cmptr->cmsg_type = SCM_RIGHTS;
         *((int32_t *)CMSG_DATA(cmptr)) = sendfd;
-
-    }
     #else
-    {
         msg.msg_accrights = (caddr_t)&sendfd;
         msg.msg_accrightslen = sizeof(int32_t);
-    }
     #endif
 
     msg.msg_name = (addr)? &addr_t: CPLUS_NULL;
@@ -858,7 +853,6 @@ int32_t cplus_socket_recv_fd(
     CHECK_OBJECT_TYPE(obj);
 
     #ifdef HAVE_MSGHDR_MSG_CONTROL
-    {
         union
         {
             struct cmsghdr cm;
@@ -867,12 +861,9 @@ int32_t cplus_socket_recv_fd(
 
         msg.msg_control = control_un.control;
         msg.msg_controllen = sizeof(control_un.control);
-    }
     #else
-    {
         msg.msg_accrights = (caddr_t)(&sock_fd);
         msg.msg_accrightslen = sizeof(int32_t);
-    }
     #endif
 
     iov[0].iov_base = &data;
