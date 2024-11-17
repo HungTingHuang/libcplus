@@ -8,6 +8,8 @@
 #include <stdio.h>
 #include <errno.h>
 #include <stdbool.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 #include "cplus.h"
 #include "common.h"
 

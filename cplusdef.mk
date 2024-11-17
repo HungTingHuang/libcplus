@@ -1,31 +1,35 @@
-MAJOR			= 13
-MINOR			= 0
-PATCH			= 7
-LIB_VER			:= $(MAJOR).$(MINOR).$(PATCH)
+MAJOR				= 1
+MINOR				= 0
+PATCH				= 0
+LIB_VER				:= $(MAJOR).$(MINOR).$(PATCH)
 
-SOURCES 		= helper
-SOURCES     	+= atomic
-SOURCES			+= memmgr
-SOURCES 		+= sys
-SOURCES     	+= systime
-SOURCES 		+= sharedmem
-SOURCES 		+= semaphore
-SOURCES			+= mutex
-SOURCES 		+= rwlock
-SOURCES 		+= pevent
-SOURCES			+= mempool
-SOURCES 		+= llist
-SOURCES 		+= task
-SOURCES 		+= taskpool
-SOURCES 		+= syslog
-SOURCES 		+= data
-SOURCES 		+= socket
-SOURCES 		+= ipc_server
-SOURCES 		+= file
-SOURCES 		+= event_server
-SOURCES 		+= cplus
+INSTALL_LIB_DIR		= /usr/local/lib
+INSTALL_HDR_DIR		= /usr/local/include
 
-SRC_DIR 		?= $(BUILD_DIR)/src
-HDR_DIR 		?= $(BUILD_DIR)/cplus
+SOURCES 			= helper
+SOURCES     		+= atomic
+SOURCES				+= memmgr
+SOURCES 			+= sys
+SOURCES     		+= systime
+SOURCES 			+= sharedmem
+SOURCES 			+= semaphore
+SOURCES				+= mutex
+SOURCES 			+= rwlock
+SOURCES 			+= pevent
+SOURCES				+= mempool
+SOURCES 			+= llist
+SOURCES 			+= task
+SOURCES 			+= taskpool
+SOURCES 			+= syslog
+SOURCES 			+= data
+SOURCES 			+= socket
+SOURCES 			+= ipc_server
+SOURCES 			+= file
+SOURCES 			+= event_server
+SOURCES 			+= cplus
 
-CFLAGS 			+= -I$(HDR_DIR)
+SRC_DIR 			?= $(BUILD_DIR)/c_src
+HDR_DIR 			?= $(BUILD_DIR)/include
+SRC 				:= $(addprefix $(SRC_DIR)/,$(SOURCES:=.c))
+
+
