@@ -6,6 +6,8 @@
 extern "C" {
 #endif
 
+#define CPLUS_MEM_CLEAN(MEM_ADDR) cplus_mem_set(MEM_ADDR, 0, sizeof(*(MEM_ADDR)))
+
 #ifdef __CPLUS_MEM_MANAGER__
 #define cplus_malloc(size) cplus_mgr_malloc(size, __FILE__, __FUNCTION__, __LINE__)
 #define cplus_realloc(ptr, size) cplus_mgr_realloc(ptr, size, __FILE__, __FUNCTION__, __LINE__)

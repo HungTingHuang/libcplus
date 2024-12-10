@@ -90,21 +90,21 @@
 
 enum HDLR_CLASS
 {
-    CORE = 0x00,
-    SYS = 0x10,
-    DS = 0x20,
-    ALG = 0x30,
-    CTRL = 0x40,
-    IO = 0x50,
-    HELPER = 0x60,
+	CORE = 0x00,
+	SYS = 0x10,
+	DS = 0x20,
+	ALG = 0x30,
+	CTRL = 0x40,
+	IO = 0x50,
+	HELPER = 0x60,
 };
 
 enum INIT_MODE
 {
-    INIT_NONE = 0,
-    INIT_CREATE,
-    INIT_OPEN,
-    INIT_HYBRID,
+	INIT_NONE = 0,
+	INIT_CREATE,
+	INIT_OPEN,
+	INIT_HYBRID,
 };
 
 #ifdef __CPLUS_UNITTEST__
@@ -117,66 +117,66 @@ extern int32_t total_failed_count;
 	void TEST_CASE_NAME##_##TEST_NAME(bool * failed)
 
 #define UNITTEST_EXPECT_EQ(expect, actual) \
-    retval_testfunc = actual; \
-    if ((typeof(actual))(ENOTSUP) != (typeof(actual))(retval_testfunc)) \
-    { \
-        fprintf( \
-            stdout \
-            , "LN: %04d EXPECT_EQ (%s, %s); \n" \
-            , __LINE__ \
-            , #expect \
-            , #actual); \
-        if ((typeof(actual))expect != (typeof(actual))retval_testfunc) \
-        { \
-            CHANGE_COLOR_PURPLE(); \
-            fprintf( \
-                stdout \
-                , "LN: %04d %s(" REG_LD ") is not equal to the expect value: " REG_LD " \n" \
-                , __LINE__ \
-                , #actual \
-                , retval_testfunc \
-                , (int64_t)expect); \
-            RECOVER_COLOR(); \
-            *failed = true; \
-            total_failed_count ++; \
-        } \
-    }
+	retval_testfunc = actual; \
+	if ((typeof(actual))(ENOTSUP) != (typeof(actual))(retval_testfunc)) \
+	{ \
+		fprintf( \
+			stdout \
+			, "LN: %04d EXPECT_EQ (%s, %s); \n" \
+			, __LINE__ \
+			, #expect \
+			, #actual); \
+		if ((typeof(actual))expect != (typeof(actual))retval_testfunc) \
+		{ \
+			CHANGE_COLOR_PURPLE(); \
+			fprintf( \
+				stdout \
+				, "LN: %04d %s(" REG_LD ") is not equal to the expect value: " REG_LD " \n" \
+				, __LINE__ \
+				, #actual \
+				, retval_testfunc \
+				, (int64_t)expect); \
+			RECOVER_COLOR(); \
+			*failed = true; \
+			total_failed_count ++; \
+		} \
+	}
 
 #define UNITTEST_EXPECT_NE(expect, actual) \
-    retval_testfunc = actual; \
-    if ((typeof(actual))(ENOTSUP) != (typeof(actual))(retval_testfunc)) \
-    { \
-        fprintf( \
-            stdout \
-            , "LN: %04d EXPECT_NQ (%s, %s); \n" \
-            , __LINE__ \
-            , #expect \
-            , #actual ); \
-        if ((typeof(actual))expect == (typeof(actual))retval_testfunc) \
-        { \
-            CHANGE_COLOR_PURPLE(); \
-            fprintf( \
-                stdout \
-                , "LN: %04d %s(" REG_LD ") is equal to the expect value: " REG_LD " \n" \
-                , __LINE__ \
-                , #actual \
-                , retval_testfunc \
-                , (int64_t)expect); \
-            RECOVER_COLOR(); \
-            *failed = true; \
-            total_failed_count ++; \
-        } \
-    }
+	retval_testfunc = actual; \
+	if ((typeof(actual))(ENOTSUP) != (typeof(actual))(retval_testfunc)) \
+	{ \
+		fprintf( \
+			stdout \
+			, "LN: %04d EXPECT_NQ (%s, %s); \n" \
+			, __LINE__ \
+			, #expect \
+			, #actual ); \
+		if ((typeof(actual))expect == (typeof(actual))retval_testfunc) \
+		{ \
+			CHANGE_COLOR_PURPLE(); \
+			fprintf( \
+				stdout \
+				, "LN: %04d %s(" REG_LD ") is equal to the expect value: " REG_LD " \n" \
+				, __LINE__ \
+				, #actual \
+				, retval_testfunc \
+				, (int64_t)expect); \
+			RECOVER_COLOR(); \
+			*failed = true; \
+			total_failed_count ++; \
+		} \
+	}
 
 #define UNITTEST_ADD_TESTCASE(TEST_CASE_NAME, TEST_NAME) \
-    unittest_add_test_case(#TEST_CASE_NAME \
-    , #TEST_NAME \
-    , TEST_CASE_NAME##_##TEST_NAME)
+	unittest_add_test_case(#TEST_CASE_NAME \
+	, #TEST_NAME \
+	, TEST_CASE_NAME##_##TEST_NAME)
 
 void * unittest_add_test_case(
-    const char * test_case_name
-    , const char * test_name
-    , void (* test_func)(bool *));
+	const char * test_case_name
+	, const char * test_name
+	, void (* test_func)(bool *));
 
 int32_t unittest_wait_child_proc_end(uint32_t timeout);
 

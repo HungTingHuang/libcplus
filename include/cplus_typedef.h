@@ -5,6 +5,8 @@
 
 #define CPLUS_FAIL -1
 #define CPLUS_SUCCESS 0
+#define CPLUS_TRUE 1
+#define CPLUS_FALSE 0
 
 #ifndef UINT32_MAX
 #   define UINT32_MAX (0U - 1)

@@ -44,6 +44,7 @@ bool cplus_llist_is_consist(cplus_llist obj1, cplus_llist obj2, int32_t (* compa
 int32_t cplus_llist_delete_data(cplus_llist obj, void * data);
 cplus_data cplus_llist_add_data(cplus_llist obj, CPLUS_DATA_TYPE type, const char * key, void * value1, void * value2);
 cplus_data cplus_llist_find_data(cplus_llist obj, const char * key);
+cplus_data cplus_llist_update_data(cplus_llist obj, const char * key, cplus_data data);
 int32_t cplus_llist_remove_data(cplus_llist obj, const char * key);
 cplus_data cplus_llist_add_data_bool(cplus_llist obj, const char * key, bool value);
 cplus_data cplus_llist_add_data_int8(cplus_llist obj, const char * key, int8_t value);
